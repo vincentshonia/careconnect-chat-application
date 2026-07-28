@@ -6,8 +6,12 @@ import { Button } from "@/components/ui/button";
 
 const nav = [
   { to: "/inbox", label: "Inbox" },
+  { to: "/intake", label: "Intake" },
+  { to: "/reports", label: "Reports" },
   { to: "/knowledge", label: "Knowledge" },
   { to: "/websites", label: "Websites" },
+  { to: "/staff", label: "Staff" },
+  { to: "/organizations", label: "Organizations" },
 ] as const;
 
 export function AdminShell({
