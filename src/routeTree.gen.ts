@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedWebsitesRouteImport } from './routes/_authenticated/websites'
 import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
+import { Route as AuthenticatedRoutingRouteImport } from './routes/_authenticated/routing'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedOrganizationsRouteImport } from './routes/_authenticated/organizations'
 import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
@@ -57,6 +58,11 @@ const AuthenticatedWebsitesRoute = AuthenticatedWebsitesRouteImport.update({
 const AuthenticatedStaffRoute = AuthenticatedStaffRouteImport.update({
   id: '/staff',
   path: '/staff',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRoutingRoute = AuthenticatedRoutingRouteImport.update({
+  id: '/routing',
+  path: '/routing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/organizations': typeof AuthenticatedOrganizationsRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/routing': typeof AuthenticatedRoutingRoute
   '/staff': typeof AuthenticatedStaffRoute
   '/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/organizations': typeof AuthenticatedOrganizationsRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/routing': typeof AuthenticatedRoutingRoute
   '/staff': typeof AuthenticatedStaffRoute
   '/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRoute
   '/_authenticated/organizations': typeof AuthenticatedOrganizationsRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/routing': typeof AuthenticatedRoutingRoute
   '/_authenticated/staff': typeof AuthenticatedStaffRoute
   '/_authenticated/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
@@ -211,6 +220,7 @@ export interface FileRouteTypes {
     | '/knowledge'
     | '/organizations'
     | '/reports'
+    | '/routing'
     | '/staff'
     | '/websites'
     | '/api/public/widget.js'
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/knowledge'
     | '/organizations'
     | '/reports'
+    | '/routing'
     | '/staff'
     | '/websites'
     | '/api/public/widget.js'
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/_authenticated/knowledge'
     | '/_authenticated/organizations'
     | '/_authenticated/reports'
+    | '/_authenticated/routing'
     | '/_authenticated/staff'
     | '/_authenticated/websites'
     | '/api/public/widget.js'
@@ -319,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/staff'
       fullPath: '/staff'
       preLoaderRoute: typeof AuthenticatedStaffRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/routing': {
+      id: '/_authenticated/routing'
+      path: '/routing'
+      fullPath: '/routing'
+      preLoaderRoute: typeof AuthenticatedRoutingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/reports': {
@@ -431,6 +450,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRoute
   AuthenticatedOrganizationsRoute: typeof AuthenticatedOrganizationsRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedRoutingRoute: typeof AuthenticatedRoutingRoute
   AuthenticatedStaffRoute: typeof AuthenticatedStaffRoute
   AuthenticatedWebsitesRoute: typeof AuthenticatedWebsitesRoute
 }
@@ -444,6 +464,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRoute,
   AuthenticatedOrganizationsRoute: AuthenticatedOrganizationsRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedRoutingRoute: AuthenticatedRoutingRoute,
   AuthenticatedStaffRoute: AuthenticatedStaffRoute,
   AuthenticatedWebsitesRoute: AuthenticatedWebsitesRoute,
 }
