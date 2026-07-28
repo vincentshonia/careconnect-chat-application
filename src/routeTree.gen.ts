@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WidgetRouteImport } from './routes/widget'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
 import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
@@ -17,6 +18,11 @@ import { Route as ApiPublicChatFeedbackRouteImport } from './routes/api/public/c
 import { Route as ApiPublicChatEscalateRouteImport } from './routes/api/public/chat/escalate'
 import { Route as ApiPublicChatConfigRouteImport } from './routes/api/public/chat/config'
 
+const WidgetRoute = WidgetRouteImport.update({
+  id: '/widget',
+  path: '/widget',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -55,6 +61,7 @@ const ApiPublicChatConfigRoute = ApiPublicChatConfigRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/widget': typeof WidgetRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
@@ -64,6 +71,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/widget': typeof WidgetRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
@@ -74,6 +82,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/widget': typeof WidgetRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
@@ -85,6 +94,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/widget'
     | '/api/public/widget.js'
     | '/api/public/chat/config'
     | '/api/public/chat/escalate'
@@ -94,6 +104,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/widget'
     | '/api/public/widget.js'
     | '/api/public/chat/config'
     | '/api/public/chat/escalate'
@@ -103,6 +114,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/widget'
     | '/api/public/widget.js'
     | '/api/public/chat/config'
     | '/api/public/chat/escalate'
@@ -113,6 +125,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  WidgetRoute: typeof WidgetRoute
   ApiPublicWidgetDotjsRoute: typeof ApiPublicWidgetDotjsRoute
   ApiPublicChatConfigRoute: typeof ApiPublicChatConfigRoute
   ApiPublicChatEscalateRoute: typeof ApiPublicChatEscalateRoute
@@ -123,6 +136,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/widget': {
+      id: '/widget'
+      path: '/widget'
+      fullPath: '/widget'
+      preLoaderRoute: typeof WidgetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -177,6 +197,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  WidgetRoute: WidgetRoute,
   ApiPublicWidgetDotjsRoute: ApiPublicWidgetDotjsRoute,
   ApiPublicChatConfigRoute: ApiPublicChatConfigRoute,
   ApiPublicChatEscalateRoute: ApiPublicChatEscalateRoute,
