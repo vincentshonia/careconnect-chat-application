@@ -39,7 +39,7 @@ export async function reindexArticle(articleId: string) {
   const db = admin();
   const { data: article, error } = await db
     .from("knowledge_articles")
-    .select("id, organization_id, title, summary, body, status")
+    .select("id, organization_id, title, summary, content, status")
     .eq("id", articleId)
     .maybeSingle();
   if (error || !article) throw new Error("Article not found");
@@ -47,7 +47,7 @@ export async function reindexArticle(articleId: string) {
   await db.from("knowledge_chunks").delete().eq("article_id", article.id);
   if (article.status !== "published") return { chunks: 0 };
 
-  const source = [article.title, article.summary ?? "", article.body ?? ""].join("\n\n");
+  const source = [article.title, article.summary ?? "", article.content ?? ""].join("\n\n");
   const chunks = chunkText(source);
 
   let index = 0;
@@ -63,10 +63,6 @@ export async function reindexArticle(articleId: string) {
     if (insertError) throw new Error(insertError.message);
     index += 1;
   }
-  await db
-    .from("knowledge_articles")
-    .update({ indexed_at: new Date().toISOString() })
-    .eq("id", article.id);
   return { chunks: index };
 }
 
