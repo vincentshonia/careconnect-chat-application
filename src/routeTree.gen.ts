@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
 import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
 import { Route as ApiPublicChatMessageRouteImport } from './routes/api/public/chat/message'
+import { Route as ApiPublicChatFeedbackRouteImport } from './routes/api/public/chat/feedback'
 import { Route as ApiPublicChatEscalateRouteImport } from './routes/api/public/chat/escalate'
 import { Route as ApiPublicChatConfigRouteImport } from './routes/api/public/chat/config'
 
@@ -36,6 +37,11 @@ const ApiPublicChatMessageRoute = ApiPublicChatMessageRouteImport.update({
   path: '/api/public/chat/message',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicChatFeedbackRoute = ApiPublicChatFeedbackRouteImport.update({
+  id: '/api/public/chat/feedback',
+  path: '/api/public/chat/feedback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicChatEscalateRoute = ApiPublicChatEscalateRouteImport.update({
   id: '/api/public/chat/escalate',
   path: '/api/public/chat/escalate',
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
+  '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
+  '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
 }
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
+  '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
 }
@@ -79,6 +88,7 @@ export interface FileRouteTypes {
     | '/api/public/widget.js'
     | '/api/public/chat/config'
     | '/api/public/chat/escalate'
+    | '/api/public/chat/feedback'
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
   fileRoutesByTo: FileRoutesByTo
@@ -87,6 +97,7 @@ export interface FileRouteTypes {
     | '/api/public/widget.js'
     | '/api/public/chat/config'
     | '/api/public/chat/escalate'
+    | '/api/public/chat/feedback'
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
   id:
@@ -95,6 +106,7 @@ export interface FileRouteTypes {
     | '/api/public/widget.js'
     | '/api/public/chat/config'
     | '/api/public/chat/escalate'
+    | '/api/public/chat/feedback'
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
   fileRoutesById: FileRoutesById
@@ -104,6 +116,7 @@ export interface RootRouteChildren {
   ApiPublicWidgetDotjsRoute: typeof ApiPublicWidgetDotjsRoute
   ApiPublicChatConfigRoute: typeof ApiPublicChatConfigRoute
   ApiPublicChatEscalateRoute: typeof ApiPublicChatEscalateRoute
+  ApiPublicChatFeedbackRoute: typeof ApiPublicChatFeedbackRoute
   ApiPublicChatMessageRoute: typeof ApiPublicChatMessageRoute
   ApiPublicChatPollRoute: typeof ApiPublicChatPollRoute
 }
@@ -138,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicChatMessageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/chat/feedback': {
+      id: '/api/public/chat/feedback'
+      path: '/api/public/chat/feedback'
+      fullPath: '/api/public/chat/feedback'
+      preLoaderRoute: typeof ApiPublicChatFeedbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/chat/escalate': {
       id: '/api/public/chat/escalate'
       path: '/api/public/chat/escalate'
@@ -160,6 +180,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicWidgetDotjsRoute: ApiPublicWidgetDotjsRoute,
   ApiPublicChatConfigRoute: ApiPublicChatConfigRoute,
   ApiPublicChatEscalateRoute: ApiPublicChatEscalateRoute,
+  ApiPublicChatFeedbackRoute: ApiPublicChatFeedbackRoute,
   ApiPublicChatMessageRoute: ApiPublicChatMessageRoute,
   ApiPublicChatPollRoute: ApiPublicChatPollRoute,
 }
