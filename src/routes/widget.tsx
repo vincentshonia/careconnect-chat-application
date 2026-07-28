@@ -8,10 +8,17 @@ export const Route = createFileRoute("/widget")({
       { name: "robots", content: "noindex" },
       { name: "description", content: "Embedded website chat widget." },
     ],
+    styles: [
+      {
+        children:
+          "html,body,#root{background:transparent !important;margin:0;overflow:hidden;}",
+      },
+    ],
   }),
   component: WidgetPage,
   ssr: false,
 });
+
 
 type Config = {
   website: {
