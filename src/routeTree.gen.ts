@@ -10,33 +10,102 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
+import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
+import { Route as ApiPublicChatMessageRouteImport } from './routes/api/public/chat/message'
+import { Route as ApiPublicChatEscalateRouteImport } from './routes/api/public/chat/escalate'
+import { Route as ApiPublicChatConfigRouteImport } from './routes/api/public/chat/config'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWidgetDotjsRoute = ApiPublicWidgetDotjsRouteImport.update({
+  id: '/api/public/widget.js',
+  path: '/api/public/widget.js',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicChatPollRoute = ApiPublicChatPollRouteImport.update({
+  id: '/api/public/chat/poll',
+  path: '/api/public/chat/poll',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicChatMessageRoute = ApiPublicChatMessageRouteImport.update({
+  id: '/api/public/chat/message',
+  path: '/api/public/chat/message',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicChatEscalateRoute = ApiPublicChatEscalateRouteImport.update({
+  id: '/api/public/chat/escalate',
+  path: '/api/public/chat/escalate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicChatConfigRoute = ApiPublicChatConfigRouteImport.update({
+  id: '/api/public/chat/config',
+  path: '/api/public/chat/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
+  '/api/public/chat/config': typeof ApiPublicChatConfigRoute
+  '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
+  '/api/public/chat/message': typeof ApiPublicChatMessageRoute
+  '/api/public/chat/poll': typeof ApiPublicChatPollRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
+  '/api/public/chat/config': typeof ApiPublicChatConfigRoute
+  '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
+  '/api/public/chat/message': typeof ApiPublicChatMessageRoute
+  '/api/public/chat/poll': typeof ApiPublicChatPollRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
+  '/api/public/chat/config': typeof ApiPublicChatConfigRoute
+  '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
+  '/api/public/chat/message': typeof ApiPublicChatMessageRoute
+  '/api/public/chat/poll': typeof ApiPublicChatPollRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/api/public/widget.js'
+    | '/api/public/chat/config'
+    | '/api/public/chat/escalate'
+    | '/api/public/chat/message'
+    | '/api/public/chat/poll'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/api/public/widget.js'
+    | '/api/public/chat/config'
+    | '/api/public/chat/escalate'
+    | '/api/public/chat/message'
+    | '/api/public/chat/poll'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/public/widget.js'
+    | '/api/public/chat/config'
+    | '/api/public/chat/escalate'
+    | '/api/public/chat/message'
+    | '/api/public/chat/poll'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiPublicWidgetDotjsRoute: typeof ApiPublicWidgetDotjsRoute
+  ApiPublicChatConfigRoute: typeof ApiPublicChatConfigRoute
+  ApiPublicChatEscalateRoute: typeof ApiPublicChatEscalateRoute
+  ApiPublicChatMessageRoute: typeof ApiPublicChatMessageRoute
+  ApiPublicChatPollRoute: typeof ApiPublicChatPollRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +117,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/widget.js': {
+      id: '/api/public/widget.js'
+      path: '/api/public/widget.js'
+      fullPath: '/api/public/widget.js'
+      preLoaderRoute: typeof ApiPublicWidgetDotjsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/chat/poll': {
+      id: '/api/public/chat/poll'
+      path: '/api/public/chat/poll'
+      fullPath: '/api/public/chat/poll'
+      preLoaderRoute: typeof ApiPublicChatPollRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/chat/message': {
+      id: '/api/public/chat/message'
+      path: '/api/public/chat/message'
+      fullPath: '/api/public/chat/message'
+      preLoaderRoute: typeof ApiPublicChatMessageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/chat/escalate': {
+      id: '/api/public/chat/escalate'
+      path: '/api/public/chat/escalate'
+      fullPath: '/api/public/chat/escalate'
+      preLoaderRoute: typeof ApiPublicChatEscalateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/chat/config': {
+      id: '/api/public/chat/config'
+      path: '/api/public/chat/config'
+      fullPath: '/api/public/chat/config'
+      preLoaderRoute: typeof ApiPublicChatConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiPublicWidgetDotjsRoute: ApiPublicWidgetDotjsRoute,
+  ApiPublicChatConfigRoute: ApiPublicChatConfigRoute,
+  ApiPublicChatEscalateRoute: ApiPublicChatEscalateRoute,
+  ApiPublicChatMessageRoute: ApiPublicChatMessageRoute,
+  ApiPublicChatPollRoute: ApiPublicChatPollRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
