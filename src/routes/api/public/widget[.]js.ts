@@ -50,7 +50,7 @@ export const Route = createFileRoute("/api/public/widget.js")({
         return new Response(js, {
           headers: {
             "Content-Type": "application/javascript; charset=utf-8",
-            "Cache-Control": "public, max-age=300",
+            "Cache-Control": "no-cache, no-store, max-age=0, must-revalidate",
             "Access-Control-Allow-Origin": "*",
           },
         });
