@@ -34,17 +34,17 @@ function DashboardPage() {
     queryFn: async () => {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const [open, unassigned, escalated, today, intakes, aiToday] = await Promise.all([
-        supabase.from("conversations").select("id", { count: "exact", head: true }).in("status", OPEN_STATUSES),
+        supabase.from("conversations").select("id", { count: "exact", head: true }).in("status", [...OPEN_STATUSES]),
         supabase
           .from("conversations")
           .select("id", { count: "exact", head: true })
           .is("assigned_to", null)
-          .in("status", OPEN_STATUSES),
+          .in("status", [...OPEN_STATUSES]),
         supabase
           .from("conversations")
           .select("id", { count: "exact", head: true })
           .eq("escalation_requested", true)
-          .in("status", OPEN_STATUSES),
+          .in("status", [...OPEN_STATUSES]),
         supabase.from("conversations").select("id", { count: "exact", head: true }).gte("created_at", since),
         supabase
           .from("intake_requests")
@@ -76,7 +76,7 @@ function DashboardPage() {
       const { data, error } = await supabase
         .from("conversations")
         .select("id, reference, subject, status, priority, escalation_requested, last_message_at")
-        .in("status", OPEN_STATUSES)
+        .in("status", [...OPEN_STATUSES])
         .order("last_message_at", { ascending: false })
         .limit(8);
       if (error) throw error;
