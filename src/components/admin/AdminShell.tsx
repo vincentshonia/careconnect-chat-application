@@ -53,7 +53,7 @@ export function AdminShell({
             </span>
             <span className="text-sm font-semibold">Support Console</span>
           </Link>
-          <nav className="flex gap-1">
+          <nav className="flex flex-wrap gap-1">
             {nav.map((item) => (
               <Link
                 key={item.to}
