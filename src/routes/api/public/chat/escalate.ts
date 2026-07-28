@@ -114,6 +114,32 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             `Visitor requested ${input.kind.replace("_", " ")}`,
           );
 
+          const typeMap: Record<string, string> = {
+            referral: "referral",
+            enrollment: "enrollment",
+            live_agent: "callback",
+            contact: "general",
+            message: "general",
+          };
+          await db.from("intake_requests").insert({
+            organization_id: website.organization_id,
+            website_id: website.id,
+            conversation_id: conversation.id,
+            contact_id: contactId,
+            department_id: rule?.department_id ?? null,
+            request_type: typeMap[input.kind] ?? "general",
+            priority: input.kind === "live_agent" ? "high" : "normal",
+            full_name: input.fullName,
+            email: input.email,
+            phone: input.phone,
+            county: input.county ?? null,
+            health_plan: input.healthPlan ?? null,
+            service_interest: input.serviceInterest ?? null,
+            preferred_language: input.preferredLanguage ?? "English",
+            source: "widget",
+            notes: input.reason ?? null,
+          });
+
           const { count } = await db
             .from("profiles")
             .select("id", { count: "exact", head: true })
