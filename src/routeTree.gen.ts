@@ -24,6 +24,7 @@ import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedDepartmentsRouteImport } from './routes/_authenticated/departments'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
+import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
 import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
 import { Route as ApiPublicChatMessageRouteImport } from './routes/api/public/chat/message'
@@ -107,6 +108,11 @@ const AuthenticatedContactsRoute = AuthenticatedContactsRouteImport.update({
   path: '/contacts',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiPublicWidgetDotjsRoute = ApiPublicWidgetDotjsRouteImport.update({
   id: '/api/public/widget.js',
   path: '/api/public/widget.js',
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
+  '/audit': typeof AuthenticatedAuditRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/departments': typeof AuthenticatedDepartmentsRoute
@@ -164,6 +171,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
+  '/audit': typeof AuthenticatedAuditRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/departments': typeof AuthenticatedDepartmentsRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
+  '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/departments': typeof AuthenticatedDepartmentsRoute
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/widget'
+    | '/audit'
     | '/contacts'
     | '/dashboard'
     | '/departments'
@@ -234,6 +244,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/widget'
+    | '/audit'
     | '/contacts'
     | '/dashboard'
     | '/departments'
@@ -257,6 +268,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/widget'
+    | '/_authenticated/audit'
     | '/_authenticated/contacts'
     | '/_authenticated/dashboard'
     | '/_authenticated/departments'
@@ -396,6 +408,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedContactsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/audit': {
+      id: '/_authenticated/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuthenticatedAuditRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/widget.js': {
       id: '/api/public/widget.js'
       path: '/api/public/widget.js'
@@ -442,6 +461,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDepartmentsRoute: typeof AuthenticatedDepartmentsRoute
@@ -456,6 +476,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDepartmentsRoute: AuthenticatedDepartmentsRoute,
