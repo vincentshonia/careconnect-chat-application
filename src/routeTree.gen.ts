@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedWebsitesRouteImport } from './routes/_authenticated/websites'
 import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
+import { Route as AuthenticatedIntakeRouteImport } from './routes/_authenticated/intake'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
 import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
@@ -50,6 +51,11 @@ const AuthenticatedWebsitesRoute = AuthenticatedWebsitesRouteImport.update({
 const AuthenticatedKnowledgeRoute = AuthenticatedKnowledgeRouteImport.update({
   id: '/knowledge',
   path: '/knowledge',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedIntakeRoute = AuthenticatedIntakeRouteImport.update({
+  id: '/intake',
+  path: '/intake',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/intake': typeof AuthenticatedIntakeRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/intake': typeof AuthenticatedIntakeRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
+  '/_authenticated/intake': typeof AuthenticatedIntakeRoute
   '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRoute
   '/_authenticated/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/widget'
     | '/inbox'
+    | '/intake'
     | '/knowledge'
     | '/websites'
     | '/api/public/widget.js'
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/widget'
     | '/inbox'
+    | '/intake'
     | '/knowledge'
     | '/websites'
     | '/api/public/widget.js'
@@ -168,6 +179,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/widget'
     | '/_authenticated/inbox'
+    | '/_authenticated/intake'
     | '/_authenticated/knowledge'
     | '/_authenticated/websites'
     | '/api/public/widget.js'
@@ -235,6 +247,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKnowledgeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/intake': {
+      id: '/_authenticated/intake'
+      path: '/intake'
+      fullPath: '/intake'
+      preLoaderRoute: typeof AuthenticatedIntakeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/inbox': {
       id: '/_authenticated/inbox'
       path: '/inbox'
@@ -289,12 +308,14 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
+  AuthenticatedIntakeRoute: typeof AuthenticatedIntakeRoute
   AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRoute
   AuthenticatedWebsitesRoute: typeof AuthenticatedWebsitesRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
+  AuthenticatedIntakeRoute: AuthenticatedIntakeRoute,
   AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRoute,
   AuthenticatedWebsitesRoute: AuthenticatedWebsitesRoute,
 }
