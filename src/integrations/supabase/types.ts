@@ -696,6 +696,186 @@ export type Database = {
           },
         ]
       }
+      intake_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          detail: string | null
+          event_type: string
+          id: string
+          intake_id: string
+          new_value: string | null
+          organization_id: string
+          previous_value: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: string | null
+          event_type: string
+          id?: string
+          intake_id: string
+          new_value?: string | null
+          organization_id: string
+          previous_value?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          detail?: string | null
+          event_type?: string
+          id?: string
+          intake_id?: string
+          new_value?: string | null
+          organization_id?: string
+          previous_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_events_intake_id_fkey"
+            columns: ["intake_id"]
+            isOneToOne: false
+            referencedRelation: "intake_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_requests: {
+        Row: {
+          assigned_to: string | null
+          closed_at: string | null
+          contact_id: string | null
+          conversation_id: string | null
+          county: string | null
+          created_at: string
+          department_id: string | null
+          due_date: string | null
+          email: string | null
+          full_name: string
+          health_plan: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          phone: string | null
+          preferred_contact_method: string | null
+          preferred_language: string | null
+          priority: Database["public"]["Enums"]["conversation_priority"]
+          reference: string
+          request_type: Database["public"]["Enums"]["intake_type"]
+          service_interest: string | null
+          source: string
+          stage: Database["public"]["Enums"]["intake_stage"]
+          stage_changed_at: string
+          submitted_at: string | null
+          updated_at: string
+          website_id: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          closed_at?: string | null
+          contact_id?: string | null
+          conversation_id?: string | null
+          county?: string | null
+          created_at?: string
+          department_id?: string | null
+          due_date?: string | null
+          email?: string | null
+          full_name: string
+          health_plan?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          phone?: string | null
+          preferred_contact_method?: string | null
+          preferred_language?: string | null
+          priority?: Database["public"]["Enums"]["conversation_priority"]
+          reference?: string
+          request_type?: Database["public"]["Enums"]["intake_type"]
+          service_interest?: string | null
+          source?: string
+          stage?: Database["public"]["Enums"]["intake_stage"]
+          stage_changed_at?: string
+          submitted_at?: string | null
+          updated_at?: string
+          website_id?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          closed_at?: string | null
+          contact_id?: string | null
+          conversation_id?: string | null
+          county?: string | null
+          created_at?: string
+          department_id?: string | null
+          due_date?: string | null
+          email?: string | null
+          full_name?: string
+          health_plan?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          phone?: string | null
+          preferred_contact_method?: string | null
+          preferred_language?: string | null
+          priority?: Database["public"]["Enums"]["conversation_priority"]
+          reference?: string
+          request_type?: Database["public"]["Enums"]["intake_type"]
+          service_interest?: string | null
+          source?: string
+          stage?: Database["public"]["Enums"]["intake_stage"]
+          stage_changed_at?: string
+          submitted_at?: string | null
+          updated_at?: string
+          website_id?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_requests_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_requests_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_requests_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_requests_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       internal_notes: {
         Row: {
           author_id: string | null
@@ -1600,6 +1780,16 @@ export type Database = {
         | "spam"
         | "archived"
       entity_status: "active" | "inactive" | "suspended" | "archived"
+      intake_stage:
+        | "new"
+        | "in_review"
+        | "contacted"
+        | "eligibility_check"
+        | "submitted"
+        | "approved"
+        | "denied"
+        | "withdrawn"
+      intake_type: "referral" | "enrollment" | "general" | "callback"
       kb_status:
         | "draft"
         | "pending_review"
@@ -1757,6 +1947,17 @@ export const Constants = {
         "archived",
       ],
       entity_status: ["active", "inactive", "suspended", "archived"],
+      intake_stage: [
+        "new",
+        "in_review",
+        "contacted",
+        "eligibility_check",
+        "submitted",
+        "approved",
+        "denied",
+        "withdrawn",
+      ],
+      intake_type: ["referral", "enrollment", "general", "callback"],
       kb_status: [
         "draft",
         "pending_review",
