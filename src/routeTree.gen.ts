@@ -13,6 +13,7 @@ import { Route as WidgetRouteImport } from './routes/widget'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
 import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
@@ -39,6 +40,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedKnowledgeRoute = AuthenticatedKnowledgeRouteImport.update({
+  id: '/knowledge',
+  path: '/knowledge',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   id: '/inbox',
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
+  '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/widget'
     | '/inbox'
+    | '/knowledge'
     | '/api/public/widget.js'
     | '/api/public/chat/config'
     | '/api/public/chat/escalate'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/widget'
     | '/inbox'
+    | '/knowledge'
     | '/api/public/widget.js'
     | '/api/public/chat/config'
     | '/api/public/chat/escalate'
@@ -146,6 +157,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/widget'
     | '/_authenticated/inbox'
+    | '/_authenticated/knowledge'
     | '/api/public/widget.js'
     | '/api/public/chat/config'
     | '/api/public/chat/escalate'
@@ -196,6 +208,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/knowledge': {
+      id: '/_authenticated/knowledge'
+      path: '/knowledge'
+      fullPath: '/knowledge'
+      preLoaderRoute: typeof AuthenticatedKnowledgeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/inbox': {
       id: '/_authenticated/inbox'
@@ -251,10 +270,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
+  AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
+  AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
