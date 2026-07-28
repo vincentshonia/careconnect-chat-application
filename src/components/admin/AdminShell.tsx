@@ -5,14 +5,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
 const nav = [
+  { to: "/dashboard", label: "Dashboard" },
   { to: "/inbox", label: "Inbox" },
   { to: "/intake", label: "Intake" },
-  { to: "/reports", label: "Reports" },
+  { to: "/contacts", label: "Contacts" },
   { to: "/knowledge", label: "Knowledge" },
+  { to: "/ai-console", label: "AI console" },
+  { to: "/reports", label: "Reports" },
   { to: "/websites", label: "Websites" },
+  { to: "/departments", label: "Departments" },
+  { to: "/routing", label: "Routing" },
   { to: "/staff", label: "Staff" },
   { to: "/organizations", label: "Organizations" },
+  { to: "/settings", label: "Settings" },
+  { to: "/audit", label: "Audit log" },
 ] as const;
+
 
 export function AdminShell({
   title,
