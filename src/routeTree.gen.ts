@@ -20,6 +20,7 @@ import { Route as AuthenticatedOrganizationsRouteImport } from './routes/_authen
 import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
 import { Route as AuthenticatedIntakeRouteImport } from './routes/_authenticated/intake'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
+import { Route as AuthenticatedDepartmentsRouteImport } from './routes/_authenticated/departments'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
@@ -84,6 +85,12 @@ const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   path: '/inbox',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDepartmentsRoute =
+  AuthenticatedDepartmentsRouteImport.update({
+    id: '/departments',
+    path: '/departments',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -131,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/widget': typeof WidgetRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/departments': typeof AuthenticatedDepartmentsRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/intake': typeof AuthenticatedIntakeRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
@@ -151,6 +159,7 @@ export interface FileRoutesByTo {
   '/widget': typeof WidgetRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/departments': typeof AuthenticatedDepartmentsRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/intake': typeof AuthenticatedIntakeRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
@@ -173,6 +182,7 @@ export interface FileRoutesById {
   '/widget': typeof WidgetRoute
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/departments': typeof AuthenticatedDepartmentsRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/intake': typeof AuthenticatedIntakeRoute
   '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRoute
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
     | '/widget'
     | '/contacts'
     | '/dashboard'
+    | '/departments'
     | '/inbox'
     | '/intake'
     | '/knowledge'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/widget'
     | '/contacts'
     | '/dashboard'
+    | '/departments'
     | '/inbox'
     | '/intake'
     | '/knowledge'
@@ -236,6 +248,7 @@ export interface FileRouteTypes {
     | '/widget'
     | '/_authenticated/contacts'
     | '/_authenticated/dashboard'
+    | '/_authenticated/departments'
     | '/_authenticated/inbox'
     | '/_authenticated/intake'
     | '/_authenticated/knowledge'
@@ -343,6 +356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInboxRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/departments': {
+      id: '/_authenticated/departments'
+      path: '/departments'
+      fullPath: '/departments'
+      preLoaderRoute: typeof AuthenticatedDepartmentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -405,6 +425,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDepartmentsRoute: typeof AuthenticatedDepartmentsRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedIntakeRoute: typeof AuthenticatedIntakeRoute
   AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRoute
@@ -417,6 +438,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDepartmentsRoute: AuthenticatedDepartmentsRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedIntakeRoute: AuthenticatedIntakeRoute,
   AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRoute,
