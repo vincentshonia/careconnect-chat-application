@@ -70,6 +70,9 @@ function Index() {
             <a href="#support" className="hover:text-foreground">
               Support
             </a>
+            <a href="/auth" className="hover:text-foreground">
+              Staff sign in
+            </a>
           </nav>
         </div>
       </header>
