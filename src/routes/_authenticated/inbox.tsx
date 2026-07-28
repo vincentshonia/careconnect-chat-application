@@ -33,7 +33,14 @@ type Conversation = {
   contact_id: string | null;
 };
 
-const OPEN_STATUSES = ["new", "waiting", "assigned", "active", "escalated", "pending_visitor"];
+const OPEN_STATUSES = [
+  "new",
+  "waiting",
+  "assigned",
+  "active",
+  "escalated",
+  "pending_visitor",
+] as const;
 
 function statusTone(status: string) {
   if (status === "closed" || status === "resolved") return "secondary" as const;
@@ -74,7 +81,7 @@ function InboxPage() {
         )
         .order("last_message_at", { ascending: false })
         .limit(100);
-      if (filter === "open") q = q.in("status", OPEN_STATUSES);
+      if (filter === "open") q = q.in("status", [...OPEN_STATUSES]);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as Conversation[];
@@ -157,7 +164,7 @@ function InboxPage() {
   });
 
   const updateConversation = useMutation({
-    mutationFn: async (patch: Record<string, unknown>) => {
+    mutationFn: async (patch: Parameters<ReturnType<typeof supabase.from<"conversations">>["update"]>[0]) => {
       if (!active) return;
       const { error } = await supabase.from("conversations").update(patch).eq("id", active.id);
       if (error) throw error;
