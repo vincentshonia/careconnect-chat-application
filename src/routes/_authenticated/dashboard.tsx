@@ -15,7 +15,17 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
 });
 
-const OPEN_STATUSES = ["new", "waiting", "assigned", "active", "escalated", "pending_visitor"];
+const OPEN_STATUSES = [
+  "new",
+  "waiting",
+  "assigned",
+  "active",
+  "escalated",
+  "pending_visitor",
+] as const satisfies ReadonlyArray<
+  import("@/integrations/supabase/types").Database["public"]["Enums"]["conversation_status"]
+>;
+
 
 function DashboardPage() {
   const stats = useQuery({
