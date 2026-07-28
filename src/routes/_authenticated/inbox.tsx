@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -164,7 +165,7 @@ function InboxPage() {
   });
 
   const updateConversation = useMutation({
-    mutationFn: async (patch: Parameters<ReturnType<typeof supabase.from<"conversations">>["update"]>[0]) => {
+    mutationFn: async (patch: Database["public"]["Tables"]["conversations"]["Update"]) => {
       if (!active) return;
       const { error } = await supabase.from("conversations").update(patch).eq("id", active.id);
       if (error) throw error;
