@@ -596,7 +596,12 @@ function WidgetPage() {
               />
             ))}
             {sending && (
-              <div className="w-fit rounded-2xl bg-muted px-3 py-2 text-xs text-muted-foreground">Thinking…</div>
+              <div className="flex w-fit items-center gap-1.5 rounded-2xl bg-muted px-3 py-2.5">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.2s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.1s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70" />
+              </div>
+
             )}
           </div>
         )}
