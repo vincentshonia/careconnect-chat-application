@@ -1,4 +1,5 @@
 import { admin } from "@/lib/public-chat.server";
+import { alertRecipients } from "@/lib/assignment.server";
 
 type NotifyInput = {
   organizationId: string;
@@ -9,7 +10,10 @@ type NotifyInput = {
   severity?: "info" | "warning" | "critical";
   recordType?: string | null;
   recordId?: string | null;
+  /** Scope the alert to one department's members; falls back to the whole org. */
   departmentId?: string | null;
+  /** Explicit recipients (e.g. the agent a chat was just assigned to). */
+  userIds?: string[];
 };
 
 const PREF_COLUMN: Record<NotifyInput["type"], string> = {
@@ -18,6 +22,7 @@ const PREF_COLUMN: Record<NotifyInput["type"], string> = {
   sla_breach: "inapp_sla_breach",
   low_rating: "inapp_low_rating",
 };
+
 
 /**
  * Fan a notification out to every staff member in the organization who opted in.
