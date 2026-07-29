@@ -1,0 +1,136 @@
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { z } from "zod";
+
+const ROLE_RANK: Record<string, number> = {
+  agent: 1,
+  team_lead: 2,
+  manager: 3,
+  administrator: 4,
+  super_admin: 5,
+};
+
+const createStaffInput = z.object({
+  fullName: z.string().trim().min(2).max(120),
+  email: z.string().trim().email().max(200),
+  role: z.enum(["agent", "team_lead", "manager", "administrator", "super_admin"]),
+  title: z.string().trim().max(120).optional().nullable(),
+  phone: z.string().trim().max(40).optional().nullable(),
+  departmentIds: z.array(z.string().uuid()).max(20).optional(),
+});
+
+/** Cryptographically random temporary password shown once to the administrator. */
+function generateTempPassword() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  const body = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+  return `Ph!${body}9`;
+}
+
+/**
+ * Administrator-only: create a staff account directly with a temporary password.
+ * The caller must be rank 4+ and cannot create a role above their own rank.
+ */
+export const createStaffFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => createStaffInput.parse(input))
+  .handler(async ({ data, context }) => {
+    // Authorize against the caller's own roles (RLS-scoped read, no admin client yet).
+    const { data: callerRoles, error: rolesError } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    if (rolesError) throw new Error("Could not verify your permissions");
+
+    const callerRank = (callerRoles ?? []).reduce(
+      (max, r) => Math.max(max, ROLE_RANK[r.role as string] ?? 0),
+      0,
+    );
+    if (callerRank < 4) throw new Error("Only administrators can add staff members");
+    if ((ROLE_RANK[data.role] ?? 99) > callerRank) {
+      throw new Error("You cannot assign a role higher than your own");
+    }
+
+    const { data: callerProfile } = await context.supabase
+      .from("profiles")
+      .select("organization_id, full_name")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const organizationId = callerProfile?.organization_id ?? null;
+    if (!organizationId) throw new Error("Your account is not linked to an organization");
+
+    // Departments must belong to the caller's organization (RLS-scoped read).
+    let departmentIds: string[] = [];
+    if (data.departmentIds?.length) {
+      const { data: depts } = await context.supabase
+        .from("departments")
+        .select("id")
+        .in("id", data.departmentIds);
+      departmentIds = (depts ?? []).map((d) => d.id);
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const email = data.email.toLowerCase();
+    const { data: existing } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+    if (existing) throw new Error("A staff member with that email already exists");
+
+    const tempPassword = generateTempPassword();
+    const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { full_name: data.fullName },
+    });
+    if (createError || !created.user) {
+      throw new Error(createError?.message ?? "Could not create the account");
+    }
+    const newUserId = created.user.id;
+
+    // The signup trigger seeds a profile + default role; normalise both here.
+    const { error: profileError } = await supabaseAdmin.from("profiles").upsert(
+      {
+        id: newUserId,
+        organization_id: organizationId,
+        full_name: data.fullName,
+        email,
+        title: data.title || null,
+        phone: data.phone || null,
+      },
+      { onConflict: "id" },
+    );
+    if (profileError) throw new Error(profileError.message);
+
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", newUserId);
+    const { error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .insert({ user_id: newUserId, role: data.role, organization_id: organizationId });
+    if (roleError) throw new Error(roleError.message);
+
+    if (departmentIds.length) {
+      await supabaseAdmin.from("department_members").insert(
+        departmentIds.map((departmentId) => ({
+          user_id: newUserId,
+          department_id: departmentId,
+          organization_id: organizationId,
+        })),
+      );
+    }
+
+    await supabaseAdmin.from("audit_logs").insert({
+      organization_id: organizationId,
+      actor_id: context.userId,
+      actor_name: callerProfile?.full_name ?? null,
+      action: "staff.created",
+      record_type: "profiles",
+      record_id: newUserId,
+      new_value: { email, role: data.role, full_name: data.fullName },
+    });
+
+    return { userId: newUserId, email, tempPassword };
+  });
