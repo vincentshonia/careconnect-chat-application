@@ -143,6 +143,23 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             notes: input.reason ?? null,
           });
 
+          const { notifyStaff } = await import("@/lib/notifications.server");
+          await notifyStaff({
+            organizationId: website.organization_id,
+            type: input.kind === "live_agent" ? "escalation" : "new_intake",
+            severity: input.kind === "live_agent" ? "critical" : "info",
+            title:
+              input.kind === "live_agent"
+                ? `${input.fullName} is waiting for an agent`
+                : `New ${input.kind.replace("_", " ")} from ${input.fullName}`,
+            body: input.reason ?? `${input.email} · ${input.phone}`,
+            link: input.kind === "live_agent" ? "/inbox" : "/intake",
+            recordType: "conversations",
+            recordId: conversation.id,
+          });
+
+
+
           const { count } = await db
             .from("profiles")
             .select("id", { count: "exact", head: true })

@@ -6,6 +6,8 @@ import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { downloadCsv } from "@/lib/csv";
 
 export const Route = createFileRoute("/_authenticated/audit")({
   head: () => ({
@@ -48,13 +50,36 @@ function AuditPage() {
       title="Audit log"
       description="Append-only history of configuration and record changes. Entries cannot be edited or deleted."
       actions={
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Filter by action, record, or person"
-          className="w-72"
-        />
+        <>
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Filter by action, record, or person"
+            className="w-72"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              downloadCsv(
+                "audit-log",
+                rows.map((r) => ({
+                  created_at: r.created_at,
+                  actor: r.actor_name ?? "System",
+                  action: r.action,
+                  record_type: r.record_type ?? "",
+                  record_id: r.record_id ?? "",
+                  previous_value: r.previous_value ?? "",
+                  new_value: r.new_value ?? "",
+                })),
+              )
+            }
+          >
+            Export CSV
+          </Button>
+        </>
       }
+
     >
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-sm">

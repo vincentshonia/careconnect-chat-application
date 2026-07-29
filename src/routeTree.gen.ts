@@ -16,9 +16,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedWebsitesRouteImport } from './routes/_authenticated/websites'
 import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSecurityRouteImport } from './routes/_authenticated/security'
 import { Route as AuthenticatedRoutingRouteImport } from './routes/_authenticated/routing'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedQualityRouteImport } from './routes/_authenticated/quality'
 import { Route as AuthenticatedOrganizationsRouteImport } from './routes/_authenticated/organizations'
+import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
 import { Route as AuthenticatedIntakeRouteImport } from './routes/_authenticated/intake'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
@@ -28,6 +31,8 @@ import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedAiConsoleRouteImport } from './routes/_authenticated/ai-console'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
+import { Route as ApiPublicHooksSlaCheckRouteImport } from './routes/api/public/hooks/sla-check'
+import { Route as ApiPublicChatRateRouteImport } from './routes/api/public/chat/rate'
 import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
 import { Route as ApiPublicChatMessageRouteImport } from './routes/api/public/chat/message'
 import { Route as ApiPublicChatFeedbackRouteImport } from './routes/api/public/chat/feedback'
@@ -68,6 +73,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSecurityRoute = AuthenticatedSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRoutingRoute = AuthenticatedRoutingRouteImport.update({
   id: '/routing',
   path: '/routing',
@@ -78,10 +88,21 @@ const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedQualityRoute = AuthenticatedQualityRouteImport.update({
+  id: '/quality',
+  path: '/quality',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedOrganizationsRoute =
   AuthenticatedOrganizationsRouteImport.update({
     id: '/organizations',
     path: '/organizations',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedNotificationsRoute =
+  AuthenticatedNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedKnowledgeRoute = AuthenticatedKnowledgeRouteImport.update({
@@ -130,6 +151,16 @@ const ApiPublicWidgetDotjsRoute = ApiPublicWidgetDotjsRouteImport.update({
   path: '/api/public/widget.js',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksSlaCheckRoute = ApiPublicHooksSlaCheckRouteImport.update({
+  id: '/api/public/hooks/sla-check',
+  path: '/api/public/hooks/sla-check',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicChatRateRoute = ApiPublicChatRateRouteImport.update({
+  id: '/api/public/chat/rate',
+  path: '/api/public/chat/rate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicChatPollRoute = ApiPublicChatPollRouteImport.update({
   id: '/api/public/chat/poll',
   path: '/api/public/chat/poll',
@@ -168,9 +199,12 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof AuthenticatedInboxRoute
   '/intake': typeof AuthenticatedIntakeRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
   '/organizations': typeof AuthenticatedOrganizationsRoute
+  '/quality': typeof AuthenticatedQualityRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/routing': typeof AuthenticatedRoutingRoute
+  '/security': typeof AuthenticatedSecurityRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/staff': typeof AuthenticatedStaffRoute
   '/websites': typeof AuthenticatedWebsitesRoute
@@ -180,6 +214,8 @@ export interface FileRoutesByFullPath {
   '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
+  '/api/public/chat/rate': typeof ApiPublicChatRateRoute
+  '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -193,9 +229,12 @@ export interface FileRoutesByTo {
   '/inbox': typeof AuthenticatedInboxRoute
   '/intake': typeof AuthenticatedIntakeRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
   '/organizations': typeof AuthenticatedOrganizationsRoute
+  '/quality': typeof AuthenticatedQualityRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/routing': typeof AuthenticatedRoutingRoute
+  '/security': typeof AuthenticatedSecurityRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/staff': typeof AuthenticatedStaffRoute
   '/websites': typeof AuthenticatedWebsitesRoute
@@ -205,6 +244,8 @@ export interface FileRoutesByTo {
   '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
+  '/api/public/chat/rate': typeof ApiPublicChatRateRoute
+  '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -220,9 +261,12 @@ export interface FileRoutesById {
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/intake': typeof AuthenticatedIntakeRoute
   '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRoute
+  '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/organizations': typeof AuthenticatedOrganizationsRoute
+  '/_authenticated/quality': typeof AuthenticatedQualityRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/routing': typeof AuthenticatedRoutingRoute
+  '/_authenticated/security': typeof AuthenticatedSecurityRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/staff': typeof AuthenticatedStaffRoute
   '/_authenticated/websites': typeof AuthenticatedWebsitesRoute
@@ -232,6 +276,8 @@ export interface FileRoutesById {
   '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
+  '/api/public/chat/rate': typeof ApiPublicChatRateRoute
+  '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -247,9 +293,12 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/intake'
     | '/knowledge'
+    | '/notifications'
     | '/organizations'
+    | '/quality'
     | '/reports'
     | '/routing'
+    | '/security'
     | '/settings'
     | '/staff'
     | '/websites'
@@ -259,6 +308,8 @@ export interface FileRouteTypes {
     | '/api/public/chat/feedback'
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
+    | '/api/public/chat/rate'
+    | '/api/public/hooks/sla-check'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -272,9 +323,12 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/intake'
     | '/knowledge'
+    | '/notifications'
     | '/organizations'
+    | '/quality'
     | '/reports'
     | '/routing'
+    | '/security'
     | '/settings'
     | '/staff'
     | '/websites'
@@ -284,6 +338,8 @@ export interface FileRouteTypes {
     | '/api/public/chat/feedback'
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
+    | '/api/public/chat/rate'
+    | '/api/public/hooks/sla-check'
   id:
     | '__root__'
     | '/'
@@ -298,9 +354,12 @@ export interface FileRouteTypes {
     | '/_authenticated/inbox'
     | '/_authenticated/intake'
     | '/_authenticated/knowledge'
+    | '/_authenticated/notifications'
     | '/_authenticated/organizations'
+    | '/_authenticated/quality'
     | '/_authenticated/reports'
     | '/_authenticated/routing'
+    | '/_authenticated/security'
     | '/_authenticated/settings'
     | '/_authenticated/staff'
     | '/_authenticated/websites'
@@ -310,6 +369,8 @@ export interface FileRouteTypes {
     | '/api/public/chat/feedback'
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
+    | '/api/public/chat/rate'
+    | '/api/public/hooks/sla-check'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -323,6 +384,8 @@ export interface RootRouteChildren {
   ApiPublicChatFeedbackRoute: typeof ApiPublicChatFeedbackRoute
   ApiPublicChatMessageRoute: typeof ApiPublicChatMessageRoute
   ApiPublicChatPollRoute: typeof ApiPublicChatPollRoute
+  ApiPublicChatRateRoute: typeof ApiPublicChatRateRoute
+  ApiPublicHooksSlaCheckRoute: typeof ApiPublicHooksSlaCheckRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -376,6 +439,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/security': {
+      id: '/_authenticated/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof AuthenticatedSecurityRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/routing': {
       id: '/_authenticated/routing'
       path: '/routing'
@@ -390,11 +460,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/quality': {
+      id: '/_authenticated/quality'
+      path: '/quality'
+      fullPath: '/quality'
+      preLoaderRoute: typeof AuthenticatedQualityRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/organizations': {
       id: '/_authenticated/organizations'
       path: '/organizations'
       fullPath: '/organizations'
       preLoaderRoute: typeof AuthenticatedOrganizationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/notifications': {
+      id: '/_authenticated/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/knowledge': {
@@ -460,6 +544,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWidgetDotjsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/sla-check': {
+      id: '/api/public/hooks/sla-check'
+      path: '/api/public/hooks/sla-check'
+      fullPath: '/api/public/hooks/sla-check'
+      preLoaderRoute: typeof ApiPublicHooksSlaCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/chat/rate': {
+      id: '/api/public/chat/rate'
+      path: '/api/public/chat/rate'
+      fullPath: '/api/public/chat/rate'
+      preLoaderRoute: typeof ApiPublicChatRateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/chat/poll': {
       id: '/api/public/chat/poll'
       path: '/api/public/chat/poll'
@@ -507,9 +605,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedIntakeRoute: typeof AuthenticatedIntakeRoute
   AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRoute
+  AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedOrganizationsRoute: typeof AuthenticatedOrganizationsRoute
+  AuthenticatedQualityRoute: typeof AuthenticatedQualityRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedRoutingRoute: typeof AuthenticatedRoutingRoute
+  AuthenticatedSecurityRoute: typeof AuthenticatedSecurityRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStaffRoute: typeof AuthenticatedStaffRoute
   AuthenticatedWebsitesRoute: typeof AuthenticatedWebsitesRoute
@@ -524,9 +625,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedIntakeRoute: AuthenticatedIntakeRoute,
   AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRoute,
+  AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedOrganizationsRoute: AuthenticatedOrganizationsRoute,
+  AuthenticatedQualityRoute: AuthenticatedQualityRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedRoutingRoute: AuthenticatedRoutingRoute,
+  AuthenticatedSecurityRoute: AuthenticatedSecurityRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStaffRoute: AuthenticatedStaffRoute,
   AuthenticatedWebsitesRoute: AuthenticatedWebsitesRoute,
@@ -546,6 +650,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicChatFeedbackRoute: ApiPublicChatFeedbackRoute,
   ApiPublicChatMessageRoute: ApiPublicChatMessageRoute,
   ApiPublicChatPollRoute: ApiPublicChatPollRoute,
+  ApiPublicChatRateRoute: ApiPublicChatRateRoute,
+  ApiPublicHooksSlaCheckRoute: ApiPublicHooksSlaCheckRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

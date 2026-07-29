@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
+import { downloadCsv } from "@/lib/csv";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/badge";
@@ -101,13 +102,23 @@ function ContactsPage() {
       title="Contacts"
       description="People captured through chat, referrals and enrollment forms."
       actions={
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name, email, county…"
-          className="w-72"
-        />
+        <>
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, email, county…"
+            className="w-72"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => downloadCsv("contacts", filtered as unknown as Record<string, unknown>[])}
+          >
+            Export CSV
+          </Button>
+        </>
       }
+
     >
       <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="max-h-[72vh] overflow-y-auto rounded-xl border border-border">

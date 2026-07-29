@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import {
   Activity,
+  Bell,
   Bot,
   Building2,
   ChevronsLeft,
@@ -17,11 +18,14 @@ import {
   LogOut,
   Menu,
   Settings,
+  ShieldCheck,
   Shuffle,
+  Star,
   Users,
   Users2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useNotifications } from "@/hooks/use-notifications";
 import { Button } from "@/components/ui/button";
 
 const navGroups = [
@@ -32,6 +36,7 @@ const navGroups = [
       { to: "/inbox", label: "Inbox", icon: Inbox },
       { to: "/intake", label: "Intake", icon: ClipboardList },
       { to: "/contacts", label: "Contacts", icon: Contact },
+      { to: "/notifications", label: "Notifications", icon: Bell },
     ],
   },
   {
@@ -39,6 +44,7 @@ const navGroups = [
     items: [
       { to: "/knowledge", label: "Knowledge", icon: LibraryBig },
       { to: "/ai-console", label: "AI console", icon: Bot },
+      { to: "/quality", label: "Quality & QA", icon: Star },
       { to: "/reports", label: "Reports", icon: BarChart3 },
     ],
   },
@@ -51,10 +57,12 @@ const navGroups = [
       { to: "/staff", label: "Staff", icon: Users },
       { to: "/organizations", label: "Organizations", icon: Building2 },
       { to: "/settings", label: "Settings", icon: Settings },
+      { to: "/security", label: "Security", icon: ShieldCheck },
       { to: "/audit", label: "Audit log", icon: Activity },
     ],
   },
 ] as const;
+
 
 export function AdminShell({
   title,
@@ -71,6 +79,8 @@ export function AdminShell({
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { unread } = useNotifications();
+
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -193,7 +203,22 @@ export function AdminShell({
                 ) : null}
               </div>
             </div>
-            {actions ? <div className="flex items-center gap-2">{actions}</div> : <div />}
+            <div className="flex items-center gap-2">
+              <Link
+                to="/notifications"
+                aria-label={unread.length ? `${unread.length} unread notifications` : "Notifications"}
+                className="relative grid h-9 w-9 place-items-center rounded-xl border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                <Bell className="h-4 w-4" />
+                {unread.length > 0 && (
+                  <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">
+                    {unread.length > 9 ? "9+" : unread.length}
+                  </span>
+                )}
+              </Link>
+              {actions}
+            </div>
+
           </div>
         </header>
 

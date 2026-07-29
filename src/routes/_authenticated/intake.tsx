@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
+import { downloadCsv } from "@/lib/csv";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useSessionContext } from "@/hooks/use-session-context";
@@ -153,7 +154,17 @@ function IntakePage() {
     <AdminShell
       title="Referrals & enrollments"
       description="Every intake from the widget, tracked from first contact to a final decision."
+      actions={
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => downloadCsv("intake-requests", all as unknown as Record<string, unknown>[])}
+        >
+          Export CSV
+        </Button>
+      }
     >
+
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <FilterChip active={typeFilter === "all"} onClick={() => setTypeFilter("all")}>
           All ({all.length})
