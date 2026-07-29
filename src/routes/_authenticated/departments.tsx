@@ -211,6 +211,16 @@ function DepartmentsTab() {
                 <Button
                   size="sm"
                   variant="outline"
+                  disabled={d.is_default || setDefault.isPending}
+                  title={d.is_default ? "Already the default department" : "Make this the default department"}
+                  onClick={() => setDefault.mutate(d)}
+                >
+                  {d.is_default ? "Default" : "Make default"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={update.isPending}
                   onClick={() =>
                     update.mutate({
                       id: d.id,
@@ -220,8 +230,9 @@ function DepartmentsTab() {
                     })
                   }
                 >
-                  Switch routing
+                  Switch to {d.routing_method === "round_robin" ? "first available" : "round robin"}
                 </Button>
+
                 <Button
                   size="sm"
                   variant="outline"
