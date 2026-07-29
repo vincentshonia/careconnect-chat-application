@@ -541,6 +541,7 @@ function WidgetPage() {
                   conversationId,
                   kind: formKind,
                   ...payload,
+                  departmentId: (payload.departmentId as string) || null,
                 }),
               });
               const data = await res.json();
@@ -548,11 +549,14 @@ function WidgetPage() {
               setConversationId(data.conversationId);
               setLiveStatus(
                 formKind === "live_agent"
-                  ? data.agentsAvailable
-                    ? "Looking for an available representative"
-                    : "No representative is currently available — your message has been saved."
+                  ? data.assignedAgent
+                    ? `${data.assignedAgent} has been assigned and will join shortly`
+                    : data.agentsAvailable
+                      ? "Looking for an available representative"
+                      : "No representative is currently available — your message has been saved."
                   : "Your request has been received. A representative will follow up.",
               );
+
               setView("waiting");
             }}
           />
