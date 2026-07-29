@@ -193,6 +193,24 @@ function DepartmentsTab() {
                 >
                   {d.status === "active" ? "Deactivate" : "Activate"}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={d.is_default || remove.isPending}
+                  title={
+                    d.is_default
+                      ? "The default department cannot be deleted"
+                      : "Delete this department"
+                  }
+                  onClick={() => {
+                    const confirmed = window.confirm(
+                      `Delete “${d.name}”? Team memberships and coverage hours for this department are removed. Conversations, intakes and routing rules are kept but will no longer point to a department.`,
+                    );
+                    if (confirmed) remove.mutate(d);
+                  }}
+                >
+                  Delete
+                </Button>
               </div>
             </li>
           );
