@@ -153,7 +153,17 @@ function IntakePage() {
     <AdminShell
       title="Referrals & enrollments"
       description="Every intake from the widget, tracked from first contact to a final decision."
+      actions={
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => downloadCsv("intake-requests", all as unknown as Record<string, unknown>[])}
+        >
+          Export CSV
+        </Button>
+      }
     >
+
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <FilterChip active={typeFilter === "all"} onClick={() => setTypeFilter("all")}>
           All ({all.length})

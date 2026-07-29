@@ -101,13 +101,23 @@ function ContactsPage() {
       title="Contacts"
       description="People captured through chat, referrals and enrollment forms."
       actions={
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name, email, county…"
-          className="w-72"
-        />
+        <>
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, email, county…"
+            className="w-72"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => downloadCsv("contacts", filtered as unknown as Record<string, unknown>[])}
+          >
+            Export CSV
+          </Button>
+        </>
       }
+
     >
       <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="max-h-[72vh] overflow-y-auto rounded-xl border border-border">
