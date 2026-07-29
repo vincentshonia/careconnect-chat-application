@@ -28,6 +28,7 @@ import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedAiConsoleRouteImport } from './routes/_authenticated/ai-console'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
+import { Route as ApiPublicChatRateRouteImport } from './routes/api/public/chat/rate'
 import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
 import { Route as ApiPublicChatMessageRouteImport } from './routes/api/public/chat/message'
 import { Route as ApiPublicChatFeedbackRouteImport } from './routes/api/public/chat/feedback'
@@ -130,6 +131,11 @@ const ApiPublicWidgetDotjsRoute = ApiPublicWidgetDotjsRouteImport.update({
   path: '/api/public/widget.js',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicChatRateRoute = ApiPublicChatRateRouteImport.update({
+  id: '/api/public/chat/rate',
+  path: '/api/public/chat/rate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicChatPollRoute = ApiPublicChatPollRouteImport.update({
   id: '/api/public/chat/poll',
   path: '/api/public/chat/poll',
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
+  '/api/public/chat/rate': typeof ApiPublicChatRateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
+  '/api/public/chat/rate': typeof ApiPublicChatRateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -232,6 +240,7 @@ export interface FileRoutesById {
   '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
+  '/api/public/chat/rate': typeof ApiPublicChatRateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -259,6 +268,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/feedback'
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
+    | '/api/public/chat/rate'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/feedback'
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
+    | '/api/public/chat/rate'
   id:
     | '__root__'
     | '/'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/feedback'
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
+    | '/api/public/chat/rate'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -323,6 +335,7 @@ export interface RootRouteChildren {
   ApiPublicChatFeedbackRoute: typeof ApiPublicChatFeedbackRoute
   ApiPublicChatMessageRoute: typeof ApiPublicChatMessageRoute
   ApiPublicChatPollRoute: typeof ApiPublicChatPollRoute
+  ApiPublicChatRateRoute: typeof ApiPublicChatRateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -460,6 +473,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWidgetDotjsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/chat/rate': {
+      id: '/api/public/chat/rate'
+      path: '/api/public/chat/rate'
+      fullPath: '/api/public/chat/rate'
+      preLoaderRoute: typeof ApiPublicChatRateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/chat/poll': {
       id: '/api/public/chat/poll'
       path: '/api/public/chat/poll'
@@ -546,6 +566,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicChatFeedbackRoute: ApiPublicChatFeedbackRoute,
   ApiPublicChatMessageRoute: ApiPublicChatMessageRoute,
   ApiPublicChatPollRoute: ApiPublicChatPollRoute,
+  ApiPublicChatRateRoute: ApiPublicChatRateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
