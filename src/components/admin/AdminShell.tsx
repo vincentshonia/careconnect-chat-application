@@ -194,7 +194,7 @@ export function AdminShell({
   );
 
   return (
-    <div className="flex min-h-screen w-full bg-background text-foreground">
+    <div className="app-canvas flex min-h-screen w-full text-foreground">
       <div className="sticky top-0 hidden h-screen shrink-0 md:block">{sidebar}</div>
 
       {mobileOpen && (
