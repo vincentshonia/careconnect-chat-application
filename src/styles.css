@@ -200,3 +200,77 @@
   backdrop-filter: blur(12px);
 }
 
+
+/* Vivid brand gradient for hero surfaces, primary CTAs and stat accents. */
+@utility gradient-brand {
+  background-image: linear-gradient(
+    120deg,
+    var(--brand-from) 0%,
+    var(--brand-via) 52%,
+    var(--brand-to) 100%
+  );
+}
+
+@utility text-gradient-brand {
+  background-image: linear-gradient(
+    100deg,
+    var(--brand-from) 0%,
+    var(--brand-via) 50%,
+    var(--brand-to) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Colored aurora wash behind the sidebar so navigation reads as branded. */
+@utility sidebar-aurora {
+  background-color: var(--color-sidebar);
+  background-image:
+    radial-gradient(
+      120% 60% at 0% 0%,
+      color-mix(in oklab, var(--brand-from) 32%, transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      100% 55% at 100% 100%,
+      color-mix(in oklab, var(--brand-to) 26%, transparent) 0%,
+      transparent 62%
+    );
+}
+
+/* Soft tinted page canvas — keeps large admin screens from feeling flat. */
+@utility app-canvas {
+  background-color: var(--color-background);
+  background-image:
+    radial-gradient(
+      70% 50% at 12% -8%,
+      color-mix(in oklab, var(--brand-from) 14%, transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      60% 45% at 100% 0%,
+      color-mix(in oklab, var(--brand-to) 12%, transparent) 0%,
+      transparent 62%
+    );
+  background-attachment: fixed;
+}
+
+/* Panel with a thin gradient hairline on top. */
+@utility panel-accent {
+  position: relative;
+  overflow: hidden;
+}
+
+@utility panel-accent-bar {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  background-image: linear-gradient(
+    90deg,
+    var(--brand-from),
+    var(--brand-via),
+    var(--brand-to)
+  );
+}
