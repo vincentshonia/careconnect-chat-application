@@ -111,6 +111,7 @@ function SettingsPage() {
     setLogoUrl(null);
     setNotice("Logo removed.");
     queryClient.invalidateQueries({ queryKey: ["org-settings", orgId] });
+    queryClient.invalidateQueries({ queryKey: ["org-branding", orgId] });
   }
 
   const save = useMutation({
