@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { ArrowRight, Lock, Mail, ShieldCheck, HeartPulse } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,8 @@ export const Route = createFileRoute("/auth")({
       },
       { property: "og:title", content: "Staff Sign In — Pacific Health Group" },
       { property: "og:description", content: "Support console access for Pacific Health Group staff." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -66,79 +69,152 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
+    <div className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      {/* Brand panel */}
+      <aside className="relative hidden overflow-hidden bg-sidebar px-14 py-12 text-sidebar-foreground lg:flex lg:flex-col lg:justify-between">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-70"
+          style={{
+            background:
+              "radial-gradient(80% 60% at 0% 0%, color-mix(in oklab, var(--brand-from) 45%, transparent), transparent 65%), radial-gradient(70% 70% at 100% 100%, color-mix(in oklab, var(--brand-via) 45%, transparent), transparent 70%)",
+          }}
+        />
+        <div className="relative flex items-center gap-3">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-sidebar-accent text-sm font-bold text-sidebar-accent-foreground">
             PH
           </span>
-          <div>
-            <p className="text-sm font-semibold">Pacific Health Group</p>
-            <p className="text-xs text-muted-foreground">Support console</p>
+          <div className="leading-tight">
+            <p className="font-display text-lg font-semibold">Pacific</p>
+            <p className="text-[0.62rem] uppercase tracking-[0.32em] text-sidebar-foreground/70">
+              Health Group
+            </p>
           </div>
         </div>
 
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {mode === "signin" ? "Staff sign in" : "Reset your password"}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {mode === "signin"
-            ? "Access the inbox, knowledge base, and widget settings."
-            : "Enter your work email and we'll send you a link to set a new password."}
-        </p>
+        <div className="relative max-w-lg">
+          <h2 className="font-display text-5xl font-bold leading-[1.08] tracking-tight">
+            Coordinated care,
+            <br />
+            one platform.
+          </h2>
+          <p className="mt-6 text-base leading-relaxed text-sidebar-foreground/75">
+            Pacific Health Group CareOS brings members, tasks, referrals, and communications
+            together — so every touchpoint moves care forward.
+          </p>
 
-        <form onSubmit={submit} className="mt-6 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Work email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-          </div>
-          {mode === "signin" ? (
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                autoComplete="current-password"
-              />
+          <div className="mt-10 flex items-center gap-4 rounded-2xl border border-sidebar-border/70 bg-sidebar-accent/40 p-4 backdrop-blur-sm">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-success/15 text-success">
+              <HeartPulse className="h-5 w-5" />
+            </span>
+            <div className="text-sm">
+              <p className="font-semibold">Built for the PHG care team</p>
+              <p className="text-xs text-sidebar-foreground/65">
+                Secure · HIPAA-aware · Internal use only
+              </p>
             </div>
-          ) : null}
+          </div>
+        </div>
 
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
+        <div className="relative h-1 w-32 rounded-full bg-gradient-to-r from-[var(--brand-from)] via-[var(--brand-via)] to-[var(--brand-to)]" />
+      </aside>
 
-          <Button type="submit" className="w-full" disabled={busy}>
-            {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Send reset link"}
-          </Button>
-        </form>
+      {/* Form panel */}
+      <main className="flex items-center justify-center bg-background px-6 py-12">
+        <div className="w-full max-w-sm">
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">
+              PH
+            </span>
+            <div>
+              <p className="text-sm font-semibold">Pacific Health Group</p>
+              <p className="text-xs text-muted-foreground">Support console</p>
+            </div>
+          </div>
 
-        <button
-          type="button"
-          className="mt-4 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
-          onClick={() => {
-            setMode(mode === "signin" ? "forgot" : "signin");
-            setError(null);
-            setMessage(null);
-          }}
-        >
-          {mode === "signin" ? "Forgot your password?" : "Back to sign in"}
-        </button>
+          <h1 className="font-display text-2xl font-bold tracking-tight">
+            {mode === "signin" ? "Sign in to CareOS" : "Reset your password"}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {mode === "signin"
+              ? "Use your PHG account. Admins provision new access."
+              : "Enter your work email and we'll send you a link to set a new password."}
+          </p>
 
-        <p className="mt-6 text-xs text-muted-foreground">
-          Staff accounts are created by an administrator. Contact your admin if you need access.
-        </p>
-      </div>
+          <form onSubmit={submit} className="mt-8 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="sr-only">
+                Work email
+              </Label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@mypacifichealth.com"
+                  className="h-11 pl-10"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            {mode === "signin" ? (
+              <div className="space-y-2">
+                <Label htmlFor="password" className="sr-only">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Password"
+                    className="h-11 pl-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    autoComplete="current-password"
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
+
+            <Button type="submit" className="h-11 w-full gap-2 text-sm font-semibold" disabled={busy}>
+              {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Send reset link"}
+              {!busy ? <ArrowRight className="h-4 w-4" /> : null}
+            </Button>
+          </form>
+
+          <div className="mt-6 flex items-start gap-3 rounded-xl bg-muted/70 p-4 text-xs leading-relaxed text-muted-foreground">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+            <p>
+              Access is restricted to <span className="font-semibold text-foreground">@mypacifichealth.com</span>{" "}
+              staff. Accounts are created and managed by administrators.
+            </p>
+          </div>
+
+          <div className="mt-6 border-t border-border pt-5 text-center text-xs text-muted-foreground">
+            {mode === "signin" ? "Forgot your password? " : "Remembered it? "}
+            <button
+              type="button"
+              className="font-semibold text-foreground underline-offset-4 hover:underline"
+              onClick={() => {
+                setMode(mode === "signin" ? "forgot" : "signin");
+                setError(null);
+                setMessage(null);
+              }}
+            >
+              {mode === "signin" ? "Send a reset link" : "Back to sign in"}
+            </button>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
-
