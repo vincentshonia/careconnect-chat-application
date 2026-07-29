@@ -130,13 +130,21 @@ export function AdminShell({
     >
       <div className="flex items-center gap-2.5 px-4 py-5">
         <Link to="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
-            PH
-          </span>
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={`${orgName} logo`}
+              className="h-9 w-9 shrink-0 rounded-xl object-contain bg-sidebar-accent/40 p-0.5"
+            />
+          ) : (
+            <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
+              {initials || "PH"}
+            </span>
+          )}
 
           {!collapsed && (
             <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold tracking-tight">Pacific Health</span>
+              <span className="block truncate text-sm font-semibold tracking-tight">{orgName}</span>
               <span className="block truncate text-[11px] text-sidebar-foreground/60">Support Console</span>
             </span>
           )}
