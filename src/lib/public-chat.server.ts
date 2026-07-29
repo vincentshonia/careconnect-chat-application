@@ -75,22 +75,30 @@ export async function resolveWebsite(websiteId: string, hostOrigin: string | nul
 export async function loadWidgetConfig(websiteId: string, hostOrigin: string | null) {
   const website = await resolveWebsite(websiteId, hostOrigin);
   const db = admin();
-  const [{ data: org }, { data: services }, { data: faqs }, { data: hours }] = await Promise.all([
-    db.from("organizations").select("*").eq("id", website.organization_id).maybeSingle(),
-    db
-      .from("services")
-      .select("id,name,short_description,eligibility_overview,counties,health_plans,learn_more_url")
-      .eq("organization_id", website.organization_id)
-      .eq("status", "active")
-      .order("sort_order"),
-    db
-      .from("faqs")
-      .select("id,category,question,answer")
-      .eq("organization_id", website.organization_id)
-      .eq("status", "active")
-      .order("sort_order"),
-    db.from("business_hours").select("*").eq("website_id", website.id),
-  ]);
+  const [{ data: org }, { data: services }, { data: faqs }, { data: hours }, { data: departments }] =
+    await Promise.all([
+      db.from("organizations").select("*").eq("id", website.organization_id).maybeSingle(),
+      db
+        .from("services")
+        .select("id,name,short_description,eligibility_overview,counties,health_plans,learn_more_url")
+        .eq("organization_id", website.organization_id)
+        .eq("status", "active")
+        .order("sort_order"),
+      db
+        .from("faqs")
+        .select("id,category,question,answer")
+        .eq("organization_id", website.organization_id)
+        .eq("status", "active")
+        .order("sort_order"),
+      db.from("business_hours").select("*").eq("website_id", website.id),
+      db
+        .from("departments")
+        .select("id,name,description,website_id")
+        .eq("organization_id", website.organization_id)
+        .eq("status", "active")
+        .order("name"),
+    ]);
+
 
   const open = isOpenNow(hours ?? [], website.timezone);
   const agentsAvailable = await hasAvailableAgent(website.organization_id);
