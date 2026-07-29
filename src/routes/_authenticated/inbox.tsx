@@ -303,7 +303,24 @@ function InboxPage() {
                 <span className="text-sm font-medium">{active.subject ?? "Website chat"}</span>
                 <Badge variant="outline">{active.priority}</Badge>
                 {active.escalation_requested ? <Badge>Agent requested</Badge> : null}
-                <div className="ml-auto flex gap-2">
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <select
+                    aria-label="Transfer to department"
+                    value={active.department_id ?? ""}
+                    disabled={transfer.isPending}
+                    onChange={(e) => {
+                      if (e.target.value) transfer.mutate(e.target.value);
+                    }}
+                    className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                  >
+                    <option value="">Transfer to…</option>
+                    {(departmentsQuery.data ?? []).map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+
                   <Button
                     size="sm"
                     variant="outline"
