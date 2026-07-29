@@ -29,6 +29,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/use-notifications";
+import { useTheme } from "@/hooks/use-theme";
+
 import { Button } from "@/components/ui/button";
 
 const navGroups = [
