@@ -222,7 +222,10 @@ export function AdminShell({
                 <Menu className="h-4 w-4" />
               </Button>
               <div className="min-w-0">
-                <h1 className="truncate text-lg font-semibold tracking-tight sm:text-xl">{title}</h1>
+                <h1 className="text-gradient-brand truncate text-lg font-semibold tracking-tight sm:text-xl">
+                  {title}
+                </h1>
+
                 {description ? (
                   <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{description}</p>
                 ) : null}
