@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -82,7 +83,7 @@ function Rules() {
   const create = useMutation({
     mutationFn: async () => {
       if (!orgId || !form.name.trim() || !form.match_value.trim()) return;
-      const { error } = await supabase.from("routing_rules").insert({
+      const { error: insertError, data: created } = await supabase.from("routing_rules").insert({
         organization_id: orgId,
         name: form.name.trim(),
         match_type: form.match_type,
