@@ -93,13 +93,11 @@ function AuthPage() {
 
         <div className="relative max-w-lg">
           <h2 className="font-display text-5xl font-bold leading-[1.08] tracking-tight">
-            Coordinated care,
-            <br />
-            one platform.
+            Your members are one chat away!
           </h2>
           <p className="mt-6 text-base leading-relaxed text-sidebar-foreground/75">
-            Pacific Health Group CareOS brings members, tasks, referrals, and communications
-            together — so every touchpoint moves care forward.
+            Care Connect OS brings your website prospects under one roof — So every conversation
+            does not get missed.
           </p>
 
           <div className="mt-10 flex items-center gap-4 rounded-2xl border border-sidebar-border/70 bg-sidebar-accent/40 p-4 backdrop-blur-sm">
@@ -107,7 +105,7 @@ function AuthPage() {
               <HeartPulse className="h-5 w-5" />
             </span>
             <div className="text-sm">
-              <p className="font-semibold">Built for the PHG care team</p>
+              <p className="font-semibold text-white">Built with love. Focused on retention.&nbsp;</p>
               <p className="text-xs text-sidebar-foreground/65">
                 Secure · HIPAA-aware · Internal use only
               </p>
@@ -132,11 +130,11 @@ function AuthPage() {
           </div>
 
           <h1 className="font-display text-2xl font-bold tracking-tight">
-            {mode === "signin" ? "Sign in to CareOS" : "Reset your password"}
+            {mode === "signin" ? "Sign in to Care Connect" : "Reset your password"}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {mode === "signin"
-              ? "Use your PHG account. Admins provision new access."
+              ? "Log in to your account"
               : "Enter your work email and we'll send you a link to set a new password."}
           </p>
 
