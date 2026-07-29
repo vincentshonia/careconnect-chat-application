@@ -351,31 +351,91 @@ function StaffPage() {
                   </div>
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {(data?.departments ?? []).map((d) => {
-                    const member = (data?.members ?? []).find(
-                      (m) => m.user_id === p.id && m.department_id === d.id,
-                    );
-                    return (
-                      <Button
-                        key={d.id}
-                        type="button"
-                        size="sm"
-                        variant={member ? "default" : "outline"}
-                        disabled={!isAdmin}
-                        onClick={() =>
-                          toggleDepartment.mutate({
-                            userId: p.id,
-                            departmentId: d.id,
-                            member: member ?? undefined,
-                          })
-                        }
-                      >
-                        {d.name}
-                      </Button>
-                    );
-                  })}
+                <div className="mt-4 border-t border-border pt-3">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Departments — click to add or remove this teammate
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {(data?.departments ?? []).length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        No departments yet — create one under Departments &amp; hours.
+                      </p>
+                    ) : null}
+                    {(data?.departments ?? []).map((d) => {
+                      const member = (data?.members ?? []).find(
+                        (m) => m.user_id === p.id && m.department_id === d.id,
+                      );
+                      return (
+                        <Button
+                          key={d.id}
+                          type="button"
+                          size="sm"
+                          variant={member ? "default" : "outline"}
+                          disabled={!isAdmin || toggleDepartment.isPending}
+                          onClick={() =>
+                            toggleDepartment.mutate({
+                              userId: p.id,
+                              departmentId: d.id,
+                              member: member ?? undefined,
+                            })
+                          }
+                        >
+                          <span className="mr-1">{member ? "✓" : "+"}</span>
+                          {d.name}
+                        </Button>
+                      );
+                    })}
+                  </div>
                 </div>
+
+                {isAdmin && session.data?.userId !== p.id ? (
+                  <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+                    <p className="text-xs text-muted-foreground">
+                      Account access — history and past conversations are always kept.
+                    </p>
+                    <div className="ml-auto flex gap-2">
+                      {p.status === "active" ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={setAccess.isPending}
+                          onClick={() => {
+                            if (confirm(`Disable ${p.full_name || p.email}? They will not be able to sign in, but all their chat history stays.`))
+                              setAccess.mutate({ userId: p.id, action: "disable" });
+                          }}
+                        >
+                          Disable
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={setAccess.isPending}
+                          onClick={() => setAccess.mutate({ userId: p.id, action: "enable" })}
+                        >
+                          Re-enable
+                        </Button>
+                      )}
+                      {p.status !== "archived" ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          disabled={setAccess.isPending}
+                          onClick={() => {
+                            if (confirm(`Remove ${p.full_name || p.email} from the team? Sign-in, roles and department routing are revoked. Conversations, messages and audit records are preserved.`))
+                              setAccess.mutate({ userId: p.id, action: "remove" });
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+
               </article>
             );
           })}
