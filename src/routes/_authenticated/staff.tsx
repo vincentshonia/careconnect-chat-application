@@ -301,6 +301,12 @@ function StaffPage() {
                       <Badge variant="outline" className="capitalize">
                         {p.presence}
                       </Badge>
+                      {p.status !== "active" ? (
+                        <Badge variant="destructive" className="capitalize">
+                          {p.status === "archived" ? "removed" : p.status}
+                        </Badge>
+                      ) : null}
+
                     </div>
                   </div>
 
