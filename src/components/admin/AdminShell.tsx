@@ -27,8 +27,10 @@ import {
   Users,
   Users2,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/use-notifications";
+import { useSessionContext } from "@/hooks/use-session-context";
 import { useTheme } from "@/hooks/use-theme";
 
 import { Button } from "@/components/ui/button";
@@ -86,6 +88,30 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const { unread } = useNotifications();
   const { theme, toggle: toggleTheme } = useTheme();
+  const session = useSessionContext();
+  const orgId = session.data?.organizationId ?? null;
+  const branding = useQuery({
+    queryKey: ["org-branding", orgId],
+    enabled: Boolean(orgId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organizations")
+        .select("name, logo_url")
+        .eq("id", orgId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const orgName = branding.data?.name ?? "Pacific Health";
+  const logoUrl = branding.data?.logo_url ?? null;
+  const initials = orgName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+
 
 
 
@@ -104,13 +130,21 @@ export function AdminShell({
     >
       <div className="flex items-center gap-2.5 px-4 py-5">
         <Link to="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
-            PH
-          </span>
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={`${orgName} logo`}
+              className="h-9 w-9 shrink-0 rounded-xl object-contain bg-sidebar-accent/40 p-0.5"
+            />
+          ) : (
+            <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
+              {initials || "PH"}
+            </span>
+          )}
 
           {!collapsed && (
             <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold tracking-tight">Pacific Health</span>
+              <span className="block truncate text-sm font-semibold tracking-tight">{orgName}</span>
               <span className="block truncate text-[11px] text-sidebar-foreground/60">Support Console</span>
             </span>
           )}

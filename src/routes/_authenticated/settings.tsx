@@ -92,6 +92,7 @@ function SettingsPage() {
       setLogoUrl(url);
       setNotice("Logo updated.");
       queryClient.invalidateQueries({ queryKey: ["org-settings", orgId] });
+      queryClient.invalidateQueries({ queryKey: ["org-branding", orgId] });
     } catch (e) {
       setNotice(e instanceof Error ? e.message : "Logo upload failed");
     } finally {
@@ -110,6 +111,7 @@ function SettingsPage() {
     setLogoUrl(null);
     setNotice("Logo removed.");
     queryClient.invalidateQueries({ queryKey: ["org-settings", orgId] });
+    queryClient.invalidateQueries({ queryKey: ["org-branding", orgId] });
   }
 
   const save = useMutation({
