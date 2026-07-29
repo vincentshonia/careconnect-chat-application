@@ -118,13 +118,77 @@ function Articles() {
     onError: (err) => setNotice(err instanceof Error ? err.message : "Save failed"),
   });
 
+  const createArticle = useMutation({
+    mutationFn: async () => {
+      const orgId =
+        articles[0]?.organization_id ??
+        (await supabase.from("organizations").select("id").limit(1).single()).data?.id;
+      if (!orgId) throw new Error("No organization context available");
+      const { data, error } = await supabase
+        .from("knowledge_articles")
+        .insert({
+          organization_id: orgId,
+          title: "Untitled article",
+          content: "",
+          status: "draft",
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      await logAudit({
+        action: "knowledge_article.created",
+        recordType: "knowledge_articles",
+        recordId: data.id,
+      });
+      return data.id as string;
+    },
+    onSuccess: async (id) => {
+      setNotice("New draft created — edit and save to index it.");
+      await queryClient.invalidateQueries({ queryKey: ["kb-articles"] });
+      setActiveId(id);
+    },
+    onError: (err) => setNotice(err instanceof Error ? err.message : "Create failed"),
+  });
+
+  const removeArticle = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("knowledge_articles").delete().eq("id", id);
+      if (error) throw error;
+      await logAudit({
+        action: "knowledge_article.deleted",
+        recordType: "knowledge_articles",
+        recordId: id,
+      });
+    },
+    onSuccess: async () => {
+      setActiveId(null);
+      setNotice("Article deleted.");
+      await queryClient.invalidateQueries({ queryKey: ["kb-articles"] });
+    },
+    onError: (err) => setNotice(err instanceof Error ? err.message : "Delete failed"),
+  });
+
   return (
     <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-      <aside className="max-h-[70vh] overflow-y-auto rounded-xl border border-border">
+      <aside className="flex max-h-[70vh] flex-col overflow-hidden rounded-xl border border-border">
+        <div className="border-b border-border p-3">
+          <Button
+            type="button"
+            size="sm"
+            className="w-full"
+            disabled={createArticle.isPending}
+            onClick={() => {
+              setNotice(null);
+              createArticle.mutate();
+            }}
+          >
+            {createArticle.isPending ? "Creating…" : "New article"}
+          </Button>
+        </div>
         {listQuery.isLoading ? (
           <p className="p-4 text-sm text-muted-foreground">Loading…</p>
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="divide-y divide-border overflow-y-auto">
             {articles.map((a) => (
               <li key={a.id}>
                 <button
@@ -145,6 +209,7 @@ function Articles() {
           </ul>
         )}
       </aside>
+
 
       <section className="rounded-xl border border-border p-4">
         {!active ? (
@@ -199,9 +264,24 @@ function Articles() {
               />
             </div>
             {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
-            <Button type="submit" disabled={save.isPending}>
-              {save.isPending ? "Saving & re-indexing…" : "Save & re-index"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button type="submit" disabled={save.isPending}>
+                {save.isPending ? "Saving & re-indexing…" : "Save & re-index"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={removeArticle.isPending}
+                onClick={() => {
+                  if (confirm("Delete this article? Its indexed chunks are removed too.")) {
+                    removeArticle.mutate(active.id);
+                  }
+                }}
+              >
+                {removeArticle.isPending ? "Deleting…" : "Delete"}
+              </Button>
+            </div>
+
           </form>
         )}
       </section>
