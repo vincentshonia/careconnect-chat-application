@@ -30,6 +30,8 @@ type Conversation = {
   status: string;
   priority: string;
   assigned_to: string | null;
+  department_id: string | null;
+
   escalation_requested: boolean;
   last_message_at: string;
   organization_id: string;
