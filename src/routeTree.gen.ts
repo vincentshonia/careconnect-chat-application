@@ -39,6 +39,7 @@ import { Route as ApiPublicChatMessageRouteImport } from './routes/api/public/ch
 import { Route as ApiPublicChatFeedbackRouteImport } from './routes/api/public/chat/feedback'
 import { Route as ApiPublicChatEscalateRouteImport } from './routes/api/public/chat/escalate'
 import { Route as ApiPublicChatConfigRouteImport } from './routes/api/public/chat/config'
+import { Route as ApiPublicBrandingSplatRouteImport } from './routes/api/public/branding/$'
 
 const WidgetRoute = WidgetRouteImport.update({
   id: '/widget',
@@ -192,6 +193,11 @@ const ApiPublicChatConfigRoute = ApiPublicChatConfigRouteImport.update({
   path: '/api/public/chat/config',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicBrandingSplatRoute = ApiPublicBrandingSplatRouteImport.update({
+  id: '/api/public/branding/$',
+  path: '/api/public/branding/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -216,6 +222,7 @@ export interface FileRoutesByFullPath {
   '/staff': typeof AuthenticatedStaffRoute
   '/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
+  '/api/public/branding/$': typeof ApiPublicBrandingSplatRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
   '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
@@ -247,6 +254,7 @@ export interface FileRoutesByTo {
   '/staff': typeof AuthenticatedStaffRoute
   '/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
+  '/api/public/branding/$': typeof ApiPublicBrandingSplatRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
   '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
@@ -280,6 +288,7 @@ export interface FileRoutesById {
   '/_authenticated/staff': typeof AuthenticatedStaffRoute
   '/_authenticated/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
+  '/api/public/branding/$': typeof ApiPublicBrandingSplatRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
   '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
@@ -313,6 +322,7 @@ export interface FileRouteTypes {
     | '/staff'
     | '/websites'
     | '/api/public/widget.js'
+    | '/api/public/branding/$'
     | '/api/public/chat/config'
     | '/api/public/chat/escalate'
     | '/api/public/chat/feedback'
@@ -344,6 +354,7 @@ export interface FileRouteTypes {
     | '/staff'
     | '/websites'
     | '/api/public/widget.js'
+    | '/api/public/branding/$'
     | '/api/public/chat/config'
     | '/api/public/chat/escalate'
     | '/api/public/chat/feedback'
@@ -376,6 +387,7 @@ export interface FileRouteTypes {
     | '/_authenticated/staff'
     | '/_authenticated/websites'
     | '/api/public/widget.js'
+    | '/api/public/branding/$'
     | '/api/public/chat/config'
     | '/api/public/chat/escalate'
     | '/api/public/chat/feedback'
@@ -392,6 +404,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   WidgetRoute: typeof WidgetRoute
   ApiPublicWidgetDotjsRoute: typeof ApiPublicWidgetDotjsRoute
+  ApiPublicBrandingSplatRoute: typeof ApiPublicBrandingSplatRoute
   ApiPublicChatConfigRoute: typeof ApiPublicChatConfigRoute
   ApiPublicChatEscalateRoute: typeof ApiPublicChatEscalateRoute
   ApiPublicChatFeedbackRoute: typeof ApiPublicChatFeedbackRoute
@@ -613,6 +626,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicChatConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/branding/$': {
+      id: '/api/public/branding/$'
+      path: '/api/public/branding/$'
+      fullPath: '/api/public/branding/$'
+      preLoaderRoute: typeof ApiPublicBrandingSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -666,6 +686,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   WidgetRoute: WidgetRoute,
   ApiPublicWidgetDotjsRoute: ApiPublicWidgetDotjsRoute,
+  ApiPublicBrandingSplatRoute: ApiPublicBrandingSplatRoute,
   ApiPublicChatConfigRoute: ApiPublicChatConfigRoute,
   ApiPublicChatEscalateRoute: ApiPublicChatEscalateRoute,
   ApiPublicChatFeedbackRoute: ApiPublicChatFeedbackRoute,
