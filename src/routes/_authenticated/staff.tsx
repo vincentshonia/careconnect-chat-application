@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
-import { createStaffFn } from "@/lib/staff.functions";
+import { createStaffFn, setStaffAccessFn } from "@/lib/staff.functions";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useSessionContext, ROLE_RANK, type AppRole } from "@/hooks/use-session-context";
@@ -148,7 +148,15 @@ function StaffPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
   });
 
+  const changeAccess = useServerFn(setStaffAccessFn);
+  const setAccess = useMutation({
+    mutationFn: async (input: { userId: string; action: "disable" | "enable" | "remove" }) =>
+      changeAccess({ data: input }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
+  });
+
   const data = staffQuery.data;
+
 
   return (
     <AdminShell
