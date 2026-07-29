@@ -1,32 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { z } from "zod";
-
-const ROLE_RANK: Record<string, number> = {
-  agent: 1,
-  team_lead: 2,
-  manager: 3,
-  administrator: 4,
-  super_admin: 5,
-};
-
-const createStaffInput = z.object({
-  fullName: z.string().trim().min(2).max(120),
-  email: z.string().trim().email().max(200),
-  role: z.enum(["agent", "team_lead", "manager", "administrator", "super_admin"]),
-  title: z.string().trim().max(120).optional().nullable(),
-  phone: z.string().trim().max(40).optional().nullable(),
-  departmentIds: z.array(z.string().uuid()).max(20).optional(),
-});
-
-/** Cryptographically random temporary password shown once to the administrator. */
-function generateTempPassword() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  const body = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
-  return `Ph!${body}9`;
-}
+import {
+  ROLE_RANK,
+  createStaffInput,
+  staffAccessInput,
+  generateTempPassword,
+} from "@/lib/staff-helpers";
 
 /**
  * Administrator-only: create a staff account directly with a temporary password.
@@ -133,4 +112,95 @@ export const createStaffFn = createServerFn({ method: "POST" })
     });
 
     return { userId: newUserId, email, tempPassword };
+  });
+
+/**
+ * Administrator-only: disable, re-enable, or revoke a staff account.
+ * Access is revoked at the auth layer and the profile is flagged — no
+ * conversations, messages, contacts or audit history are ever deleted.
+ */
+export const setStaffAccessFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => staffAccessInput.parse(input))
+  .handler(async ({ data, context }) => {
+    if (data.userId === context.userId) throw new Error("You cannot change your own access");
+
+    const { data: callerRoles, error: rolesError } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    if (rolesError) throw new Error("Could not verify your permissions");
+    const callerRank = (callerRoles ?? []).reduce(
+      (max, r) => Math.max(max, ROLE_RANK[r.role as string] ?? 0),
+      0,
+    );
+    if (callerRank < 4) throw new Error("Only administrators can change staff access");
+
+    const { data: callerProfile } = await context.supabase
+      .from("profiles")
+      .select("organization_id, full_name")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const organizationId = callerProfile?.organization_id ?? null;
+    if (!organizationId) throw new Error("Your account is not linked to an organization");
+
+    // Target must be visible under the caller's org RLS.
+    const { data: target } = await context.supabase
+      .from("profiles")
+      .select("id, organization_id, full_name, email, status")
+      .eq("id", data.userId)
+      .maybeSingle();
+    if (!target || target.organization_id !== organizationId) {
+      throw new Error("Staff member not found in your organization");
+    }
+
+    const { data: targetRoles } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.userId);
+    const targetRank = (targetRoles ?? []).reduce(
+      (max, r) => Math.max(max, ROLE_RANK[r.role as string] ?? 0),
+      0,
+    );
+    if (targetRank > callerRank) throw new Error("You cannot change access for a higher role");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    if (data.action === "enable") {
+      await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: "none" });
+      await supabaseAdmin
+        .from("profiles")
+        .update({ status: "active" })
+        .eq("id", data.userId);
+    } else {
+      // Indefinite ban revokes sign-in without touching any historical records.
+      await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: "876000h" });
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          status: data.action === "remove" ? "archived" : "inactive",
+          presence: "offline",
+        })
+        .eq("id", data.userId);
+
+      if (data.action === "remove") {
+        // Strip permissions and routing membership; conversations stay assigned
+        // so the communication history remains intact and attributable.
+        await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId);
+        await supabaseAdmin.from("department_members").delete().eq("user_id", data.userId);
+      }
+    }
+
+    await supabaseAdmin.from("audit_logs").insert({
+      organization_id: organizationId,
+      actor_id: context.userId,
+      actor_name: callerProfile?.full_name ?? null,
+      action: `staff.${data.action === "enable" ? "reactivated" : data.action === "remove" ? "removed" : "disabled"}`,
+      record_type: "profiles",
+      record_id: data.userId,
+      previous_value: { status: target.status },
+      new_value: { status: data.action === "enable" ? "active" : data.action === "remove" ? "archived" : "inactive" },
+    });
+
+    return { ok: true, status: data.action };
   });
