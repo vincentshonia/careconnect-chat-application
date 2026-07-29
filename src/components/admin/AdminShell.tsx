@@ -17,6 +17,9 @@ import {
   LibraryBig,
   LogOut,
   Menu,
+  Moon,
+  Sun,
+
   Settings,
   ShieldCheck,
   Shuffle,
