@@ -811,6 +811,8 @@ function IntakeForm({
     healthPlan: "",
     serviceInterest: "",
     preferredLanguage: "English",
+    departmentId: "",
+
     consent: false,
   });
   const [busy, setBusy] = useState(false);
