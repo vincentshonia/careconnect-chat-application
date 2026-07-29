@@ -662,30 +662,49 @@ function MenuView({
   onLiveAgent: () => void;
 }) {
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-foreground">{config.website.welcomeMessage}</p>
+    <div className="space-y-4">
+      <p className="text-[15px] leading-relaxed text-foreground">{config.website.welcomeMessage}</p>
       <div className="grid gap-2">
         {config.website.menuButtons.map((b) => (
           <button
             key={b.key}
             onClick={() => onSelect(b.key)}
-            className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left text-sm font-medium text-card-foreground transition hover:border-transparent hover:shadow-panel"
-            style={{ borderLeft: `3px solid ${brand}` }}
+            className="group flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 text-left text-sm font-medium text-card-foreground shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-transparent hover:shadow-panel"
           >
-            {b.label}
+            <span
+              className="h-8 w-1 shrink-0 rounded-full transition-all duration-200 group-hover:h-9"
+              style={{ background: brand }}
+              aria-hidden="true"
+            />
+            <span className="flex-1">{b.label}</span>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5"
+            >
+              <path d="M9 6l6 6-6 6" />
+            </svg>
           </button>
         ))}
       </div>
       <button
         onClick={onLiveAgent}
-        className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-white"
-        style={{ background: brand }}
+        className="w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-white shadow-panel transition duration-200 hover:-translate-y-0.5 hover:brightness-110"
+        style={{ background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 70%, black))` }}
       >
         Speak with a Live Representative
       </button>
       <p className="text-[11px] leading-tight text-muted-foreground">{config.website.privacyDisclaimer}</p>
     </div>
   );
+
 }
 
 function MessageBubble({
