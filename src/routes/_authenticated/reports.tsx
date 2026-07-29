@@ -93,7 +93,7 @@ function ReportsPage() {
       title="Reporting"
       description="Volume, AI performance, response speed, and intake conversion at a glance."
       actions={
-        <div className="flex gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {RANGES.map((r) => (
             <button
               key={r.days}
@@ -108,8 +108,27 @@ function ReportsPage() {
               {r.label}
             </button>
           ))}
+          <button
+            type="button"
+            className="ml-2 rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+            onClick={() =>
+              downloadCsv("support-report", [
+                { metric: "Conversations", value: convs.length, window_days: days },
+                { metric: "AI deflection %", value: deflected, window_days: days },
+                { metric: "Escalated", value: escalated, window_days: days },
+                { metric: "Avg answer confidence %", value: avgConfidence, window_days: days },
+                { metric: "Avg first response (min)", value: avgFirstResponse, window_days: days },
+                { metric: "Intakes received", value: intakes.length, window_days: days },
+                { metric: "Intake approval %", value: conversion, window_days: days },
+                { metric: "Helpful ratings", value: rated ? Math.round((helpful / rated) * 100) : 0, window_days: days },
+              ])
+            }
+          >
+            Export CSV
+          </button>
         </div>
       }
+
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Conversations" value={convs.length} hint={`Last ${days} days`} />
