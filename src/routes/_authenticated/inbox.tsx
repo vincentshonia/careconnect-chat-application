@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { transferConversationFn } from "@/lib/routing.functions";
+import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/button";
@@ -233,7 +234,18 @@ function InboxPage() {
       if (!active) throw new Error("No conversation selected");
       return transferConversation({ data: { conversationId: active.id, departmentId } });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+    onSuccess: (result) => {
+      toast.success(
+        result?.assignedTo
+          ? `Transferred to ${result.departmentName} — assigned to ${result.assignedTo}`
+          : `Transferred to ${result?.departmentName ?? "department"} — waiting for an agent`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["messages", active?.id] });
+    },
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Could not transfer this conversation");
+    },
   });
 
 
