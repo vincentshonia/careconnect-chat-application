@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useSessionContext } from "@/hooks/use-session-context";
@@ -88,6 +89,7 @@ function OrganizationsPage() {
         })
         .eq("id", active.id);
       if (error) throw error;
+      await logAudit({ action: "organization.updated", recordType: "organizations", recordId: active.id, newValue: { name: form.name, timezone: form.timezone } });
     },
     onSuccess: () => {
       setNotice("Organization saved.");
@@ -105,6 +107,7 @@ function OrganizationsPage() {
         slug: brand.slug || brand.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
       });
       if (error) throw error;
+      await logAudit({ action: "brand.created", recordType: "workspaces", newValue: { name: brand.name } });
     },
     onSuccess: () => {
       setBrand({ name: "", slug: "" });
@@ -121,6 +124,7 @@ function OrganizationsPage() {
         domain: site.domain,
       });
       if (error) throw error;
+      await logAudit({ action: "website.created", recordType: "websites", newValue: { name: site.name, domain: site.domain } });
     },
     onSuccess: () => {
       setSite({ name: "", domain: "" });

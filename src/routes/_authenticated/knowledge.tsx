@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { reindexArticleFn } from "@/lib/admin.functions";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -100,6 +101,13 @@ function Articles() {
         })
         .eq("id", active.id);
       if (error) throw error;
+      await logAudit({
+        action: "knowledge_article.updated",
+        recordType: "knowledge_articles",
+        recordId: active.id,
+        previousValue: { title: active.title, status: active.status },
+        newValue: { title: form.title, status: form.status },
+      });
       const result = await reindex({ data: { articleId: active.id } });
       return result;
     },
@@ -232,6 +240,7 @@ function Faqs() {
         status: "active",
       });
       if (error) throw error;
+      await logAudit({ action: "faq.created", recordType: "faqs", newValue: { category: draft.category, question: draft.question } });
     },
     onSuccess: () => {
       setDraft({ category: "General", question: "", answer: "" });
@@ -243,6 +252,7 @@ function Faqs() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("faqs").delete().eq("id", id);
       if (error) throw error;
+      await logAudit({ action: "faq.deleted", recordType: "faqs", recordId: id });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["kb-faqs"] }),
   });

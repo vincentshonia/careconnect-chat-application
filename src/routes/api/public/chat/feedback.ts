@@ -12,7 +12,17 @@ export const Route = createFileRoute("/api/public/chat/feedback")({
       POST: async ({ request }) => {
         const parsed = schema.safeParse(await request.json());
         if (!parsed.success) return Response.json({ error: "Invalid request" }, { status: 400 });
-        const { admin } = await import("@/lib/public-chat.server");
+        const { admin, clientIp, enforceRateLimit, PublicChatError } = await import(
+          "@/lib/public-chat.server"
+        );
+        try {
+          await enforceRateLimit(`fb:ip:${clientIp(request)}`, 30, 60);
+        } catch (error) {
+          if (error instanceof PublicChatError) {
+            return Response.json({ error: error.message }, { status: error.status });
+          }
+          throw error;
+        }
         await admin()
           .from("ai_responses")
           .update({ visitor_feedback: parsed.data.helpful ? "helpful" : "not_helpful" })

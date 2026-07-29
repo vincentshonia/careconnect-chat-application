@@ -23,6 +23,9 @@ export const Route = createFileRoute("/api/public/chat/message")({
             return Response.json({ error: "Invalid request" }, { status: 400 });
           }
           const input = parsed.data;
+          const ip = mod.clientIp(request);
+          await mod.enforceRateLimit(`msg:ip:${ip}`, 60, 60);
+          await mod.enforceRateLimit(`msg:s:${input.sessionToken}`, 15, 60);
           const website = await mod.resolveWebsite(input.websiteId, input.host ?? null);
           const visitor = await mod.ensureVisitor(website, input.sessionToken, input.meta ?? {});
           const conversation = await mod.ensureConversation(

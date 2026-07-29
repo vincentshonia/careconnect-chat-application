@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -82,16 +83,26 @@ function Rules() {
   const create = useMutation({
     mutationFn: async () => {
       if (!orgId || !form.name.trim() || !form.match_value.trim()) return;
-      const { error } = await supabase.from("routing_rules").insert({
-        organization_id: orgId,
-        name: form.name.trim(),
-        match_type: form.match_type,
-        match_value: form.match_value.trim(),
-        department_id: form.department_id || null,
-        priority: Number(form.priority) || 100,
-        routing_method: "first_available",
-      });
+      const { data: created, error } = await supabase
+        .from("routing_rules")
+        .insert({
+          organization_id: orgId,
+          name: form.name.trim(),
+          match_type: form.match_type,
+          match_value: form.match_value.trim(),
+          department_id: form.department_id || null,
+          priority: Number(form.priority) || 100,
+          routing_method: "first_available",
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      await logAudit({
+        action: "routing_rule.created",
+        recordType: "routing_rules",
+        recordId: created?.id ?? null,
+        newValue: { name: form.name.trim(), match_type: form.match_type, match_value: form.match_value.trim() },
+      });
     },
     onSuccess: () => {
       setForm({ name: "", match_type: "interest", match_value: "", department_id: "", priority: 100 });
@@ -103,6 +114,7 @@ function Rules() {
     mutationFn: async ({ id, patch }: { id: string; patch: Database["public"]["Tables"]["routing_rules"]["Update"] }) => {
       const { error } = await supabase.from("routing_rules").update(patch).eq("id", id);
       if (error) throw error;
+      await logAudit({ action: "routing_rule.updated", recordType: "routing_rules", recordId: id, newValue: patch as Record<string, unknown> });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["routing-rules"] }),
   });
@@ -111,6 +123,7 @@ function Rules() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("routing_rules").delete().eq("id", id);
       if (error) throw error;
+      await logAudit({ action: "routing_rule.deleted", recordType: "routing_rules", recordId: id });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["routing-rules"] }),
   });
@@ -228,15 +241,25 @@ function Templates() {
   const create = useMutation({
     mutationFn: async () => {
       if (!orgId || !form.name.trim() || !form.body.trim()) return;
-      const { error } = await supabase.from("response_templates").insert({
-        organization_id: orgId,
-        name: form.name.trim(),
-        shortcut: form.shortcut.trim() || null,
-        category: form.category.trim() || null,
-        body: form.body.trim(),
-        language: "en",
-      });
+      const { data: created, error } = await supabase
+        .from("response_templates")
+        .insert({
+          organization_id: orgId,
+          name: form.name.trim(),
+          shortcut: form.shortcut.trim() || null,
+          category: form.category.trim() || null,
+          body: form.body.trim(),
+          language: "en",
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      await logAudit({
+        action: "response_template.created",
+        recordType: "response_templates",
+        recordId: created?.id ?? null,
+        newValue: { name: form.name.trim(), shortcut: form.shortcut.trim() || null },
+      });
     },
     onSuccess: () => {
       setForm({ name: "", shortcut: "", category: "", body: "" });
@@ -248,6 +271,7 @@ function Templates() {
     mutationFn: async ({ id, patch }: { id: string; patch: Database["public"]["Tables"]["response_templates"]["Update"] }) => {
       const { error } = await supabase.from("response_templates").update(patch).eq("id", id);
       if (error) throw error;
+      await logAudit({ action: "response_template.updated", recordType: "response_templates", recordId: id, newValue: patch as Record<string, unknown> });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["response-templates"] }),
   });
@@ -256,6 +280,7 @@ function Templates() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("response_templates").delete().eq("id", id);
       if (error) throw error;
+      await logAudit({ action: "response_template.deleted", recordType: "response_templates", recordId: id });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["response-templates"] }),
   });
