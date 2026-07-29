@@ -925,3 +925,83 @@ function Field({
     </label>
   );
 }
+
+/** Post-conversation satisfaction rating shown once the chat has some depth. */
+function SatisfactionPrompt({ conversationId, brand }: { conversationId: string; brand: string }) {
+  const [score, setScore] = useState<number | null>(null);
+  const [comment, setComment] = useState("");
+  const [done, setDone] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  if (dismissed) return null;
+
+  if (done) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-3 text-xs text-muted-foreground">
+        Thank you — your feedback helps our team improve.
+      </div>
+    );
+  }
+
+  async function submit(value: number, note: string) {
+    setDone(true);
+    await fetch("/api/public/chat/rate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId, score: value, comment: note || null }),
+    }).catch(() => undefined);
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-semibold text-card-foreground">How helpful was this chat?</p>
+        <button
+          type="button"
+          aria-label="Dismiss rating"
+          className="text-[11px] text-muted-foreground hover:underline"
+          onClick={() => setDismissed(true)}
+        >
+          Not now
+        </button>
+      </div>
+      <div className="mt-2 flex gap-1.5">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-label={`Rate ${n} out of 5`}
+            onClick={() => {
+              setScore(n);
+              if (n >= 4) void submit(n, "");
+            }}
+            className="h-8 w-8 rounded-lg border border-border text-xs font-semibold text-foreground transition"
+            style={score === n ? { background: brand, color: "#fff", borderColor: brand } : undefined}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+      {score !== null && score <= 3 && (
+        <div className="mt-2 space-y-2">
+          <textarea
+            rows={2}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="What could we have done better?"
+            aria-label="Rating comment"
+            className="w-full rounded-lg border border-input bg-card px-3 py-2 text-xs"
+          />
+          <button
+            type="button"
+            className="w-full rounded-lg px-3 py-2 text-xs font-semibold text-white"
+            style={{ background: brand }}
+            onClick={() => void submit(score, comment)}
+          >
+            Send feedback
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
