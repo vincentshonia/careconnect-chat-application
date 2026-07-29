@@ -88,6 +88,30 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const { unread } = useNotifications();
   const { theme, toggle: toggleTheme } = useTheme();
+  const session = useSessionContext();
+  const orgId = session.data?.organizationId ?? null;
+  const branding = useQuery({
+    queryKey: ["org-branding", orgId],
+    enabled: Boolean(orgId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organizations")
+        .select("name, logo_url")
+        .eq("id", orgId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const orgName = branding.data?.name ?? "Pacific Health";
+  const logoUrl = branding.data?.logo_url ?? null;
+  const initials = orgName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+
 
 
 
