@@ -136,8 +136,10 @@ export function AdminShell({
                       collapsed ? "justify-center" : ""
                     }`}
                     activeProps={{
-                      className: "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm",
+                      className:
+                        "gradient-brand text-sidebar-primary-foreground font-semibold shadow-glow hover:text-sidebar-primary-foreground",
                     }}
+
                   >
                     <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
                     {!collapsed && <span className="truncate">{item.label}</span>}
