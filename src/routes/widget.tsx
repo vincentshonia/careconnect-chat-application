@@ -603,7 +603,7 @@ function WidgetPage() {
               </div>
 
             )}
-            {conversationId && !sending && messages.filter((m) => m.role === "assistant").length >= 2 && (
+            {conversationId && !sending && messages.filter((m) => m.role === "bot").length >= 2 && (
               <SatisfactionPrompt conversationId={conversationId} brand={brand} />
             )}
           </div>
