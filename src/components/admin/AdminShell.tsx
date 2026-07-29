@@ -98,15 +98,16 @@ export function AdminShell({
 
   const sidebar = (
     <aside
-      className={`flex h-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ${
+      className={`sidebar-aurora flex h-full flex-col border-r border-sidebar-border text-sidebar-foreground transition-[width] duration-200 ${
         collapsed ? "w-[74px]" : "w-[248px]"
       }`}
     >
       <div className="flex items-center gap-2.5 px-4 py-5">
         <Link to="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground">
+          <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
             PH
           </span>
+
           {!collapsed && (
             <span className="min-w-0">
               <span className="block truncate text-sm font-semibold tracking-tight">Pacific Health</span>
@@ -135,8 +136,10 @@ export function AdminShell({
                       collapsed ? "justify-center" : ""
                     }`}
                     activeProps={{
-                      className: "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm",
+                      className:
+                        "gradient-brand text-sidebar-primary-foreground font-semibold shadow-glow hover:text-sidebar-primary-foreground",
                     }}
+
                   >
                     <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
                     {!collapsed && <span className="truncate">{item.label}</span>}
@@ -191,7 +194,7 @@ export function AdminShell({
   );
 
   return (
-    <div className="flex min-h-screen w-full bg-background text-foreground">
+    <div className="app-canvas flex min-h-screen w-full text-foreground">
       <div className="sticky top-0 hidden h-screen shrink-0 md:block">{sidebar}</div>
 
       {mobileOpen && (
@@ -219,7 +222,10 @@ export function AdminShell({
                 <Menu className="h-4 w-4" />
               </Button>
               <div className="min-w-0">
-                <h1 className="truncate text-lg font-semibold tracking-tight sm:text-xl">{title}</h1>
+                <h1 className="text-gradient-brand truncate text-lg font-semibold tracking-tight sm:text-xl">
+                  {title}
+                </h1>
+
                 {description ? (
                   <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{description}</p>
                 ) : null}
