@@ -34,8 +34,9 @@ export function useNotifications() {
   });
 
   useEffect(() => {
+    // Unique per hook instance: the bell and the notifications page both subscribe.
     const channel = supabase
-      .channel("notifications-feed")
+      .channel(`notifications-feed-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, () => {
         queryClient.invalidateQueries({ queryKey: ["notifications"] });
       })
@@ -44,6 +45,7 @@ export function useNotifications() {
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
+
 
   const unread = (query.data ?? []).filter((n) => !n.read_at);
 
