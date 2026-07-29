@@ -233,7 +233,18 @@ function InboxPage() {
       if (!active) throw new Error("No conversation selected");
       return transferConversation({ data: { conversationId: active.id, departmentId } });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+    onSuccess: (result) => {
+      toast.success(
+        result?.assignedTo
+          ? `Transferred to ${result.departmentName} — assigned to ${result.assignedTo}`
+          : `Transferred to ${result?.departmentName ?? "department"} — waiting for an agent`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["messages", active?.id] });
+    },
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Could not transfer this conversation");
+    },
   });
 
 
