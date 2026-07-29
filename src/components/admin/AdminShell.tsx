@@ -86,7 +86,7 @@ export function AdminShell({
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { unread } = useNotifications();
+  const { unread } = useNotifications({ alerts: true });
   const { theme, toggle: toggleTheme } = useTheme();
   const session = useSessionContext();
   const orgId = session.data?.organizationId ?? null;
