@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export type NotificationRow = {
   id: string;
@@ -13,9 +14,43 @@ export type NotificationRow = {
   created_at: string;
 };
 
-/** Live notification feed for the signed-in staff member. */
-export function useNotifications() {
+/** Short two-tone chime so agents hear a chat landing in their queue. */
+function playChime() {
+  try {
+    const Ctx =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const now = ctx.currentTime;
+    [880, 1174].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const start = now + i * 0.16;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.18, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.28);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.3);
+    });
+    setTimeout(() => void ctx.close(), 1200);
+  } catch {
+    /* audio is best-effort — never block the alert */
+  }
+}
+
+/**
+ * Live notification feed for the signed-in staff member.
+ * Pass `{ alerts: true }` on exactly one mounted instance (the shell bell) to
+ * also announce brand-new notifications with a toast and a chime.
+ */
+export function useNotifications(options: { alerts?: boolean } = {}) {
   const queryClient = useQueryClient();
+  const alerts = options.alerts ?? false;
+  const seen = useRef<Set<string> | null>(null);
 
   const query = useQuery({
     queryKey: ["notifications"],
@@ -45,6 +80,25 @@ export function useNotifications() {
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
+
+  const rows = query.data;
+  useEffect(() => {
+    if (!alerts || !rows) return;
+    // First load only records what already exists — no retro-alerts.
+    if (seen.current === null) {
+      seen.current = new Set(rows.map((n) => n.id));
+      return;
+    }
+    const fresh = rows.filter((n) => !n.read_at && !seen.current!.has(n.id));
+    rows.forEach((n) => seen.current!.add(n.id));
+    if (!fresh.length) return;
+    playChime();
+    fresh.slice(0, 3).forEach((n) => {
+      const show = n.severity === "critical" ? toast.error : n.severity === "warning" ? toast.warning : toast.info;
+      show(n.title, { description: n.body ?? undefined, duration: 8000 });
+    });
+  }, [rows, alerts]);
+
 
 
   const unread = (query.data ?? []).filter((n) => !n.read_at);
