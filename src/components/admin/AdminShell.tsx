@@ -143,6 +143,20 @@ export function AdminShell({
 
       <div className="space-y-1 border-t border-sidebar-border p-3">
         <button
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
+            collapsed ? "justify-center" : ""
+          }`}
+        >
+          {theme === "dark" ? (
+            <Sun className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+          ) : (
+            <Moon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+          )}
+          {!collapsed && <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>}
+        </button>
+        <button
           onClick={() => setCollapsed((v) => !v)}
           className={`hidden w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground lg:flex ${
             collapsed ? "justify-center" : ""
@@ -155,6 +169,7 @@ export function AdminShell({
           )}
           {!collapsed && <span>Collapse</span>}
         </button>
+
         <button
           onClick={signOut}
           className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
