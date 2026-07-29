@@ -189,27 +189,31 @@ function AuthPage() {
             </Button>
           </form>
 
-          <div className="mt-6 flex items-start gap-3 rounded-xl bg-muted/70 p-4 text-xs leading-relaxed text-muted-foreground">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-            <p>
-              Access is restricted to <span className="font-semibold text-foreground">@mypacifichealth.com</span>{" "}
-              staff. Accounts are created and managed by administrators.
-            </p>
-          </div>
-
-          <div className="mt-6 border-t border-border pt-5 text-center text-xs text-muted-foreground">
-            {mode === "signin" ? "Forgot your password? " : "Remembered it? "}
-            <button
-              type="button"
-              className="font-semibold text-foreground underline-offset-4 hover:underline"
-              onClick={() => {
-                setMode(mode === "signin" ? "forgot" : "signin");
-                setError(null);
-                setMessage(null);
-              }}
-            >
-              {mode === "signin" ? "Send a reset link" : "Back to sign in"}
-            </button>
+          <div className="mt-8 border-t border-border pt-6">
+            <div className="flex items-start gap-3 text-xs leading-relaxed text-muted-foreground">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {mode === "signin" ? "Forgot your password?" : "Remembered your password?"}
+                </p>
+                <p className="mt-1">
+                  {mode === "signin"
+                    ? "We'll email a secure reset link to your work address. The link expires in 60 minutes and can only be used once — check your spam folder if it doesn't arrive within a few minutes."
+                    : "Head back to the sign-in form and use your existing password. If you never received the reset email, request a new link — older links stop working once a new one is sent."}
+                </p>
+                <button
+                  type="button"
+                  className="mt-2 font-semibold text-foreground underline underline-offset-4 hover:no-underline"
+                  onClick={() => {
+                    setMode(mode === "signin" ? "forgot" : "signin");
+                    setError(null);
+                    setMessage(null);
+                  }}
+                >
+                  {mode === "signin" ? "Send a reset link" : "Back to sign in"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </main>
