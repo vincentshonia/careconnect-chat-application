@@ -24,10 +24,11 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  // Staff accounts are created by administrators — this page only signs in
+  // existing users or emails them a password reset link.
+  const [mode, setMode] = useState<"signin" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,17 +50,13 @@ function AuthPage() {
         if (err) throw err;
         navigate({ to: "/inbox", replace: true });
       } else {
-        const { data, error: err } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName },
-            emailRedirectTo: `${window.location.origin}/inbox`,
-          },
+        const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
         });
         if (err) throw err;
-        if (data.session) navigate({ to: "/inbox", replace: true });
-        else setMessage("Check your email to confirm the account, then sign in.");
+        setMessage(
+          "If that email belongs to a staff account, a password reset link is on its way.",
+        );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign in failed");
@@ -82,25 +79,15 @@ function AuthPage() {
         </div>
 
         <h1 className="text-2xl font-semibold tracking-tight">
-          {mode === "signin" ? "Staff sign in" : "Create staff account"}
+          {mode === "signin" ? "Staff sign in" : "Reset your password"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Access the inbox, knowledge base, and widget settings.
+          {mode === "signin"
+            ? "Access the inbox, knowledge base, and widget settings."
+            : "Enter your work email and we'll send you a link to set a new password."}
         </p>
 
         <form onSubmit={submit} className="mt-6 space-y-4">
-          {mode === "signup" ? (
-            <div className="space-y-2">
-              <Label htmlFor="name">Full name</Label>
-              <Input
-                id="name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                autoComplete="name"
-              />
-            </div>
-          ) : null}
           <div className="space-y-2">
             <Label htmlFor="email">Work email</Label>
             <Input
@@ -112,24 +99,26 @@ function AuthPage() {
               autoComplete="email"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            />
-          </div>
+          {mode === "signin" ? (
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                autoComplete="current-password"
+              />
+            </div>
+          ) : null}
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
 
           <Button type="submit" className="w-full" disabled={busy}>
-            {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+            {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Send reset link"}
           </Button>
         </form>
 
@@ -137,14 +126,19 @@ function AuthPage() {
           type="button"
           className="mt-4 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
           onClick={() => {
-            setMode(mode === "signin" ? "signup" : "signin");
+            setMode(mode === "signin" ? "forgot" : "signin");
             setError(null);
             setMessage(null);
           }}
         >
-          {mode === "signin" ? "Need an account? Create one" : "Already have an account? Sign in"}
+          {mode === "signin" ? "Forgot your password?" : "Back to sign in"}
         </button>
+
+        <p className="mt-6 text-xs text-muted-foreground">
+          Staff accounts are created by an administrator. Contact your admin if you need access.
+        </p>
       </div>
     </div>
   );
 }
+
