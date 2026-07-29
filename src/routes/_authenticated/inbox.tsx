@@ -83,7 +83,7 @@ function InboxPage() {
       let q = supabase
         .from("conversations")
         .select(
-          "id, reference, subject, status, priority, assigned_to, escalation_requested, last_message_at, organization_id, website_id, visitor_type, contact_id",
+          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, organization_id, website_id, visitor_type, contact_id",
         )
         .order("last_message_at", { ascending: false })
         .limit(100);
