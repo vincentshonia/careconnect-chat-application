@@ -159,7 +159,117 @@ function StaffPage() {
         <p className="mb-4 rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
           You can view the team, but only administrators can change roles or departments.
         </p>
-      ) : null}
+      ) : (
+        <div className="mb-6 rounded-xl border border-border bg-card p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold">Add a staff member</h2>
+              <p className="text-xs text-muted-foreground">
+                Creates the account immediately with a one-time temporary password you share with them.
+              </p>
+            </div>
+            <Button type="button" variant={showForm ? "outline" : "default"} onClick={() => setShowForm((v) => !v)}>
+              {showForm ? "Cancel" : "Add staff member"}
+            </Button>
+          </div>
+
+          {showForm ? (
+            <form
+              className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                addStaff.mutate();
+              }}
+            >
+              <div className="space-y-1">
+                <Label className="text-xs">Full name</Label>
+                <Input
+                  required
+                  value={form.fullName}
+                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                  placeholder="Maria Lopez"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Work email</Label>
+                <Input
+                  required
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="maria@pacifichealthgroup.com"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Role</Label>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value as AppRole })}
+                >
+                  {ROLES.filter((r) => ROLE_RANK[r] <= callerRank).map((r) => (
+                    <option key={r} value={r}>
+                      {r.replace(/_/g, " ")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Job title (optional)</Label>
+                <Input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="Enrollment specialist"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Phone (optional)</Label>
+                <Input
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder="(555) 010-2233"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button type="submit" disabled={addStaff.isPending}>
+                  {addStaff.isPending ? "Creating…" : "Create account"}
+                </Button>
+              </div>
+              {addStaff.error ? (
+                <p className="text-sm text-destructive sm:col-span-2 lg:col-span-3">
+                  {(addStaff.error as Error).message}
+                </p>
+              ) : null}
+            </form>
+          ) : null}
+
+          {createdCredentials ? (
+            <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
+              <p className="text-sm font-medium">Account created — share these details once</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Email: <span className="font-mono">{createdCredentials.email}</span>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Temporary password:{" "}
+                <span className="font-mono">{createdCredentials.tempPassword}</span>
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                This password will not be shown again. Ask them to sign in at /auth and change it from Security.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                onClick={() => setCreatedCredentials(null)}
+              >
+                Dismiss
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      )}
+
 
       {staffQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">Loading team…</p>
