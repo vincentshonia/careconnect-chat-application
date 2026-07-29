@@ -102,12 +102,53 @@ function DepartmentsTab() {
 
   const update = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Database["public"]["Tables"]["departments"]["Update"] }) => {
-      const { error } = await supabase.from("departments").update(patch).eq("id", id);
+      const { data, error } = await supabase.from("departments").update(patch).eq("id", id).select("id").maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("You do not have permission to update departments.");
       await logAudit({ action: "department.updated", recordType: "departments", recordId: id, newValue: patch as Record<string, unknown> });
+      return patch;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["departments"] }),
+    onSuccess: (patch) => {
+      if (patch?.routing_method) toast.success(`Routing set to ${String(patch.routing_method).replace(/_/g, " ")}`);
+      else if (patch?.status) toast.success(`Department ${patch.status === "active" ? "activated" : "deactivated"}`);
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not update that department"),
   });
+
+  const setDefault = useMutation({
+    mutationFn: async (dept: Department) => {
+      if (!orgId) throw new Error("Missing organization");
+      const { error: clearError } = await supabase
+        .from("departments")
+        .update({ is_default: false })
+        .eq("organization_id", orgId)
+        .neq("id", dept.id);
+      if (clearError) throw clearError;
+      const { data, error } = await supabase
+        .from("departments")
+        .update({ is_default: true })
+        .eq("id", dept.id)
+        .select("id")
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("You do not have permission to change the default department.");
+      await logAudit({
+        action: "department.default_changed",
+        recordType: "departments",
+        recordId: dept.id,
+        newValue: { name: dept.name, is_default: true },
+      });
+    },
+    onSuccess: (_d, dept) => {
+      toast.success(`${dept.name} is now the default department`);
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not set the default department"),
+  });
+
 
   const remove = useMutation({
     mutationFn: async (dept: Department) => {
