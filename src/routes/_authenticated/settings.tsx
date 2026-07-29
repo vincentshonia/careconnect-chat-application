@@ -27,6 +27,8 @@ function SettingsPage() {
   const orgId = session.data?.organizationId ?? null;
   const isAdmin = session.data?.isAdmin ?? false;
   const [notice, setNotice] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
