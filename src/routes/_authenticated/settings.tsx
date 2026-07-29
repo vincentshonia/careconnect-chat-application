@@ -63,8 +63,54 @@ function SettingsPage() {
         emergency_message: org.data.emergency_message ?? "",
         privacy_notice: org.data.privacy_notice ?? "",
       });
+      setLogoUrl(org.data.logo_url ?? null);
     }
   }, [org.data]);
+
+  async function handleLogoUpload(file: File) {
+    if (!orgId) return;
+    setNotice(null);
+    setUploading(true);
+    try {
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const path = `${orgId}/logo-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("branding")
+        .upload(path, file, { cacheControl: "300", upsert: true, contentType: file.type });
+      if (uploadError) throw uploadError;
+
+      const url = `/api/public/branding/${path}`;
+      const { error } = await supabase.from("organizations").update({ logo_url: url }).eq("id", orgId);
+      if (error) throw error;
+
+      await logAudit({
+        action: "organization_settings.logo_updated",
+        recordType: "organizations",
+        recordId: orgId,
+        newValue: { logo_url: url },
+      });
+      setLogoUrl(url);
+      setNotice("Logo updated.");
+      queryClient.invalidateQueries({ queryKey: ["org-settings", orgId] });
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Logo upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleLogoRemove() {
+    if (!orgId) return;
+    setNotice(null);
+    const { error } = await supabase.from("organizations").update({ logo_url: null }).eq("id", orgId);
+    if (error) {
+      setNotice(error.message);
+      return;
+    }
+    setLogoUrl(null);
+    setNotice("Logo removed.");
+    queryClient.invalidateQueries({ queryKey: ["org-settings", orgId] });
+  }
 
   const save = useMutation({
     mutationFn: async () => {
