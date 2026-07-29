@@ -134,3 +134,99 @@ export const createStaffFn = createServerFn({ method: "POST" })
 
     return { userId: newUserId, email, tempPassword };
   });
+
+const accessInput = z.object({
+  userId: z.string().uuid(),
+  action: z.enum(["disable", "enable", "remove"]),
+});
+
+/**
+ * Administrator-only: disable, re-enable, or revoke a staff account.
+ * Access is revoked at the auth layer and the profile is flagged — no
+ * conversations, messages, contacts or audit history are ever deleted.
+ */
+export const setStaffAccessFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => accessInput.parse(input))
+  .handler(async ({ data, context }) => {
+    if (data.userId === context.userId) throw new Error("You cannot change your own access");
+
+    const { data: callerRoles, error: rolesError } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    if (rolesError) throw new Error("Could not verify your permissions");
+    const callerRank = (callerRoles ?? []).reduce(
+      (max, r) => Math.max(max, ROLE_RANK[r.role as string] ?? 0),
+      0,
+    );
+    if (callerRank < 4) throw new Error("Only administrators can change staff access");
+
+    const { data: callerProfile } = await context.supabase
+      .from("profiles")
+      .select("organization_id, full_name")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const organizationId = callerProfile?.organization_id ?? null;
+    if (!organizationId) throw new Error("Your account is not linked to an organization");
+
+    // Target must be visible under the caller's org RLS.
+    const { data: target } = await context.supabase
+      .from("profiles")
+      .select("id, organization_id, full_name, email, status")
+      .eq("id", data.userId)
+      .maybeSingle();
+    if (!target || target.organization_id !== organizationId) {
+      throw new Error("Staff member not found in your organization");
+    }
+
+    const { data: targetRoles } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.userId);
+    const targetRank = (targetRoles ?? []).reduce(
+      (max, r) => Math.max(max, ROLE_RANK[r.role as string] ?? 0),
+      0,
+    );
+    if (targetRank > callerRank) throw new Error("You cannot change access for a higher role");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    if (data.action === "enable") {
+      await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: "none" });
+      await supabaseAdmin
+        .from("profiles")
+        .update({ status: "active" })
+        .eq("id", data.userId);
+    } else {
+      // Indefinite ban revokes sign-in without touching any historical records.
+      await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: "876000h" });
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          status: data.action === "remove" ? "archived" : "inactive",
+          presence: "offline",
+        })
+        .eq("id", data.userId);
+
+      if (data.action === "remove") {
+        // Strip permissions and routing membership; conversations stay assigned
+        // so the communication history remains intact and attributable.
+        await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId);
+        await supabaseAdmin.from("department_members").delete().eq("user_id", data.userId);
+      }
+    }
+
+    await supabaseAdmin.from("audit_logs").insert({
+      organization_id: organizationId,
+      actor_id: context.userId,
+      actor_name: callerProfile?.full_name ?? null,
+      action: `staff.${data.action === "enable" ? "reactivated" : data.action === "remove" ? "removed" : "disabled"}`,
+      record_type: "profiles",
+      record_id: data.userId,
+      previous_value: { status: target.status },
+      new_value: { status: data.action === "enable" ? "active" : data.action === "remove" ? "archived" : "inactive" },
+    });
+
+    return { ok: true, status: data.action };
+  });
