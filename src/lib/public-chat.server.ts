@@ -137,7 +137,11 @@ export async function loadWidgetConfig(websiteId: string, hostOrigin: string | n
       privacyNotice: org?.privacy_notice ?? "",
       emergencyMessage: org?.emergency_message ?? "",
     },
+    departments: ((departments ?? []) as Array<Record<string, any>>)
+      .filter((d) => !d.website_id || d.website_id === website.id)
+      .map((d) => ({ id: d.id as string, name: d.name as string, description: d.description ?? null })),
     services: services ?? [],
+
     faqs: faqs ?? [],
     businessOpen: open,
     agentsAvailable: open && agentsAvailable,
