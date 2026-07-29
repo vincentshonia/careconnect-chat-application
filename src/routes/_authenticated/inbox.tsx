@@ -73,7 +73,8 @@ function InboxPage() {
 
   const conversationsQuery = useQuery({
     queryKey: ["conversations", filter],
-    refetchInterval: 8000,
+    refetchInterval: 60_000,
+
     queryFn: async () => {
       let q = supabase
         .from("conversations")
