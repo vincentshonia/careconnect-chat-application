@@ -302,23 +302,23 @@ function WidgetPage() {
 
   if (!open) {
     return (
-      <div className="flex h-screen w-full flex-col items-end justify-end gap-2 p-2" style={{ fontFamily: config.website.fontFamily }}>
+      <div className="flex h-screen w-full flex-col items-end justify-end gap-3 p-2" style={{ fontFamily: config.website.fontFamily }}>
         {showTeaser && (
           <div
-            className="relative w-full max-w-[300px] rounded-2xl bg-card p-4 text-sm shadow-float"
+            className="relative w-full max-w-[300px] border border-border/60 bg-card/95 p-4 text-sm shadow-float backdrop-blur"
             style={{ borderRadius: radius }}
           >
             <button
               onClick={dismissTeaser}
               aria-label="Dismiss message"
-              className="absolute right-2 top-2 rounded-full p-1 text-muted-foreground hover:bg-muted"
+              className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full text-muted-foreground transition hover:bg-muted"
             >
               ✕
             </button>
-            <p className="pr-5 font-medium text-card-foreground">{config.website.triggerMessage}</p>
+            <p className="pr-6 font-medium leading-snug text-card-foreground">{config.website.triggerMessage}</p>
             <button
               onClick={openWidget}
-              className="mt-3 w-full rounded-lg px-3 py-2 text-sm font-semibold text-white"
+              className="mt-3 w-full rounded-full px-3 py-2 text-sm font-semibold text-white shadow-panel transition hover:brightness-110"
               style={{ background: brand }}
             >
               Start chat
@@ -328,10 +328,15 @@ function WidgetPage() {
         <button
           onClick={openWidget}
           aria-label="Open chat"
-          className="flex h-14 w-14 items-center justify-center rounded-full text-white shadow-float transition hover:scale-105"
-          style={{ background: brand }}
+          className="group relative flex h-14 w-14 items-center justify-center rounded-full text-white shadow-float ring-1 ring-white/25 transition duration-200 hover:-translate-y-0.5 hover:scale-105 active:scale-95"
+          style={{ background: `linear-gradient(145deg, ${brand}, color-mix(in oklab, ${brand} 72%, black))` }}
         >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <span
+            className="absolute inset-0 rounded-full opacity-0 transition group-hover:opacity-100"
+            style={{ boxShadow: `0 0 0 6px color-mix(in oklab, ${brand} 22%, transparent)` }}
+            aria-hidden="true"
+          />
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
           </svg>
         </button>
@@ -341,32 +346,56 @@ function WidgetPage() {
 
   return (
     <div
-      className="flex h-screen w-full flex-col overflow-hidden bg-card shadow-float"
+      className="flex h-screen w-full flex-col overflow-hidden bg-card shadow-float ring-1 ring-black/5"
       style={{ borderRadius: radius, fontFamily: config.website.fontFamily }}
     >
-      <header className="flex items-center gap-3 px-4 py-3 text-white" style={{ background: brand }}>
-        {config.website.logoUrl ? (
-          <img src={config.website.logoUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
-        ) : (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm font-bold">
-            {config.organization.name.slice(0, 1)}
-          </div>
-        )}
+      <header
+        className="relative flex items-center gap-3 px-4 py-3.5 text-white"
+        style={{ background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 68%, black))` }}
+      >
+        <span
+          className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-white/10 blur-2xl"
+          aria-hidden="true"
+        />
+        <div className="relative shrink-0">
+          {config.website.logoUrl ? (
+            <img src={config.website.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover ring-2 ring-white/30" />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-sm font-bold ring-2 ring-white/25">
+              {config.organization.name.slice(0, 1)}
+            </div>
+          )}
+          <span
+            className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white/80 ${
+              config.agentsAvailable ? "bg-emerald-400" : "bg-amber-300"
+            }`}
+            aria-hidden="true"
+          />
+        </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{config.website.chatbotName}</p>
-          <p className="truncate text-[11px] opacity-90">
+          <p className="truncate text-sm font-semibold tracking-tight">{config.website.chatbotName}</p>
+          <p className="truncate text-[11px] text-white/80">
             {config.agentsAvailable ? "Live representatives are available" : "AI assistant · leave a message anytime"}
           </p>
         </div>
         {view !== "menu" && (
-          <button onClick={() => setView("menu")} className="rounded px-2 py-1 text-xs hover:bg-white/15" aria-label="Back to menu">
+          <button
+            onClick={() => setView("menu")}
+            className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium transition hover:bg-white/20"
+            aria-label="Back to menu"
+          >
             Menu
           </button>
         )}
-        <button onClick={closeWidget} aria-label="Close chat" className="rounded px-2 py-1 text-lg leading-none hover:bg-white/15">
+        <button
+          onClick={closeWidget}
+          aria-label="Close chat"
+          className="grid h-8 w-8 place-items-center rounded-full text-base leading-none transition hover:bg-white/15"
+        >
           ✕
         </button>
       </header>
+
 
       <div ref={scroller} className="flex-1 overflow-y-auto bg-background px-4 py-4">
         {view === "menu" && (
@@ -567,7 +596,12 @@ function WidgetPage() {
               />
             ))}
             {sending && (
-              <div className="w-fit rounded-2xl bg-muted px-3 py-2 text-xs text-muted-foreground">Thinking…</div>
+              <div className="flex w-fit items-center gap-1.5 rounded-2xl bg-muted px-3 py-2.5">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.2s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.1s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70" />
+              </div>
+
             )}
           </div>
         )}
@@ -575,13 +609,13 @@ function WidgetPage() {
 
       {(view === "chat" || view === "menu" || view === "waiting") && (
         <form
-          className="border-t border-border bg-card p-3"
+          className="border-t border-border/70 bg-card px-3 pb-3 pt-2.5"
           onSubmit={(e) => {
             e.preventDefault();
             void sendQuestion(input);
           }}
         >
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-2 rounded-2xl border border-input bg-background p-1.5 transition focus-within:border-transparent focus-within:ring-2 focus-within:ring-ring/40">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -594,19 +628,22 @@ function WidgetPage() {
               rows={1}
               placeholder="Type your question…"
               aria-label="Type your question"
-              className="max-h-24 min-h-[40px] flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              className="max-h-24 min-h-[36px] flex-1 resize-none border-0 bg-transparent px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground"
             />
             <button
               type="submit"
               disabled={sending || !input.trim()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white disabled:opacity-50"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white shadow-sm transition hover:brightness-110 disabled:opacity-40 disabled:shadow-none"
               style={{ background: brand }}
               aria-label="Send message"
             >
-              ➤
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
             </button>
           </div>
-          <p className="mt-2 text-[10px] leading-tight text-muted-foreground">{config.organization.privacyNotice}</p>
+          <p className="mt-2 px-1 text-[10px] leading-tight text-muted-foreground">{config.organization.privacyNotice}</p>
+
         </form>
       )}
     </div>
@@ -625,30 +662,49 @@ function MenuView({
   onLiveAgent: () => void;
 }) {
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-foreground">{config.website.welcomeMessage}</p>
+    <div className="space-y-4">
+      <p className="text-[15px] leading-relaxed text-foreground">{config.website.welcomeMessage}</p>
       <div className="grid gap-2">
         {config.website.menuButtons.map((b) => (
           <button
             key={b.key}
             onClick={() => onSelect(b.key)}
-            className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left text-sm font-medium text-card-foreground transition hover:border-transparent hover:shadow-panel"
-            style={{ borderLeft: `3px solid ${brand}` }}
+            className="group flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 text-left text-sm font-medium text-card-foreground shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-transparent hover:shadow-panel"
           >
-            {b.label}
+            <span
+              className="h-8 w-1 shrink-0 rounded-full transition-all duration-200 group-hover:h-9"
+              style={{ background: brand }}
+              aria-hidden="true"
+            />
+            <span className="flex-1">{b.label}</span>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5"
+            >
+              <path d="M9 6l6 6-6 6" />
+            </svg>
           </button>
         ))}
       </div>
       <button
         onClick={onLiveAgent}
-        className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-white"
-        style={{ background: brand }}
+        className="w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-white shadow-panel transition duration-200 hover:-translate-y-0.5 hover:brightness-110"
+        style={{ background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 70%, black))` }}
       >
         Speak with a Live Representative
       </button>
       <p className="text-[11px] leading-tight text-muted-foreground">{config.website.privacyDisclaimer}</p>
     </div>
   );
+
 }
 
 function MessageBubble({

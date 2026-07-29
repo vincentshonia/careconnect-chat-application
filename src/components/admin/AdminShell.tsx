@@ -1,26 +1,60 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import {
+  Activity,
+  Bot,
+  Building2,
+  ChevronsLeft,
+  ChevronsRight,
+  ClipboardList,
+  Contact,
+  BarChart3,
+  Globe,
+  Inbox,
+  LayoutDashboard,
+  LibraryBig,
+  LogOut,
+  Menu,
+  Settings,
+  Shuffle,
+  Users,
+  Users2,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
-const nav = [
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/inbox", label: "Inbox" },
-  { to: "/intake", label: "Intake" },
-  { to: "/contacts", label: "Contacts" },
-  { to: "/knowledge", label: "Knowledge" },
-  { to: "/ai-console", label: "AI console" },
-  { to: "/reports", label: "Reports" },
-  { to: "/websites", label: "Websites" },
-  { to: "/departments", label: "Departments" },
-  { to: "/routing", label: "Routing" },
-  { to: "/staff", label: "Staff" },
-  { to: "/organizations", label: "Organizations" },
-  { to: "/settings", label: "Settings" },
-  { to: "/audit", label: "Audit log" },
+const navGroups = [
+  {
+    label: "Workspace",
+    items: [
+      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/inbox", label: "Inbox", icon: Inbox },
+      { to: "/intake", label: "Intake", icon: ClipboardList },
+      { to: "/contacts", label: "Contacts", icon: Contact },
+    ],
+  },
+  {
+    label: "Content & AI",
+    items: [
+      { to: "/knowledge", label: "Knowledge", icon: LibraryBig },
+      { to: "/ai-console", label: "AI console", icon: Bot },
+      { to: "/reports", label: "Reports", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Configuration",
+    items: [
+      { to: "/websites", label: "Websites", icon: Globe },
+      { to: "/departments", label: "Departments", icon: Users2 },
+      { to: "/routing", label: "Routing", icon: Shuffle },
+      { to: "/staff", label: "Staff", icon: Users },
+      { to: "/organizations", label: "Organizations", icon: Building2 },
+      { to: "/settings", label: "Settings", icon: Settings },
+      { to: "/audit", label: "Audit log", icon: Activity },
+    ],
+  },
 ] as const;
-
 
 export function AdminShell({
   title,
@@ -35,6 +69,8 @@ export function AdminShell({
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -43,49 +79,126 @@ export function AdminShell({
     navigate({ to: "/auth", replace: true });
   }
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border">
-        <div className="flex flex-wrap items-center gap-4 px-6 py-3">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
-              PH
+  const sidebar = (
+    <aside
+      className={`flex h-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ${
+        collapsed ? "w-[74px]" : "w-[248px]"
+      }`}
+    >
+      <div className="flex items-center gap-2.5 px-4 py-5">
+        <Link to="/" className="flex min-w-0 items-center gap-2.5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground">
+            PH
+          </span>
+          {!collapsed && (
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold tracking-tight">Pacific Health</span>
+              <span className="block truncate text-[11px] text-sidebar-foreground/60">Support Console</span>
             </span>
-            <span className="text-sm font-semibold">Support Console</span>
-          </Link>
-          <nav className="flex flex-wrap gap-1">
-            {nav.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-                activeProps={{ className: "bg-accent text-foreground" }}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="ml-auto">
-            <Button variant="outline" size="sm" onClick={signOut}>
-              Sign out
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <div className="border-b border-border bg-card">
-        <div className="flex flex-wrap items-end justify-between gap-4 px-6 py-5">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-            {description ? (
-              <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-            ) : null}
-          </div>
-          {actions}
-        </div>
+          )}
+        </Link>
       </div>
 
-      <main className="px-6 py-6">{children}</main>
+      <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
+        {navGroups.map((group) => (
+          <div key={group.label}>
+            {!collapsed && (
+              <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/45">
+                {group.label}
+              </p>
+            )}
+            <ul className="space-y-0.5">
+              {group.items.map((item) => (
+                <li key={item.to}>
+                  <Link
+                    to={item.to}
+                    title={collapsed ? item.label : undefined}
+                    onClick={() => setMobileOpen(false)}
+                    className={`group flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
+                      collapsed ? "justify-center" : ""
+                    }`}
+                    activeProps={{
+                      className: "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm",
+                    }}
+                  >
+                    <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                    {!collapsed && <span className="truncate">{item.label}</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </nav>
+
+      <div className="space-y-1 border-t border-sidebar-border p-3">
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          className={`hidden w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground lg:flex ${
+            collapsed ? "justify-center" : ""
+          }`}
+        >
+          {collapsed ? (
+            <ChevronsRight className="h-[18px] w-[18px]" aria-hidden="true" />
+          ) : (
+            <ChevronsLeft className="h-[18px] w-[18px]" aria-hidden="true" />
+          )}
+          {!collapsed && <span>Collapse</span>}
+        </button>
+        <button
+          onClick={signOut}
+          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
+            collapsed ? "justify-center" : ""
+          }`}
+        >
+          <LogOut className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+          {!collapsed && <span>Sign out</span>}
+        </button>
+      </div>
+    </aside>
+  );
+
+  return (
+    <div className="flex min-h-screen w-full bg-background text-foreground">
+      <div className="sticky top-0 hidden h-screen shrink-0 md:block">{sidebar}</div>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button
+            className="absolute inset-0 bg-foreground/40"
+            aria-label="Close navigation"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="relative h-full w-[248px] shadow-float">{sidebar}</div>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 border-b border-border surface-glass">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-4 sm:px-8">
+            <div className="flex min-w-0 items-center gap-3">
+              <Button
+                variant="outline"
+                size="icon"
+                className="md:hidden"
+                aria-label="Open navigation"
+                onClick={() => setMobileOpen(true)}
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-semibold tracking-tight sm:text-xl">{title}</h1>
+                {description ? (
+                  <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{description}</p>
+                ) : null}
+              </div>
+            </div>
+            {actions ? <div className="flex items-center gap-2">{actions}</div> : <div />}
+          </div>
+        </header>
+
+        <main className="min-w-0 flex-1 px-5 py-6 sm:px-8">{children}</main>
+      </div>
     </div>
   );
 }
