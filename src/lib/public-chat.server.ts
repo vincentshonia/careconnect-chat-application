@@ -255,6 +255,37 @@ export async function ensureConversation(
   return data;
 }
 
+/** Client IP for rate-limit bucketing (best effort behind proxies). */
+export function clientIp(request: Request): string {
+  const fwd = request.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0].trim().slice(0, 60);
+  return (
+    request.headers.get("cf-connecting-ip") ??
+    request.headers.get("x-real-ip") ??
+    "unknown"
+  ).slice(0, 60);
+}
+
+/**
+ * Throttle anonymous widget traffic. Fails open if the counter itself errors,
+ * so a database hiccup never blocks a legitimate visitor.
+ */
+export async function enforceRateLimit(key: string, limit: number, windowSeconds: number) {
+  try {
+    const { data, error } = await admin().rpc("bump_rate_limit", {
+      _key: key,
+      _limit: limit,
+      _window_seconds: windowSeconds,
+    });
+    if (error) return;
+    if (data === false) {
+      throw new PublicChatError(429, "Too many requests. Please wait a moment and try again.");
+    }
+  } catch (error) {
+    if (error instanceof PublicChatError) throw error;
+  }
+}
+
 export async function logEvent(
   conversationId: string,
   organizationId: string,
