@@ -359,6 +359,47 @@ export type Database = {
           },
         ]
       }
+      conversation_ratings: {
+        Row: {
+          comment: string | null
+          conversation_id: string
+          created_at: string
+          id: string
+          organization_id: string
+          score: number
+          source: string
+          website_id: string | null
+        }
+        Insert: {
+          comment?: string | null
+          conversation_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          score: number
+          source?: string
+          website_id?: string | null
+        }
+        Update: {
+          comment?: string | null
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          score?: number
+          source?: string
+          website_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_ratings_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           assigned_to: string | null
@@ -1153,6 +1194,99 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          email_escalations: boolean
+          email_low_rating: boolean
+          email_new_intake: boolean
+          email_sla_breach: boolean
+          inapp_escalations: boolean
+          inapp_low_rating: boolean
+          inapp_new_intake: boolean
+          inapp_sla_breach: boolean
+          organization_id: string | null
+          sla_first_response_minutes: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_escalations?: boolean
+          email_low_rating?: boolean
+          email_new_intake?: boolean
+          email_sla_breach?: boolean
+          inapp_escalations?: boolean
+          inapp_low_rating?: boolean
+          inapp_new_intake?: boolean
+          inapp_sla_breach?: boolean
+          organization_id?: string | null
+          sla_first_response_minutes?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_escalations?: boolean
+          email_low_rating?: boolean
+          email_new_intake?: boolean
+          email_sla_breach?: boolean
+          inapp_escalations?: boolean
+          inapp_low_rating?: boolean
+          inapp_new_intake?: boolean
+          inapp_sla_breach?: boolean
+          organization_id?: string | null
+          sla_first_response_minutes?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          link: string | null
+          organization_id: string
+          read_at: string | null
+          record_id: string | null
+          record_type: string | null
+          severity: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          organization_id: string
+          read_at?: string | null
+          record_id?: string | null
+          record_type?: string | null
+          severity?: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          organization_id?: string
+          read_at?: string | null
+          record_id?: string | null
+          record_type?: string | null
+          severity?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       organizations: {
         Row: {
           address: string | null
@@ -1265,6 +1399,68 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_reviews: {
+        Row: {
+          accuracy_score: number
+          agent_id: string | null
+          coaching_notes: string | null
+          compliance_score: number
+          conversation_id: string
+          created_at: string
+          flagged: boolean
+          id: string
+          organization_id: string
+          overall_score: number | null
+          resolution_score: number
+          reviewer_id: string | null
+          reviewer_name: string | null
+          tone_score: number
+          updated_at: string
+        }
+        Insert: {
+          accuracy_score: number
+          agent_id?: string | null
+          coaching_notes?: string | null
+          compliance_score: number
+          conversation_id: string
+          created_at?: string
+          flagged?: boolean
+          id?: string
+          organization_id: string
+          overall_score?: number | null
+          resolution_score: number
+          reviewer_id?: string | null
+          reviewer_name?: string | null
+          tone_score: number
+          updated_at?: string
+        }
+        Update: {
+          accuracy_score?: number
+          agent_id?: string | null
+          coaching_notes?: string | null
+          compliance_score?: number
+          conversation_id?: string
+          created_at?: string
+          flagged?: boolean
+          id?: string
+          organization_id?: string
+          overall_score?: number | null
+          resolution_score?: number
+          reviewer_id?: string | null
+          reviewer_name?: string | null
+          tone_score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_reviews_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
         ]
