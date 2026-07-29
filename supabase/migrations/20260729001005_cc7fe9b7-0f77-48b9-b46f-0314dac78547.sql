@@ -1,0 +1,1 @@
+ALTER TABLE public.rate_limits ADD CONSTRAINT rate_limits_bucket_key_key UNIQUE (bucket_key);
