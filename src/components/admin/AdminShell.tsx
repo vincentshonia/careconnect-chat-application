@@ -98,15 +98,16 @@ export function AdminShell({
 
   const sidebar = (
     <aside
-      className={`flex h-full flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ${
+      className={`sidebar-aurora flex h-full flex-col border-r border-sidebar-border text-sidebar-foreground transition-[width] duration-200 ${
         collapsed ? "w-[74px]" : "w-[248px]"
       }`}
     >
       <div className="flex items-center gap-2.5 px-4 py-5">
         <Link to="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground">
+          <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
             PH
           </span>
+
           {!collapsed && (
             <span className="min-w-0">
               <span className="block truncate text-sm font-semibold tracking-tight">Pacific Health</span>
