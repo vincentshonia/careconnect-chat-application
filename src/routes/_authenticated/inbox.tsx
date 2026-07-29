@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/button";
@@ -177,6 +178,12 @@ function InboxPage() {
         })
         .eq("id", active.id);
       if (convError) throw convError;
+      await logAudit({
+        action: "conversation.agent_replied",
+        recordType: "conversations",
+        recordId: active.id,
+        websiteId: active.website_id,
+      });
     },
     onSuccess: () => {
       setDraft("");
@@ -190,6 +197,14 @@ function InboxPage() {
       if (!active) return;
       const { error } = await supabase.from("conversations").update(patch).eq("id", active.id);
       if (error) throw error;
+      await logAudit({
+        action: "conversation.updated",
+        recordType: "conversations",
+        recordId: active.id,
+        websiteId: active.website_id,
+        previousValue: { status: active.status, assigned_to: active.assigned_to, priority: active.priority },
+        newValue: patch as Record<string, unknown>,
+      });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["conversations"] }),
   });

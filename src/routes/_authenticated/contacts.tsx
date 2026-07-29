@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +63,13 @@ function ContactsPage() {
       if (!active) return;
       const { error } = await supabase.from("contacts").update(patch).eq("id", active.id);
       if (error) throw error;
+      await logAudit({
+        action: "contact.updated",
+        recordType: "contacts",
+        recordId: active.id,
+        previousValue: { lead_status: active.lead_status, owner_id: active.owner_id },
+        newValue: patch as Record<string, unknown>,
+      });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["contacts"] }),
   });

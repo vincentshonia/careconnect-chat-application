@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useSessionContext } from "@/hooks/use-session-context";
@@ -105,6 +106,13 @@ function IntakePage() {
       const target = all.find((i) => i.id === id);
       const { error } = await supabase.from("intake_requests").update(patch).eq("id", id);
       if (error) throw error;
+      await logAudit({
+        action: "intake_request.updated",
+        recordType: "intake_requests",
+        recordId: id,
+        previousValue: target ? { stage: target.stage, assigned_to: target.assigned_to } : null,
+        newValue: patch as Record<string, unknown>,
+      });
       if (event && target) {
         await supabase.from("intake_events").insert({
           intake_id: id,

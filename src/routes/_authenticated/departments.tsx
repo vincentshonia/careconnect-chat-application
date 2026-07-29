@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -90,6 +91,7 @@ function DepartmentsTab() {
         timezone: "America/Los_Angeles",
       });
       if (error) throw error;
+      await logAudit({ action: "department.created", recordType: "departments", newValue: { name: name.trim() } });
     },
     onSuccess: () => {
       setName("");
@@ -101,6 +103,7 @@ function DepartmentsTab() {
     mutationFn: async ({ id, patch }: { id: string; patch: Database["public"]["Tables"]["departments"]["Update"] }) => {
       const { error } = await supabase.from("departments").update(patch).eq("id", id);
       if (error) throw error;
+      await logAudit({ action: "department.updated", recordType: "departments", recordId: id, newValue: patch as Record<string, unknown> });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["departments"] }),
   });
@@ -201,6 +204,12 @@ function HoursTab() {
           .update({ open_time: row.open, close_time: row.close, is_closed: row.closed })
           .eq("id", row.id);
         if (error) throw error;
+        await logAudit({
+          action: "business_hours.updated",
+          recordType: "business_hours",
+          recordId: row.id,
+          newValue: { day_of_week: row.day, open_time: row.open, close_time: row.close, is_closed: row.closed },
+        });
       } else {
         const { error } = await supabase.from("business_hours").insert({
           organization_id: orgId,
@@ -210,6 +219,11 @@ function HoursTab() {
           is_closed: row.closed,
         });
         if (error) throw error;
+        await logAudit({
+          action: "business_hours.created",
+          recordType: "business_hours",
+          newValue: { day_of_week: row.day, open_time: row.open, close_time: row.close, is_closed: row.closed },
+        });
       }
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["business-hours"] }),
@@ -297,6 +311,7 @@ function HolidaysTab() {
         .from("holidays")
         .insert({ organization_id: orgId, name: form.name.trim(), holiday_date: form.date });
       if (error) throw error;
+      await logAudit({ action: "holiday.created", recordType: "holidays", newValue: { name: form.name.trim(), date: form.date } });
     },
     onSuccess: () => {
       setForm({ name: "", date: "" });
@@ -308,6 +323,7 @@ function HolidaysTab() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("holidays").delete().eq("id", id);
       if (error) throw error;
+      await logAudit({ action: "holiday.deleted", recordType: "holidays", recordId: id });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["holidays"] }),
   });

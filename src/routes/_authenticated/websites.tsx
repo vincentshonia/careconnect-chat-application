@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,13 @@ function WebsitesPage() {
         })
         .eq("id", active.id);
       if (error) throw error;
+      await logAudit({
+        action: "website_settings.updated",
+        recordType: "websites",
+        recordId: active.id,
+        websiteId: active.id,
+        newValue: { name: form.name, chatbot_name: form.chatbot_name, widget_position: form.widget_position },
+      });
     },
     onSuccess: () => {
       setNotice("Widget settings saved.");
