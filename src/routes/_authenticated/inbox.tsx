@@ -214,6 +214,30 @@ function InboxPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["conversations"] }),
   });
 
+  const departmentsQuery = useQuery({
+    queryKey: ["inbox-departments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("departments")
+        .select("id, name")
+        .eq("status", "active")
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const transferConversation = useServerFn(transferConversationFn);
+  const transfer = useMutation({
+    mutationFn: async (departmentId: string) => {
+      if (!active) throw new Error("No conversation selected");
+      return transferConversation({ data: { conversationId: active.id, departmentId } });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+  });
+
+
+
   return (
     <AdminShell
       title="Inbox"
