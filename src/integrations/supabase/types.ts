@@ -1269,6 +1269,30 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          bucket_key: string
+          created_at: string
+          hits: number
+          id: string
+          window_start: string
+        }
+        Insert: {
+          bucket_key: string
+          created_at?: string
+          hits?: number
+          id?: string
+          window_start?: string
+        }
+        Update: {
+          bucket_key?: string
+          created_at?: string
+          hits?: number
+          id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       response_templates: {
         Row: {
           approved: boolean
@@ -1726,6 +1750,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bump_rate_limit: {
+        Args: { _key: string; _limit: number; _window_seconds: number }
+        Returns: boolean
+      }
       can_access_org: { Args: { _org: string }; Returns: boolean }
       current_org_id: { Args: never; Returns: string }
       current_rank: { Args: never; Returns: number }

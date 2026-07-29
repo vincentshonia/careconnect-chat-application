@@ -15,11 +15,18 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedWebsitesRouteImport } from './routes/_authenticated/websites'
 import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedRoutingRouteImport } from './routes/_authenticated/routing'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedOrganizationsRouteImport } from './routes/_authenticated/organizations'
 import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
 import { Route as AuthenticatedIntakeRouteImport } from './routes/_authenticated/intake'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
+import { Route as AuthenticatedDepartmentsRouteImport } from './routes/_authenticated/departments'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
+import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
+import { Route as AuthenticatedAiConsoleRouteImport } from './routes/_authenticated/ai-console'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
 import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
 import { Route as ApiPublicChatMessageRouteImport } from './routes/api/public/chat/message'
@@ -56,6 +63,16 @@ const AuthenticatedStaffRoute = AuthenticatedStaffRouteImport.update({
   path: '/staff',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRoutingRoute = AuthenticatedRoutingRouteImport.update({
+  id: '/routing',
+  path: '/routing',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -80,6 +97,32 @@ const AuthenticatedIntakeRoute = AuthenticatedIntakeRouteImport.update({
 const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDepartmentsRoute =
+  AuthenticatedDepartmentsRouteImport.update({
+    id: '/departments',
+    path: '/departments',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedContactsRoute = AuthenticatedContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAiConsoleRoute = AuthenticatedAiConsoleRouteImport.update({
+  id: '/ai-console',
+  path: '/ai-console',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const ApiPublicWidgetDotjsRoute = ApiPublicWidgetDotjsRouteImport.update({
@@ -117,11 +160,18 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
+  '/ai-console': typeof AuthenticatedAiConsoleRoute
+  '/audit': typeof AuthenticatedAuditRoute
+  '/contacts': typeof AuthenticatedContactsRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/departments': typeof AuthenticatedDepartmentsRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/intake': typeof AuthenticatedIntakeRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/organizations': typeof AuthenticatedOrganizationsRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/routing': typeof AuthenticatedRoutingRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/staff': typeof AuthenticatedStaffRoute
   '/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
@@ -135,11 +185,18 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
+  '/ai-console': typeof AuthenticatedAiConsoleRoute
+  '/audit': typeof AuthenticatedAuditRoute
+  '/contacts': typeof AuthenticatedContactsRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/departments': typeof AuthenticatedDepartmentsRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/intake': typeof AuthenticatedIntakeRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/organizations': typeof AuthenticatedOrganizationsRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/routing': typeof AuthenticatedRoutingRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/staff': typeof AuthenticatedStaffRoute
   '/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
@@ -155,11 +212,18 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
+  '/_authenticated/ai-console': typeof AuthenticatedAiConsoleRoute
+  '/_authenticated/audit': typeof AuthenticatedAuditRoute
+  '/_authenticated/contacts': typeof AuthenticatedContactsRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/departments': typeof AuthenticatedDepartmentsRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/intake': typeof AuthenticatedIntakeRoute
   '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRoute
   '/_authenticated/organizations': typeof AuthenticatedOrganizationsRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/routing': typeof AuthenticatedRoutingRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/staff': typeof AuthenticatedStaffRoute
   '/_authenticated/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
@@ -175,11 +239,18 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/widget'
+    | '/ai-console'
+    | '/audit'
+    | '/contacts'
+    | '/dashboard'
+    | '/departments'
     | '/inbox'
     | '/intake'
     | '/knowledge'
     | '/organizations'
     | '/reports'
+    | '/routing'
+    | '/settings'
     | '/staff'
     | '/websites'
     | '/api/public/widget.js'
@@ -193,11 +264,18 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/widget'
+    | '/ai-console'
+    | '/audit'
+    | '/contacts'
+    | '/dashboard'
+    | '/departments'
     | '/inbox'
     | '/intake'
     | '/knowledge'
     | '/organizations'
     | '/reports'
+    | '/routing'
+    | '/settings'
     | '/staff'
     | '/websites'
     | '/api/public/widget.js'
@@ -212,11 +290,18 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/widget'
+    | '/_authenticated/ai-console'
+    | '/_authenticated/audit'
+    | '/_authenticated/contacts'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/departments'
     | '/_authenticated/inbox'
     | '/_authenticated/intake'
     | '/_authenticated/knowledge'
     | '/_authenticated/organizations'
     | '/_authenticated/reports'
+    | '/_authenticated/routing'
+    | '/_authenticated/settings'
     | '/_authenticated/staff'
     | '/_authenticated/websites'
     | '/api/public/widget.js'
@@ -284,6 +369,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStaffRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/routing': {
+      id: '/_authenticated/routing'
+      path: '/routing'
+      fullPath: '/routing'
+      preLoaderRoute: typeof AuthenticatedRoutingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/reports': {
       id: '/_authenticated/reports'
       path: '/reports'
@@ -317,6 +416,41 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof AuthenticatedInboxRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/departments': {
+      id: '/_authenticated/departments'
+      path: '/departments'
+      fullPath: '/departments'
+      preLoaderRoute: typeof AuthenticatedDepartmentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/contacts': {
+      id: '/_authenticated/contacts'
+      path: '/contacts'
+      fullPath: '/contacts'
+      preLoaderRoute: typeof AuthenticatedContactsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/audit': {
+      id: '/_authenticated/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuthenticatedAuditRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ai-console': {
+      id: '/_authenticated/ai-console'
+      path: '/ai-console'
+      fullPath: '/ai-console'
+      preLoaderRoute: typeof AuthenticatedAiConsoleRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/widget.js': {
@@ -365,21 +499,35 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAiConsoleRoute: typeof AuthenticatedAiConsoleRoute
+  AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
+  AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDepartmentsRoute: typeof AuthenticatedDepartmentsRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedIntakeRoute: typeof AuthenticatedIntakeRoute
   AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRoute
   AuthenticatedOrganizationsRoute: typeof AuthenticatedOrganizationsRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedRoutingRoute: typeof AuthenticatedRoutingRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStaffRoute: typeof AuthenticatedStaffRoute
   AuthenticatedWebsitesRoute: typeof AuthenticatedWebsitesRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAiConsoleRoute: AuthenticatedAiConsoleRoute,
+  AuthenticatedAuditRoute: AuthenticatedAuditRoute,
+  AuthenticatedContactsRoute: AuthenticatedContactsRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDepartmentsRoute: AuthenticatedDepartmentsRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedIntakeRoute: AuthenticatedIntakeRoute,
   AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRoute,
   AuthenticatedOrganizationsRoute: AuthenticatedOrganizationsRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedRoutingRoute: AuthenticatedRoutingRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStaffRoute: AuthenticatedStaffRoute,
   AuthenticatedWebsitesRoute: AuthenticatedWebsitesRoute,
 }

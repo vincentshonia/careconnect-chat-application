@@ -73,7 +73,8 @@ function InboxPage() {
 
   const conversationsQuery = useQuery({
     queryKey: ["conversations", filter],
-    refetchInterval: 8000,
+    refetchInterval: 60_000,
+
     queryFn: async () => {
       let q = supabase
         .from("conversations")
@@ -99,10 +100,29 @@ function InboxPage() {
     if (!activeId && conversations.length) setActiveId(conversations[0].id);
   }, [conversations, activeId]);
 
+  // Live updates: new visitor messages and conversation changes push instantly.
+  useEffect(() => {
+    const channel = supabase
+      .channel("inbox-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+        queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        const convId = (payload.new as { conversation_id?: string })?.conversation_id;
+        if (convId) queryClient.invalidateQueries({ queryKey: ["messages", convId] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   const messagesQuery = useQuery({
     queryKey: ["messages", activeId],
     enabled: Boolean(activeId),
-    refetchInterval: 5000,
+    refetchInterval: 30_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("messages")
@@ -114,6 +134,7 @@ function InboxPage() {
       return data ?? [];
     },
   });
+
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
