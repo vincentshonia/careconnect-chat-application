@@ -103,6 +103,18 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               (rules ?? []).find((r: any) => r.match_value === "*");
             departmentId = rule?.department_id ?? conversation.department_id ?? null;
           }
+          if (!departmentId) {
+            // Last resort: the organization's default department keeps round-robin working.
+            const { data: fallback } = await db
+              .from("departments")
+              .select("id")
+              .eq("organization_id", website.organization_id)
+              .eq("status", "active")
+              .eq("is_default", true)
+              .maybeSingle();
+            departmentId = fallback?.id ?? null;
+          }
+
 
           await db
             .from("conversations")
