@@ -108,6 +108,26 @@ function DepartmentsTab() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["departments"] }),
   });
 
+  const remove = useMutation({
+    mutationFn: async (dept: Department) => {
+      const { error } = await supabase.from("departments").delete().eq("id", dept.id);
+      if (error) throw error;
+      await logAudit({
+        action: "department.deleted",
+        recordType: "departments",
+        recordId: dept.id,
+        previousValue: { name: dept.name, routing_method: dept.routing_method },
+      });
+    },
+    onSuccess: (_data, dept) => {
+      toast.success(`${dept.name} deleted`);
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+      queryClient.invalidateQueries({ queryKey: ["department-members"] });
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not delete that department"),
+  });
+
   return (
     <div className="space-y-4">
       <form
