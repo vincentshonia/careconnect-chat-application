@@ -146,7 +146,7 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             website_id: website.id,
             conversation_id: conversation.id,
             contact_id: contactId,
-            department_id: rule?.department_id ?? null,
+            department_id: departmentId,
             request_type: typeMap[input.kind] ?? "general",
             priority: input.kind === "live_agent" ? "high" : "normal",
             full_name: input.fullName,
