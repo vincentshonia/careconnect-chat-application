@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useSessionContext, type AppRole } from "@/hooks/use-session-context";
@@ -60,6 +61,7 @@ function StaffPage() {
         .from("user_roles")
         .insert({ user_id: userId, role, organization_id: orgId });
       if (error) throw error;
+      await logAudit({ action: "user_role.changed", recordType: "user_roles", recordId: userId, newValue: { role } });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
   });
@@ -74,6 +76,7 @@ function StaffPage() {
     }) => {
       const { error } = await supabase.from("profiles").update(patch).eq("id", id);
       if (error) throw error;
+      await logAudit({ action: "staff_profile.updated", recordType: "profiles", recordId: id, newValue: patch as Record<string, unknown> });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
   });
@@ -91,6 +94,7 @@ function StaffPage() {
       if (member) {
         const { error } = await supabase.from("department_members").delete().eq("id", member.id);
         if (error) throw error;
+        await logAudit({ action: "department_member.removed", recordType: "department_members", recordId: userId, previousValue: { departmentId } });
         return;
       }
       const { error } = await supabase.from("department_members").insert({
@@ -99,6 +103,7 @@ function StaffPage() {
         organization_id: session.data?.organizationId ?? "",
       });
       if (error) throw error;
+      await logAudit({ action: "department_member.added", recordType: "department_members", recordId: userId, newValue: { departmentId } });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
   });

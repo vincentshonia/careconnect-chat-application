@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,12 @@ function SettingsPage() {
         })
         .eq("id", orgId);
       if (error) throw error;
+      await logAudit({
+        action: "organization_settings.updated",
+        recordType: "organizations",
+        recordId: orgId,
+        newValue: { name: form.name, timezone: form.timezone, ai_instructions_changed: true },
+      });
     },
     onSuccess: () => {
       setNotice("Settings saved.");
