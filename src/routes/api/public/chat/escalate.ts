@@ -15,7 +15,9 @@ const bodySchema = z.object({
   serviceInterest: z.string().trim().max(160).optional().nullable(),
   preferredLanguage: z.string().trim().max(60).optional().nullable(),
   consent: z.literal(true),
+  departmentId: z.string().uuid().nullable().optional(),
   kind: z.enum(["live_agent", "contact", "referral", "enrollment", "message"]).default("live_agent"),
+
 });
 
 export const Route = createFileRoute("/api/public/chat/escalate")({
