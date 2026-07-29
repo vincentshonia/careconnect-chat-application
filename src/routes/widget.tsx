@@ -52,7 +52,9 @@ type Config = {
     privacyNotice: string;
     emergencyMessage: string;
   };
+  departments: Array<{ id: string; name: string; description: string | null }>;
   services: Array<{
+
     id: string;
     name: string;
     short_description: string;
@@ -539,6 +541,7 @@ function WidgetPage() {
                   conversationId,
                   kind: formKind,
                   ...payload,
+                  departmentId: (payload.departmentId as string) || null,
                 }),
               });
               const data = await res.json();
@@ -546,11 +549,14 @@ function WidgetPage() {
               setConversationId(data.conversationId);
               setLiveStatus(
                 formKind === "live_agent"
-                  ? data.agentsAvailable
-                    ? "Looking for an available representative"
-                    : "No representative is currently available — your message has been saved."
+                  ? data.assignedAgent
+                    ? `${data.assignedAgent} has been assigned and will join shortly`
+                    : data.agentsAvailable
+                      ? "Looking for an available representative"
+                      : "No representative is currently available — your message has been saved."
                   : "Your request has been received. A representative will follow up.",
               );
+
               setView("waiting");
             }}
           />
@@ -809,6 +815,8 @@ function IntakeForm({
     healthPlan: "",
     serviceInterest: "",
     preferredLanguage: "English",
+    departmentId: "",
+
     consent: false,
   });
   const [busy, setBusy] = useState(false);
@@ -850,7 +858,25 @@ function IntakeForm({
           {config.organization.privacyNotice}
         </p>
       )}
+      {config.departments?.length ? (
+        <label className="block text-xs font-medium text-foreground">
+          Which team can help you?
+          <select
+            value={values.departmentId}
+            onChange={(e) => set("departmentId", e.target.value)}
+            className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm font-normal"
+          >
+            <option value="">Choose for me</option>
+            {config.departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <Field label="Full name" required value={values.fullName} onChange={(v) => set("fullName", v)} />
+
       <Field label="Phone number" required type="tel" value={values.phone} onChange={(v) => set("phone", v)} />
       <Field label="Email address" required type="email" value={values.email} onChange={(v) => set("email", v)} />
       {(kind === "referral" || kind === "enrollment") && (

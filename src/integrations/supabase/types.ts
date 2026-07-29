@@ -535,6 +535,7 @@ export type Database = {
           created_at: string
           department_id: string
           id: string
+          last_assigned_at: string | null
           organization_id: string
           user_id: string
         }
@@ -542,6 +543,7 @@ export type Database = {
           created_at?: string
           department_id: string
           id?: string
+          last_assigned_at?: string | null
           organization_id: string
           user_id: string
         }
@@ -549,6 +551,7 @@ export type Database = {
           created_at?: string
           department_id?: string
           id?: string
+          last_assigned_at?: string | null
           organization_id?: string
           user_id?: string
         }

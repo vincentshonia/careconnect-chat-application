@@ -1,13 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
+import { transferConversationFn } from "@/lib/routing.functions";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   head: () => ({
@@ -27,6 +30,8 @@ type Conversation = {
   status: string;
   priority: string;
   assigned_to: string | null;
+  department_id: string | null;
+
   escalation_requested: boolean;
   last_message_at: string;
   organization_id: string;
@@ -80,7 +85,7 @@ function InboxPage() {
       let q = supabase
         .from("conversations")
         .select(
-          "id, reference, subject, status, priority, assigned_to, escalation_requested, last_message_at, organization_id, website_id, visitor_type, contact_id",
+          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, organization_id, website_id, visitor_type, contact_id",
         )
         .order("last_message_at", { ascending: false })
         .limit(100);
@@ -209,6 +214,30 @@ function InboxPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["conversations"] }),
   });
 
+  const departmentsQuery = useQuery({
+    queryKey: ["inbox-departments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("departments")
+        .select("id, name")
+        .eq("status", "active")
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const transferConversation = useServerFn(transferConversationFn);
+  const transfer = useMutation({
+    mutationFn: async (departmentId: string) => {
+      if (!active) throw new Error("No conversation selected");
+      return transferConversation({ data: { conversationId: active.id, departmentId } });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+  });
+
+
+
   return (
     <AdminShell
       title="Inbox"
@@ -274,7 +303,24 @@ function InboxPage() {
                 <span className="text-sm font-medium">{active.subject ?? "Website chat"}</span>
                 <Badge variant="outline">{active.priority}</Badge>
                 {active.escalation_requested ? <Badge>Agent requested</Badge> : null}
-                <div className="ml-auto flex gap-2">
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <select
+                    aria-label="Transfer to department"
+                    value={active.department_id ?? ""}
+                    disabled={transfer.isPending}
+                    onChange={(e) => {
+                      if (e.target.value) transfer.mutate(e.target.value);
+                    }}
+                    className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                  >
+                    <option value="">Transfer to…</option>
+                    {(departmentsQuery.data ?? []).map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+
                   <Button
                     size="sm"
                     variant="outline"
