@@ -83,6 +83,8 @@ export function AdminShell({
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { unread } = useNotifications();
+  const { theme, toggle: toggleTheme } = useTheme();
+
 
 
   async function signOut() {
