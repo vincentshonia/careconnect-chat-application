@@ -1,32 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { z } from "zod";
-
-const ROLE_RANK: Record<string, number> = {
-  agent: 1,
-  team_lead: 2,
-  manager: 3,
-  administrator: 4,
-  super_admin: 5,
-};
-
-const createStaffInput = z.object({
-  fullName: z.string().trim().min(2).max(120),
-  email: z.string().trim().email().max(200),
-  role: z.enum(["agent", "team_lead", "manager", "administrator", "super_admin"]),
-  title: z.string().trim().max(120).optional().nullable(),
-  phone: z.string().trim().max(40).optional().nullable(),
-  departmentIds: z.array(z.string().uuid()).max(20).optional(),
-});
-
-/** Cryptographically random temporary password shown once to the administrator. */
-function generateTempPassword() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  const body = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
-  return `Ph!${body}9`;
-}
+import {
+  ROLE_RANK,
+  createStaffInput,
+  staffAccessInput,
+  generateTempPassword,
+} from "@/lib/staff-helpers";
 
 /**
  * Administrator-only: create a staff account directly with a temporary password.
@@ -135,11 +114,6 @@ export const createStaffFn = createServerFn({ method: "POST" })
     return { userId: newUserId, email, tempPassword };
   });
 
-const accessInput = z.object({
-  userId: z.string().uuid(),
-  action: z.enum(["disable", "enable", "remove"]),
-});
-
 /**
  * Administrator-only: disable, re-enable, or revoke a staff account.
  * Access is revoked at the auth layer and the profile is flagged — no
@@ -147,7 +121,7 @@ const accessInput = z.object({
  */
 export const setStaffAccessFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => accessInput.parse(input))
+  .inputValidator((input: unknown) => staffAccessInput.parse(input))
   .handler(async ({ data, context }) => {
     if (data.userId === context.userId) throw new Error("You cannot change your own access");
 
