@@ -52,7 +52,9 @@ type Config = {
     privacyNotice: string;
     emergencyMessage: string;
   };
+  departments: Array<{ id: string; name: string; description: string | null }>;
   services: Array<{
+
     id: string;
     name: string;
     short_description: string;
