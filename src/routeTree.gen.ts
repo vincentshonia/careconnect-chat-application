@@ -26,6 +26,7 @@ import { Route as AuthenticatedDepartmentsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
+import { Route as AuthenticatedAiConsoleRouteImport } from './routes/_authenticated/ai-console'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
 import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
 import { Route as ApiPublicChatMessageRouteImport } from './routes/api/public/chat/message'
@@ -119,6 +120,11 @@ const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAiConsoleRoute = AuthenticatedAiConsoleRouteImport.update({
+  id: '/ai-console',
+  path: '/ai-console',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiPublicWidgetDotjsRoute = ApiPublicWidgetDotjsRouteImport.update({
   id: '/api/public/widget.js',
   path: '/api/public/widget.js',
@@ -154,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
+  '/ai-console': typeof AuthenticatedAiConsoleRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
+  '/ai-console': typeof AuthenticatedAiConsoleRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/contacts': typeof AuthenticatedContactsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -204,6 +212,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/widget': typeof WidgetRoute
+  '/_authenticated/ai-console': typeof AuthenticatedAiConsoleRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -230,6 +239,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/widget'
+    | '/ai-console'
     | '/audit'
     | '/contacts'
     | '/dashboard'
@@ -254,6 +264,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/widget'
+    | '/ai-console'
     | '/audit'
     | '/contacts'
     | '/dashboard'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/widget'
+    | '/_authenticated/ai-console'
     | '/_authenticated/audit'
     | '/_authenticated/contacts'
     | '/_authenticated/dashboard'
@@ -434,6 +446,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAuditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ai-console': {
+      id: '/_authenticated/ai-console'
+      path: '/ai-console'
+      fullPath: '/ai-console'
+      preLoaderRoute: typeof AuthenticatedAiConsoleRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/widget.js': {
       id: '/api/public/widget.js'
       path: '/api/public/widget.js'
@@ -480,6 +499,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAiConsoleRoute: typeof AuthenticatedAiConsoleRoute
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -496,6 +516,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAiConsoleRoute: AuthenticatedAiConsoleRoute,
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
