@@ -25,20 +25,18 @@ const PREF_COLUMN: Record<NotifyInput["type"], string> = {
 
 
 /**
- * Fan a notification out to every staff member in the organization who opted in.
+ * Fan a notification out to the relevant staff (department members when a
+ * department is given, otherwise the whole organization) who opted in.
  * Never throws — alerting must not break the action that triggered it.
  */
 export async function notifyStaff(input: NotifyInput) {
   try {
     const db = admin();
-    const { data: staff } = await db
-      .from("profiles")
-      .select("id")
-      .eq("organization_id", input.organizationId)
-      .eq("status", "active");
-
-    const ids = (staff ?? []).map((s: { id: string }) => s.id);
+    const ids = input.userIds?.length
+      ? input.userIds
+      : await alertRecipients(input.organizationId, input.departmentId ?? null);
     if (ids.length === 0) return;
+
 
     const { data: prefs } = await db
       .from("notification_preferences")
