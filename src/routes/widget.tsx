@@ -609,13 +609,13 @@ function WidgetPage() {
 
       {(view === "chat" || view === "menu" || view === "waiting") && (
         <form
-          className="border-t border-border bg-card p-3"
+          className="border-t border-border/70 bg-card px-3 pb-3 pt-2.5"
           onSubmit={(e) => {
             e.preventDefault();
             void sendQuestion(input);
           }}
         >
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-2 rounded-2xl border border-input bg-background p-1.5 transition focus-within:border-transparent focus-within:ring-2 focus-within:ring-ring/40">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -628,19 +628,22 @@ function WidgetPage() {
               rows={1}
               placeholder="Type your question…"
               aria-label="Type your question"
-              className="max-h-24 min-h-[40px] flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              className="max-h-24 min-h-[36px] flex-1 resize-none border-0 bg-transparent px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground"
             />
             <button
               type="submit"
               disabled={sending || !input.trim()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white disabled:opacity-50"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white shadow-sm transition hover:brightness-110 disabled:opacity-40 disabled:shadow-none"
               style={{ background: brand }}
               aria-label="Send message"
             >
-              ➤
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
             </button>
           </div>
-          <p className="mt-2 text-[10px] leading-tight text-muted-foreground">{config.organization.privacyNotice}</p>
+          <p className="mt-2 px-1 text-[10px] leading-tight text-muted-foreground">{config.organization.privacyNotice}</p>
+
         </form>
       )}
     </div>
