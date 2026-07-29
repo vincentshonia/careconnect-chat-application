@@ -156,6 +156,49 @@ function SettingsPage() {
           save.mutate();
         }}
       >
+        <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+          <div>
+            <Label>Brand logo</Label>
+            <p className="text-xs text-muted-foreground">
+              PNG, JPG or SVG up to 2 MB. Shown across the console and branded surfaces.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Organization logo" className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-xs text-muted-foreground">None</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                id="logo"
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                className="max-w-xs"
+                disabled={!isAdmin || uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  if (file.size > 2 * 1024 * 1024) {
+                    setNotice("Logo must be smaller than 2 MB.");
+                    return;
+                  }
+                  void handleLogoUpload(file);
+                }}
+              />
+              {logoUrl ? (
+                <Button type="button" variant="outline" disabled={!isAdmin} onClick={() => void handleLogoRemove()}>
+                  Remove
+                </Button>
+              ) : null}
+            </div>
+            {uploading ? <span className="text-sm text-muted-foreground">Uploading…</span> : null}
+          </div>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="name" label="Organization name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
           <Field id="timezone" label="Timezone" value={form.timezone} onChange={(v) => setForm({ ...form, timezone: v })} />
