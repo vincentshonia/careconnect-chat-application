@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
+import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -108,6 +109,26 @@ function DepartmentsTab() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["departments"] }),
   });
 
+  const remove = useMutation({
+    mutationFn: async (dept: Department) => {
+      const { error } = await supabase.from("departments").delete().eq("id", dept.id);
+      if (error) throw error;
+      await logAudit({
+        action: "department.deleted",
+        recordType: "departments",
+        recordId: dept.id,
+        previousValue: { name: dept.name, routing_method: dept.routing_method },
+      });
+    },
+    onSuccess: (_data, dept) => {
+      toast.success(`${dept.name} deleted`);
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+      queryClient.invalidateQueries({ queryKey: ["department-members"] });
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not delete that department"),
+  });
+
   return (
     <div className="space-y-4">
       <form
@@ -171,6 +192,24 @@ function DepartmentsTab() {
                   }
                 >
                   {d.status === "active" ? "Deactivate" : "Activate"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={d.is_default || remove.isPending}
+                  title={
+                    d.is_default
+                      ? "The default department cannot be deleted"
+                      : "Delete this department"
+                  }
+                  onClick={() => {
+                    const confirmed = window.confirm(
+                      `Delete “${d.name}”? Team memberships and coverage hours for this department are removed. Conversations, intakes and routing rules are kept but will no longer point to a department.`,
+                    );
+                    if (confirmed) remove.mutate(d);
+                  }}
+                >
+                  Delete
                 </Button>
               </div>
             </li>
