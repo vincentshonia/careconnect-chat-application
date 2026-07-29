@@ -36,6 +36,42 @@ function StaffPage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
   const isAdmin = session.data?.isAdmin ?? false;
+  const callerRank = session.data?.rank ?? 0;
+  const createStaff = useServerFn(createStaffFn);
+
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    role: "agent" as AppRole,
+    title: "",
+    phone: "",
+  });
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    email: string;
+    tempPassword: string;
+  } | null>(null);
+
+  const addStaff = useMutation({
+    mutationFn: async () =>
+      createStaff({
+        data: {
+          fullName: form.fullName,
+          email: form.email,
+          role: form.role,
+          title: form.title || null,
+          phone: form.phone || null,
+        },
+      }),
+    onSuccess: (result) => {
+      setCreatedCredentials({ email: result.email, tempPassword: result.tempPassword });
+      setForm({ fullName: "", email: "", role: "agent", title: "", phone: "" });
+      setShowForm(false);
+      queryClient.invalidateQueries({ queryKey: ["staff"] });
+    },
+  });
+
+
 
   const staffQuery = useQuery({
     queryKey: ["staff"],
