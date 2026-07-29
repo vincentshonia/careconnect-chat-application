@@ -264,9 +264,24 @@ function Articles() {
               />
             </div>
             {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
-            <Button type="submit" disabled={save.isPending}>
-              {save.isPending ? "Saving & re-indexing…" : "Save & re-index"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button type="submit" disabled={save.isPending}>
+                {save.isPending ? "Saving & re-indexing…" : "Save & re-index"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={removeArticle.isPending}
+                onClick={() => {
+                  if (confirm("Delete this article? Its indexed chunks are removed too.")) {
+                    removeArticle.mutate(active.id);
+                  }
+                }}
+              >
+                {removeArticle.isPending ? "Deleting…" : "Delete"}
+              </Button>
+            </div>
+
           </form>
         )}
       </section>
