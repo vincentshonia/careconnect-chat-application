@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WidgetRouteImport } from './routes/widget'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as NoAccessRouteImport } from './routes/no-access'
+import { Route as InviteRouteImport } from './routes/invite'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -50,6 +52,16 @@ const WidgetRoute = WidgetRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NoAccessRoute = NoAccessRouteImport.update({
+  id: '/no-access',
+  path: '/no-access',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -208,6 +220,8 @@ const ApiPublicBrandingSplatRoute = ApiPublicBrandingSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/invite': typeof InviteRoute
+  '/no-access': typeof NoAccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/widget': typeof WidgetRoute
   '/ai-console': typeof AuthenticatedAiConsoleRoute
@@ -241,6 +255,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/invite': typeof InviteRoute
+  '/no-access': typeof NoAccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/widget': typeof WidgetRoute
   '/ai-console': typeof AuthenticatedAiConsoleRoute
@@ -276,6 +292,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/invite': typeof InviteRoute
+  '/no-access': typeof NoAccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/widget': typeof WidgetRoute
   '/_authenticated/ai-console': typeof AuthenticatedAiConsoleRoute
@@ -311,6 +329,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/invite'
+    | '/no-access'
     | '/reset-password'
     | '/widget'
     | '/ai-console'
@@ -344,6 +364,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/invite'
+    | '/no-access'
     | '/reset-password'
     | '/widget'
     | '/ai-console'
@@ -378,6 +400,8 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/invite'
+    | '/no-access'
     | '/reset-password'
     | '/widget'
     | '/_authenticated/ai-console'
@@ -413,6 +437,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  InviteRoute: typeof InviteRoute
+  NoAccessRoute: typeof NoAccessRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   WidgetRoute: typeof WidgetRoute
   ApiPublicWidgetDotjsRoute: typeof ApiPublicWidgetDotjsRoute
@@ -441,6 +467,20 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/no-access': {
+      id: '/no-access'
+      path: '/no-access'
+      fullPath: '/no-access'
+      preLoaderRoute: typeof NoAccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -703,6 +743,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  InviteRoute: InviteRoute,
+  NoAccessRoute: NoAccessRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   WidgetRoute: WidgetRoute,
   ApiPublicWidgetDotjsRoute: ApiPublicWidgetDotjsRoute,
