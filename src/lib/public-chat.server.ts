@@ -20,13 +20,8 @@ export function admin(): Admin {
   return cached;
 }
 
-export class PublicChatError extends Error {
-  status: number;
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
-}
+export { PublicChatError } from "./public-chat-error";
+import { PublicChatError } from "./public-chat-error";
 
 function hostOf(value: string | null | undefined): string | null {
   if (!value) return null;
