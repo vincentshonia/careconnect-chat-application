@@ -183,7 +183,7 @@ function InboxPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("messages")
-        .select("id, sender_type, sender_name, body, created_at")
+        .select("id, sender_type, sender_name, body, created_at, metadata")
         .eq("conversation_id", activeId!)
         .order("created_at")
         .limit(200);
