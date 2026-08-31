@@ -7,6 +7,9 @@ import {
   generateTempPassword,
 } from "@/lib/staff-helpers";
 
+/** Public origin used for absolute links/images inside outgoing emails. */
+const APP_ORIGIN = "https://chat.mypacifichealth.com";
+
 /**
  * Administrator-only: create a staff account directly with a temporary password.
  * The caller must be rank 4+ and cannot create a role above their own rank.
