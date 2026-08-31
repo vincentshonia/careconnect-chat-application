@@ -2232,7 +2232,7 @@ export type Database = {
           title: string
         }[]
       }
-      mfa_requirement: { Args: { _user_id: string }; Returns: boolean }
+      my_mfa_requirement: { Args: never; Returns: boolean }
       org_role_rank: { Args: { _org: string; _user?: string }; Returns: number }
       role_rank: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
