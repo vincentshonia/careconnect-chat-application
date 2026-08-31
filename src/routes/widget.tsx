@@ -1014,10 +1014,10 @@ function SatisfactionPrompt({
 
   async function submit(value: number, note: string) {
     setDone(true);
-    await fetch("/api/public/chat/rate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId, score: value, comment: note || null }),
+    await chatPost("/api/public/chat/rate", {
+      conversationId,
+      score: value,
+      comment: note || null,
     }).catch(() => undefined);
   }
 
