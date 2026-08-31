@@ -44,8 +44,12 @@ function NotificationsPage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
   const { notifications, unread, markRead } = useNotifications();
+  const { count: waitingCount } = useWaitingCount();
+  const [push, setPush] = useState<PushStatus>("default");
   const [saved, setSaved] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, boolean | number>>({});
+
+  useEffect(() => setPush(pushStatus()), []);
 
   const prefs = useQuery({
     queryKey: ["notification-preferences", session.data?.userId],
