@@ -72,11 +72,18 @@ export const transferConversationFn = createServerFn({ method: "POST" })
       new_value: department.id,
     });
 
-    const assigned = await assignRoundRobin({
-      organizationId: conversation.organization_id,
-      departmentId: department.id,
-      conversationId: conversation.id,
-    });
+    // Only auto-assign when the destination department round-robins; a shared
+    // queue leaves the chat waiting for the first eligible agent to claim.
+    const { departmentRoutingMode } = await import("@/lib/assignment.server");
+    const mode = await departmentRoutingMode(department.id);
+    const assigned =
+      mode === "round_robin"
+        ? await assignRoundRobin({
+            organizationId: conversation.organization_id,
+            departmentId: department.id,
+            conversationId: conversation.id,
+          })
+        : null;
 
     await notifyStaff({
       organizationId: conversation.organization_id,
