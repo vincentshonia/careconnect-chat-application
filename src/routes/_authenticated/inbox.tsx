@@ -418,9 +418,8 @@ function InboxPage() {
                   <Badge>Assigned to you</Badge>
                 ) : active.assigned_to ? (
                   <Badge variant="secondary">Assigned to {ownerName}</Badge>
-                ) : (
-                  <Badge variant="destructive">Unclaimed</Badge>
-                )}
+                ) : null}
+
                 {readOnly ? <Badge variant="outline">View only</Badge> : null}
 
                 <div className="ml-auto flex flex-wrap items-center gap-2">
