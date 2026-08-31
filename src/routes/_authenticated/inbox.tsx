@@ -333,7 +333,7 @@ function InboxPage() {
   ];
 
   function ownershipLabel(c: Conversation) {
-    if (!c.assigned_to) return "Waiting for agent";
+    if (!c.assigned_to) return "Unclaimed";
     if (c.assigned_to === userId) return "Assigned to you";
     const name = (staffQuery.data ?? []).find((s) => s.id === c.assigned_to)?.full_name;
     return name ? `Assigned to ${name}` : "Assigned to a colleague";
@@ -412,7 +412,7 @@ function InboxPage() {
                 ) : active.assigned_to ? (
                   <Badge variant="secondary">Assigned to {ownerName}</Badge>
                 ) : (
-                  <Badge variant="destructive">Waiting for agent</Badge>
+                  <Badge variant="destructive">Unclaimed</Badge>
                 )}
                 {readOnly ? <Badge variant="outline">View only</Badge> : null}
 
