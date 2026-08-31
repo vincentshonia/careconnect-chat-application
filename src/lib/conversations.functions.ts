@@ -374,3 +374,31 @@ export const closeConversationFn = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
+
+/**
+ * Mint a short-lived signed URL for a visitor attachment so the agent can
+ * view or save it. Access mirrors conversation visibility.
+ */
+export const attachmentUrlFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({ conversationId: z.string().uuid(), path: z.string().min(1).max(500) })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    const conversation = await loadConversation(data.conversationId);
+    if (!canView(actor, conversation)) throw new ForbiddenError("Conversation not found");
+    // The stored path is namespaced by org + conversation: refuse anything else.
+    if (!data.path.startsWith(`${conversation.organization_id}/${conversation.id}/`)) {
+      throw new ForbiddenError("That attachment does not belong to this conversation");
+    }
+
+    const { admin } = await import("@/lib/public-chat.server");
+    const { data: signed, error } = await admin()
+      .storage.from("chat-attachments")
+      .createSignedUrl(data.path, 60 * 10);
+    if (error || !signed?.signedUrl) throw new ForbiddenError("Could not open that attachment");
+    return { url: signed.signedUrl };
+  });
