@@ -2,6 +2,7 @@ import React from 'react'
 import {
   Body,
   Button,
+  Img,
   Container,
   Head,
   Heading,
@@ -20,15 +21,19 @@ interface Props {
   tempPassword?: string
   signInUrl?: string
   role?: string
+  logoUrl?: string
+  primaryColor?: string
 }
 
 const main = { backgroundColor: '#ffffff', fontFamily: 'Helvetica, Arial, sans-serif' }
 const container = { maxWidth: '560px', margin: '0 auto', padding: '32px 24px' }
-const brandBar = {
-  background: 'linear-gradient(90deg, #12839b 0%, #4f46e5 55%, #a734b8 100%)',
+const brandBarBase = {
   borderRadius: '12px',
   padding: '22px 24px',
 }
+const defaultBrandBackground =
+  'linear-gradient(90deg, #12839b 0%, #4f46e5 55%, #a734b8 100%)'
+const logoImg = { maxHeight: '40px', maxWidth: '200px', display: 'block' }
 const brandText = { color: '#ffffff', fontSize: '18px', fontWeight: 700, margin: '0' }
 const brandSub = { color: '#e6f4f7', fontSize: '13px', margin: '6px 0 0' }
 const heading = { color: '#0f172a', fontSize: '22px', margin: '28px 0 8px' }
@@ -73,15 +78,28 @@ const StaffWelcomeEmail = ({
   tempPassword,
   signInUrl = 'https://chat.mypacifichealth.com/auth',
   role,
+  logoUrl,
+  primaryColor,
 }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Your CareConnect account is ready — here is your temporary password</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Section style={brandBar}>
-          <Text style={brandText}>CareConnect</Text>
-          <Text style={brandSub}>Pacific Health Group</Text>
+        <Section
+          style={{
+            ...brandBarBase,
+            background: primaryColor || defaultBrandBackground,
+          }}
+        >
+          {logoUrl ? (
+            <Img src={logoUrl} alt={organizationName} style={logoImg} />
+          ) : (
+            <Text style={brandText}>CareConnect</Text>
+          )}
+          <Text style={logoUrl ? { ...brandSub, margin: '10px 0 0' } : brandSub}>
+            {organizationName}
+          </Text>
         </Section>
 
         <Heading style={heading}>Welcome{fullName ? `, ${fullName}` : ''} 👋</Heading>
@@ -104,7 +122,7 @@ const StaffWelcomeEmail = ({
         </Section>
 
         <Section>
-          <Button href={signInUrl} style={button}>
+          <Button href={signInUrl} style={{ ...button, backgroundColor: primaryColor || button.backgroundColor }}>
             Sign in to CareConnect
           </Button>
         </Section>
@@ -134,5 +152,6 @@ export const template = {
     tempPassword: 'Ph!TempPassw0rd9',
     signInUrl: 'https://chat.mypacifichealth.com/auth',
     role: 'agent',
+    primaryColor: '#0f766e',
   },
 } satisfies TemplateEntry

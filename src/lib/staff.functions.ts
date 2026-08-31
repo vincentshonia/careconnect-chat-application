@@ -7,6 +7,9 @@ import {
   generateTempPassword,
 } from "@/lib/staff-helpers";
 
+/** Public origin used for absolute links/images inside outgoing emails. */
+const APP_ORIGIN = "https://chat.mypacifichealth.com";
+
 /**
  * Administrator-only: create a staff account directly with a temporary password.
  * The caller must be rank 4+ and cannot create a role above their own rank.
@@ -136,7 +139,7 @@ export const createStaffFn = createServerFn({ method: "POST" })
     try {
       const { data: org } = await supabaseAdmin
         .from("organizations")
-        .select("name")
+        .select("name, logo_url, primary_color")
         .eq("id", organizationId)
         .maybeSingle();
 
@@ -149,7 +152,13 @@ export const createStaffFn = createServerFn({ method: "POST" })
           email,
           tempPassword,
           role: data.role,
-          signInUrl: "https://chat.mypacifichealth.com/auth",
+          signInUrl: `${APP_ORIGIN}/auth`,
+          logoUrl: org?.logo_url
+            ? org.logo_url.startsWith("http")
+              ? org.logo_url
+              : `${APP_ORIGIN}${org.logo_url}`
+            : undefined,
+          primaryColor: org?.primary_color ?? undefined,
         },
       });
       emailed = result.sent;
