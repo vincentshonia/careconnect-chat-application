@@ -80,58 +80,25 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             contactId = created.id;
           }
 
-          // The visitor's chosen department wins; otherwise fall back to routing rules.
-          let departmentId: string | null = null;
-          if (input.departmentId) {
-            const { data: dept } = await db
-              .from("departments")
-              .select("id")
-              .eq("id", input.departmentId)
-              .eq("organization_id", website.organization_id)
-              .eq("status", "active")
-              .maybeSingle();
-            departmentId = dept?.id ?? null;
-          }
-          if (!departmentId) {
-            const { data: rules } = await db
-              .from("routing_rules")
-              .select("match_value, department_id, priority")
-              .eq("organization_id", website.organization_id)
-              .eq("status", "active")
-              .order("priority");
-            const rule =
-              (rules ?? []).find((r: any) => r.match_value === input.kind) ??
-              (rules ?? []).find((r: any) => r.match_value === "*");
-            departmentId = rule?.department_id ?? conversation.department_id ?? null;
-          }
-          if (!departmentId) {
-            // Last resort: the organization's default department keeps round-robin working.
-            const { data: fallback } = await db
-              .from("departments")
-              .select("id")
-              .eq("organization_id", website.organization_id)
-              .eq("status", "active")
-              .eq("is_default", true)
-              .maybeSingle();
-            departmentId = fallback?.id ?? null;
-          }
-
+          // The visitor's chosen department wins; otherwise routing rules, then default.
+          const { resolveDepartment } = await import("@/lib/handoff.server");
+          const departmentId = await resolveDepartment({
+            organizationId: website.organization_id,
+            preferredDepartmentId: input.departmentId ?? null,
+            matchValue: input.kind,
+            currentDepartmentId: conversation.department_id ?? null,
+          });
 
           await db
             .from("conversations")
             .update({
               contact_id: contactId,
-              department_id: departmentId,
-              status: "waiting",
-              is_ai_only: false,
-              escalation_requested: true,
-              escalation_reason: input.reason ?? `Visitor requested: ${input.kind.replace("_", " ")}`,
               visitor_type: "prospect",
-              requested_agent_at: new Date().toISOString(),
               priority: input.kind === "live_agent" ? "high" : "normal",
               subject: `${input.kind.replace("_", " ")} — ${input.fullName}`,
             })
             .eq("id", conversation.id);
+
 
 
           await mod.insertMessage(
