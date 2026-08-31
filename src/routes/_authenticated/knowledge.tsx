@@ -7,6 +7,7 @@ import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { reindexArticleFn } from "@/lib/admin.functions";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { KnowledgeImport } from "@/components/admin/KnowledgeImport";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -169,7 +170,9 @@ function Articles() {
   });
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
+    <div className="space-y-4">
+      <KnowledgeImport mode="articles" />
+      <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
       <aside className="flex max-h-[70vh] flex-col overflow-hidden rounded-xl border border-border">
         <div className="border-b border-border p-3">
           <Button
@@ -284,7 +287,8 @@ function Articles() {
 
           </form>
         )}
-      </section>
+        </section>
+      </div>
     </div>
   );
 }
@@ -398,6 +402,9 @@ function Faqs() {
           {create.isPending ? "Adding…" : "Add FAQ"}
         </Button>
       </form>
+      <div className="lg:col-start-2 lg:row-start-2">
+        <KnowledgeImport mode="faqs" />
+      </div>
     </div>
   );
 }
