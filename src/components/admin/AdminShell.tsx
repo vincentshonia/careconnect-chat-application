@@ -32,7 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { useTheme } from "@/hooks/use-theme";
-import type { Permission } from "@/lib/permissions";
+import type { Permission, PlatformPermission } from "@/lib/permissions";
 
 import { Button } from "@/components/ui/button";
 
@@ -45,11 +45,11 @@ const navGroups = [
   {
     label: "Workspace",
     items: [
-      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, perms: undefined },
       { to: "/inbox", label: "Inbox", icon: Inbox, perms: ["conversation.view_assigned"] },
       { to: "/intake", label: "Intake", icon: ClipboardList, perms: ["workflow.view_assigned"] },
       { to: "/contacts", label: "Contacts", icon: Contact, perms: ["contact.view_related"] },
-      { to: "/notifications", label: "Notifications", icon: Bell },
+      { to: "/notifications", label: "Notifications", icon: Bell, perms: undefined },
     ],
   },
   {
@@ -86,7 +86,7 @@ const navGroups = [
   },
 ] as const satisfies readonly {
   label: string;
-  items: readonly { to: string; label: string; icon: typeof Inbox; perms?: readonly Permission[] }[];
+  items: readonly { to: string; label: string; icon: typeof Inbox; perms?: readonly (Permission | PlatformPermission)[] }[];
 }[];
 
 
@@ -127,7 +127,7 @@ export function AdminShell({
     .map((group) => ({
       ...group,
       items: group.items.filter(
-        (item) => !item.perms || item.perms.some((p) => permissions?.has(p)),
+        (item) => !item.perms || item.perms.some((p: string) => permissions?.has(p)),
       ),
     }))
     .filter((group) => group.items.length > 0);
