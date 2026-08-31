@@ -42,8 +42,28 @@ function AuthPage() {
     });
   }, [navigate]);
 
+  async function oauth(provider: "google" | "microsoft") {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const { lovable } = await import("@/integrations/lovable/index");
+      const result = await lovable.auth.signInWithOAuth(provider, {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) throw result.error;
+      if (result.redirected) return;
+      navigate({ to: "/inbox", replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign in failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+
     setBusy(true);
     setError(null);
     setMessage(null);
