@@ -549,3 +549,137 @@ export async function recordAiResponse(params: {
     .single();
   return data?.id as string | undefined;
 }
+
+/* -------------------------- signed widget sessions ------------------------ */
+
+/**
+ * Mint a signed session for a visitor. The visitor session token is generated
+ * server-side, so a browser can never claim someone else's session.
+ */
+export async function startWidgetSession(opts: {
+  websiteId?: string | null;
+  publicKey?: string | null;
+  host: string | null;
+  meta: Record<string, any>;
+}) {
+  const { newSessionId, signSession } = await import("./widget-session.server");
+  const website = opts.publicKey
+    ? await resolveWebsiteByKey(opts.publicKey, opts.host)
+    : await resolveWebsite(String(opts.websiteId ?? ""), opts.host);
+
+  const sid = newSessionId();
+  await ensureVisitor(website, sid, opts.meta ?? {});
+  const { token, expiresAt } = await signSession({
+    sid,
+    wid: website.id,
+    org: website.organization_id,
+    host: opts.host,
+  });
+  return { token, expiresAt, websiteId: website.id as string };
+}
+
+export type SessionContext = {
+  claims: import("./widget-session.server").WidgetSessionClaims;
+  website: Record<string, any>;
+  visitor: Record<string, any>;
+};
+
+/** Verify a session token and load the bound website + visitor. */
+export async function sessionContext(token: unknown, host: string | null): Promise<SessionContext> {
+  const { verifySession } = await import("./widget-session.server");
+  const claims = await verifySession(token);
+  const db = admin();
+
+  const { data: website } = await db.from("websites").select("*").eq("id", claims.wid).maybeSingle();
+  if (!website || website.status !== "active") throw new PublicChatError(404, "Website not found");
+  if (website.organization_id !== claims.org) throw new PublicChatError(401, "Chat session is invalid");
+  assertHostAllowed(website, host ?? claims.host);
+
+  const { data: visitor } = await db
+    .from("visitors")
+    .select("*")
+    .eq("session_token", claims.sid)
+    .eq("website_id", website.id)
+    .maybeSingle();
+  if (!visitor) throw new PublicChatError(401, "Chat session is no longer valid");
+
+  return { claims, website, visitor };
+}
+
+/** Load a conversation only if it belongs to this session's visitor. */
+export async function conversationForSession(ctx: SessionContext, conversationId: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(conversationId)) throw new PublicChatError(400, "Invalid conversation id");
+  const { data } = await admin()
+    .from("conversations")
+    .select("*")
+    .eq("id", conversationId)
+    .eq("visitor_id", ctx.visitor.id)
+    .eq("organization_id", ctx.claims.org)
+    .maybeSingle();
+  if (!data) throw new PublicChatError(404, "Conversation not found");
+  return data;
+}
+
+/* ------------------------------ usage limits ------------------------------ */
+
+export type OrgLimits = {
+  monthly_ai_messages: number;
+  monthly_ai_tokens: number;
+  session_ai_messages_per_minute: number;
+  ip_requests_per_minute: number;
+  max_prompt_chars: number;
+  hard_stop: boolean;
+};
+
+const DEFAULT_LIMITS: OrgLimits = {
+  monthly_ai_messages: 5000,
+  monthly_ai_tokens: 5_000_000,
+  session_ai_messages_per_minute: 15,
+  ip_requests_per_minute: 60,
+  max_prompt_chars: 2000,
+  hard_stop: true,
+};
+
+export async function orgLimits(organizationId: string): Promise<OrgLimits> {
+  const { data } = await admin()
+    .from("organization_limits")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+  return { ...DEFAULT_LIMITS, ...(data ?? {}) } as OrgLimits;
+}
+
+function currentPeriod() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+/** Block AI spend once a tenant passes its monthly allowance. */
+export async function enforceAiBudget(organizationId: string, limits: OrgLimits) {
+  if (!limits.hard_stop) return;
+  const { data } = await admin()
+    .from("usage_counters")
+    .select("metric, value")
+    .eq("organization_id", organizationId)
+    .eq("period", currentPeriod());
+  const used = new Map((data ?? []).map((r: any) => [r.metric as string, Number(r.value)]));
+  if ((used.get("ai_messages") ?? 0) >= limits.monthly_ai_messages) {
+    throw new PublicChatError(
+      429,
+      "This assistant has reached its monthly usage limit. Please contact us directly and we'll help right away.",
+    );
+  }
+  if ((used.get("ai_tokens") ?? 0) >= limits.monthly_ai_tokens) {
+    throw new PublicChatError(
+      429,
+      "This assistant has reached its monthly usage limit. Please contact us directly and we'll help right away.",
+    );
+  }
+}
+
+export async function recordUsage(organizationId: string, metric: string, amount = 1) {
+  try {
+    await admin().rpc("bump_usage", { _org: organizationId, _metric: metric, _amount: amount });
+  } catch {
+    /* usage accounting must never break a conversation */
+  }
+}
