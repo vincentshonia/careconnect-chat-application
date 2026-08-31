@@ -273,6 +273,12 @@ function StaffPage() {
               <p className="mt-2 text-xs text-muted-foreground">
                 This password will not be shown again. Ask them to sign in at /auth and change it from Security.
               </p>
+              <p className="mt-2 text-xs">
+                {createdCredentials.emailed
+                  ? "A welcome email with these details was sent to them."
+                  : `Welcome email not sent${createdCredentials.emailError ? ` — ${createdCredentials.emailError}` : ""}. Share the password directly.`}
+              </p>
+
               <Button
                 type="button"
                 size="sm"
