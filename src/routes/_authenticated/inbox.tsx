@@ -571,3 +571,61 @@ function InboxPage() {
     </AdminShell>
   );
 }
+
+type Attachment = { path: string; name: string; type: string; size: number };
+
+function formatSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Visitor attachment with on-demand signed access so agents can view or save it. */
+function AttachmentCard({
+  conversationId,
+  attachment,
+}: {
+  conversationId: string;
+  attachment: Attachment;
+}) {
+  const getUrl = useServerFn(attachmentUrlFn);
+  const [busy, setBusy] = useState(false);
+
+  const open = async (download: boolean) => {
+    setBusy(true);
+    try {
+      const { url } = await getUrl({ data: { conversationId, path: attachment.path } });
+      if (download) {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = attachment.name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } else {
+        window.open(url, "_blank", "noopener");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not open that attachment");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-2 rounded-md border border-border/60 bg-background/60 p-2 text-foreground">
+      <p className="truncate text-xs font-medium">{attachment.name}</p>
+      <p className="text-[11px] text-muted-foreground">
+        {attachment.type} · {formatSize(attachment.size)}
+      </p>
+      <div className="mt-2 flex gap-2">
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => open(false)}>
+          View
+        </Button>
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => open(true)}>
+          Save
+        </Button>
+      </div>
+    </div>
+  );
+}
