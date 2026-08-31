@@ -48,7 +48,7 @@ export function MfaPolicyCard() {
         action: "security.mfa_policy_updated",
         recordType: "organization",
         recordId: orgId,
-        metadata: patch,
+        newValue: patch,
       });
     },
     onSuccess: () => {
