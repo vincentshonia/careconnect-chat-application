@@ -110,9 +110,17 @@ export type PlatformPermission =
   | "platform.roles_manage"
   | "reports.platform";
 
+/**
+ * Standard User: operational chat access only. They can watch their whole
+ * department's queue, claim a waiting chat and answer the chats they own —
+ * but they get no supervisory or administrative authority from this bundle.
+ */
 const AGENT: Permission[] = [
   "conversation.view_assigned",
+  "conversation.view_department",
+  "conversation.claim",
   "conversation.reply",
+  "conversation.reply_assigned",
   "conversation.close",
   "workflow.view_assigned",
   "task.view_assigned",
@@ -123,8 +131,8 @@ const AGENT: Permission[] = [
 
 const TEAM_LEAD: Permission[] = [
   ...AGENT,
-  "conversation.view_department",
   "conversation.assign",
+  "conversation.reassign",
   "conversation.transfer",
   "workflow.view_team",
   "task.manage_team",
