@@ -50,12 +50,15 @@ export const ROLE_RANK: Record<OrgRole, number> = {
 };
 
 export type Permission =
-  // conversations
+  // conversations — visibility, ownership, response and supervision are distinct
   | "conversation.view_assigned"
   | "conversation.view_department"
   | "conversation.view_all"
+  | "conversation.claim"
   | "conversation.reply"
+  | "conversation.reply_assigned"
   | "conversation.assign"
+  | "conversation.reassign"
   | "conversation.transfer"
   | "conversation.close"
   // workflows / tasks
