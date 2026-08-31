@@ -41,10 +41,7 @@ import { Button } from "@/components/ui/button";
  * member holds at least one of its permissions. Route guards and RLS enforce
  * the same rules, so hiding here is purely for clarity.
  */
-const navGroups: {
-  label: string;
-  items: { to: string; label: string; icon: typeof Inbox; perms?: Permission[] }[];
-}[] = [
+const navGroups = [
   {
     label: "Workspace",
     items: [
@@ -87,7 +84,10 @@ const navGroups: {
       { to: "/audit", label: "Audit log", icon: Activity, perms: ["audit.view"] },
     ],
   },
-];
+] as const satisfies readonly {
+  label: string;
+  items: readonly { to: string; label: string; icon: typeof Inbox; perms?: readonly Permission[] }[];
+}[];
 
 
 export function AdminShell({
