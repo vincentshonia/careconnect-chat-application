@@ -101,7 +101,7 @@ export const claimConversationFn = createServerFn({ method: "POST" })
     const { admin } = await import("@/lib/public-chat.server");
     const db = admin();
 
-    // Profile eligibility: active account and available presence.
+    // Profile eligibility: account must be active.
     const { data: profile } = await db
       .from("profiles")
       .select("full_name, status, presence, max_concurrent_chats")
