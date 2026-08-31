@@ -98,7 +98,7 @@ function AuthPage() {
       {/* Brand panel */}
       <aside className="relative hidden overflow-hidden bg-sidebar px-14 py-12 text-sidebar-foreground lg:flex lg:flex-col lg:justify-between">
         <div
-          className="pointer-events-none absolute inset-0 opacity-10"
+          className="pointer-events-none absolute inset-0 opacity-5"
           style={{
             backgroundImage: `url(${chatBubblesAsset.url})`,
             backgroundRepeat: "no-repeat",
