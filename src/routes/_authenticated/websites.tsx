@@ -33,6 +33,7 @@ function WebsitesPage() {
   const [form, setForm] = useState<Partial<Website>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
+  const [domainsText, setDomainsText] = useState("");
 
   useEffect(() => setOrigin(window.location.origin), []);
 
