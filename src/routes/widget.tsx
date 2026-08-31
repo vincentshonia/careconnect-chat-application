@@ -114,16 +114,68 @@ function WidgetPage() {
   const lastSeen = useRef<string | null>(null);
 
   const storageKey = `phg-widget-${websiteId}`;
-  const sessionToken = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    const key = `${storageKey}-session`;
-    let token = window.localStorage.getItem(key);
-    if (!token) {
-      token = uid() + uid();
-      window.localStorage.setItem(key, token);
-    }
-    return token;
-  }, [storageKey]);
+
+  /* ------------------------- signed chat session ------------------------ */
+  // The server mints and signs the session; the browser only stores it.
+  const sessionRef = useRef<{ token: string; expiresAt: string } | null>(null);
+
+  const ensureSession = useCallback(
+    async (force = false): Promise<string> => {
+      const key = `${storageKey}-session-v2`;
+      if (!force) {
+        let cached = sessionRef.current;
+        if (!cached && typeof window !== "undefined") {
+          try {
+            cached = JSON.parse(window.localStorage.getItem(key) ?? "null");
+          } catch {
+            cached = null;
+          }
+        }
+        if (cached?.token && Date.parse(cached.expiresAt) - 60_000 > Date.now()) {
+          sessionRef.current = cached;
+          return cached.token;
+        }
+      }
+      const res = await fetch("/api/public/chat/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          websiteId,
+          host: hostOrigin,
+          meta: {
+            currentPage: page,
+            landingPage: page,
+            referrer: params.get("r"),
+            deviceType: typeof window !== "undefined" && window.innerWidth < 640 ? "mobile" : "desktop",
+          },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Unable to start a chat session");
+      sessionRef.current = { token: json.token, expiresAt: json.expiresAt };
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(key, JSON.stringify(sessionRef.current));
+      }
+      return json.token as string;
+    },
+    [storageKey, websiteId, hostOrigin, page, params],
+  );
+
+  /** POST to a public chat endpoint, transparently re-minting an expired session. */
+  const chatPost = useCallback(
+    async (path: string, body: Record<string, unknown>) => {
+      const send = async (token: string) =>
+        fetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...body, session: token, host: hostOrigin }),
+        });
+      let res = await send(await ensureSession());
+      if (res.status === 401) res = await send(await ensureSession(true));
+      return res;
+    },
+    [ensureSession, hostOrigin],
+  );
 
   /* ---------------------------- load config ---------------------------- */
   useEffect(() => {
@@ -178,9 +230,13 @@ function WidgetPage() {
   useEffect(() => {
     if (!conversationId || view !== "waiting") return;
     const tick = async () => {
-      const qs = new URLSearchParams({ c: conversationId, s: sessionToken });
-      if (lastSeen.current) qs.set("since", lastSeen.current);
-      const res = await fetch(`/api/public/chat/poll?${qs.toString()}`);
+      const request = async (token: string) => {
+        const qs = new URLSearchParams({ c: conversationId, s: token, h: hostOrigin ?? "" });
+        if (lastSeen.current) qs.set("since", lastSeen.current);
+        return fetch(`/api/public/chat/poll?${qs.toString()}`);
+      };
+      let res = await request(await ensureSession());
+      if (res.status === 401) res = await request(await ensureSession(true));
       if (!res.ok) return;
       const data = await res.json();
       if (data.connected && data.agentName) {
@@ -206,7 +262,7 @@ function WidgetPage() {
     void tick();
     const interval = setInterval(tick, 5000);
     return () => clearInterval(interval);
-  }, [conversationId, view, sessionToken]);
+  }, [conversationId, view, ensureSession, hostOrigin]);
 
   const brand = config?.website.primaryColor ?? "#0f766e";
   const radius = config?.website.borderRadius ?? 16;
@@ -236,18 +292,7 @@ function WidgetPage() {
     setMessages((prev) => [...prev, { id: uid(), role: "visitor", text }]);
     setSending(true);
     try {
-      const res = await fetch("/api/public/chat/message", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          websiteId,
-          host: hostOrigin,
-          sessionToken,
-          conversationId,
-          text,
-          meta: { currentPage: page, landingPage: page, referrer: params.get("r") },
-        }),
-      });
+      const res = await chatPost("/api/public/chat/message", { conversationId, text });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong");
       setConversationId(data.conversationId);
@@ -281,11 +326,8 @@ function WidgetPage() {
     setMessages((prev) =>
       prev.map((m) => (m.aiResponseId === aiResponseId ? { ...m, aiResponseId: undefined } : m)),
     );
-    await fetch("/api/public/chat/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ aiResponseId, helpful }),
-    });
+    if (!conversationId) return;
+    await chatPost("/api/public/chat/feedback", { conversationId, aiResponseId, helpful });
   };
 
   /* -------------------------------- UI --------------------------------- */
@@ -531,18 +573,11 @@ function WidgetPage() {
             brand={brand}
             onCancel={() => setView("menu")}
             onSubmit={async (payload) => {
-              const res = await fetch("/api/public/chat/escalate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  websiteId,
-                  host: hostOrigin,
-                  sessionToken,
-                  conversationId,
-                  kind: formKind,
-                  ...payload,
-                  departmentId: (payload.departmentId as string) || null,
-                }),
+              const res = await chatPost("/api/public/chat/escalate", {
+                conversationId,
+                kind: formKind,
+                ...payload,
+                departmentId: (payload.departmentId as string) || null,
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data.error ?? "Submission failed");
@@ -610,7 +645,7 @@ function WidgetPage() {
 
             )}
             {conversationId && !sending && messages.filter((m) => m.role === "bot").length >= 2 && (
-              <SatisfactionPrompt conversationId={conversationId} brand={brand} />
+              <SatisfactionPrompt conversationId={conversationId} brand={brand} chatPost={chatPost} />
             )}
           </div>
         )}
@@ -953,7 +988,15 @@ function Field({
 }
 
 /** Post-conversation satisfaction rating shown once the chat has some depth. */
-function SatisfactionPrompt({ conversationId, brand }: { conversationId: string; brand: string }) {
+function SatisfactionPrompt({
+  conversationId,
+  brand,
+  chatPost,
+}: {
+  conversationId: string;
+  brand: string;
+  chatPost: (path: string, body: Record<string, unknown>) => Promise<Response>;
+}) {
   const [score, setScore] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const [done, setDone] = useState(false);
@@ -971,10 +1014,10 @@ function SatisfactionPrompt({ conversationId, brand }: { conversationId: string;
 
   async function submit(value: number, note: string) {
     setDone(true);
-    await fetch("/api/public/chat/rate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId, score: value, comment: note || null }),
+    await chatPost("/api/public/chat/rate", {
+      conversationId,
+      score: value,
+      comment: note || null,
     }).catch(() => undefined);
   }
 

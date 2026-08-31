@@ -91,6 +91,23 @@ export const createStaffFn = createServerFn({ method: "POST" })
       .insert({ user_id: newUserId, role: data.role, organization_id: organizationId });
     if (roleError) throw new Error(roleError.message);
 
+    // Explicit tenant membership is what actually grants access to the org.
+    const { error: membershipError } = await supabaseAdmin
+      .from("organization_memberships")
+      .upsert(
+        {
+          organization_id: organizationId,
+          user_id: newUserId,
+          role: data.role,
+          status: "active",
+          title: data.title || null,
+          invited_by: context.userId,
+          accepted_at: new Date().toISOString(),
+        },
+        { onConflict: "organization_id,user_id" },
+      );
+    if (membershipError) throw new Error(membershipError.message);
+
     if (departmentIds.length) {
       await supabaseAdmin.from("department_members").insert(
         departmentIds.map((departmentId) => ({
@@ -165,6 +182,14 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
     if (targetRank > callerRank) throw new Error("You cannot change access for a higher role");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const membershipStatus =
+      data.action === "enable" ? "active" : data.action === "remove" ? "removed" : "suspended";
+    await supabaseAdmin
+      .from("organization_memberships")
+      .update({ status: membershipStatus, updated_at: new Date().toISOString() })
+      .eq("user_id", data.userId)
+      .eq("organization_id", organizationId);
 
     if (data.action === "enable") {
       await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: "none" });

@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { createStaffFn, setStaffAccessFn } from "@/lib/staff.functions";
+import { InvitationsCard } from "@/components/admin/InvitationsCard";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useSessionContext, ROLE_RANK, type AppRole } from "@/hooks/use-session-context";
@@ -278,6 +279,7 @@ function StaffPage() {
         </div>
       )}
 
+      {isAdmin ? <InvitationsCard callerRank={callerRank} /> : null}
 
       {staffQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">Loading team…</p>

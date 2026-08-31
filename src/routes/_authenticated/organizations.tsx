@@ -122,6 +122,8 @@ function OrganizationsPage() {
         organization_id: active.id,
         name: site.name,
         domain: site.domain,
+        // Public widget key; the database also defaults this if omitted.
+        public_key: `cc_pk_${crypto.randomUUID().replace(/-/g, "")}`,
       });
       if (error) throw error;
       await logAudit({ action: "website.created", recordType: "websites", newValue: { name: site.name, domain: site.domain } });

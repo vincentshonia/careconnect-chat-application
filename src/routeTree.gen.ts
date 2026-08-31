@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WidgetRouteImport } from './routes/widget'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as NoAccessRouteImport } from './routes/no-access'
+import { Route as InviteRouteImport } from './routes/invite'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -33,6 +35,7 @@ import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAiConsoleRouteImport } from './routes/_authenticated/ai-console'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
 import { Route as ApiPublicHooksSlaCheckRouteImport } from './routes/api/public/hooks/sla-check'
+import { Route as ApiPublicChatSessionRouteImport } from './routes/api/public/chat/session'
 import { Route as ApiPublicChatRateRouteImport } from './routes/api/public/chat/rate'
 import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
 import { Route as ApiPublicChatMessageRouteImport } from './routes/api/public/chat/message'
@@ -49,6 +52,16 @@ const WidgetRoute = WidgetRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NoAccessRoute = NoAccessRouteImport.update({
+  id: '/no-access',
+  path: '/no-access',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -163,6 +176,11 @@ const ApiPublicHooksSlaCheckRoute = ApiPublicHooksSlaCheckRouteImport.update({
   path: '/api/public/hooks/sla-check',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicChatSessionRoute = ApiPublicChatSessionRouteImport.update({
+  id: '/api/public/chat/session',
+  path: '/api/public/chat/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicChatRateRoute = ApiPublicChatRateRouteImport.update({
   id: '/api/public/chat/rate',
   path: '/api/public/chat/rate',
@@ -202,6 +220,8 @@ const ApiPublicBrandingSplatRoute = ApiPublicBrandingSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/invite': typeof InviteRoute
+  '/no-access': typeof NoAccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/widget': typeof WidgetRoute
   '/ai-console': typeof AuthenticatedAiConsoleRoute
@@ -229,11 +249,14 @@ export interface FileRoutesByFullPath {
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
+  '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/invite': typeof InviteRoute
+  '/no-access': typeof NoAccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/widget': typeof WidgetRoute
   '/ai-console': typeof AuthenticatedAiConsoleRoute
@@ -261,6 +284,7 @@ export interface FileRoutesByTo {
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
+  '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
 }
 export interface FileRoutesById {
@@ -268,6 +292,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/invite': typeof InviteRoute
+  '/no-access': typeof NoAccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/widget': typeof WidgetRoute
   '/_authenticated/ai-console': typeof AuthenticatedAiConsoleRoute
@@ -295,6 +321,7 @@ export interface FileRoutesById {
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
+  '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
 }
 export interface FileRouteTypes {
@@ -302,6 +329,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/invite'
+    | '/no-access'
     | '/reset-password'
     | '/widget'
     | '/ai-console'
@@ -329,11 +358,14 @@ export interface FileRouteTypes {
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
     | '/api/public/chat/rate'
+    | '/api/public/chat/session'
     | '/api/public/hooks/sla-check'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/invite'
+    | '/no-access'
     | '/reset-password'
     | '/widget'
     | '/ai-console'
@@ -361,12 +393,15 @@ export interface FileRouteTypes {
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
     | '/api/public/chat/rate'
+    | '/api/public/chat/session'
     | '/api/public/hooks/sla-check'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/invite'
+    | '/no-access'
     | '/reset-password'
     | '/widget'
     | '/_authenticated/ai-console'
@@ -394,6 +429,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
     | '/api/public/chat/rate'
+    | '/api/public/chat/session'
     | '/api/public/hooks/sla-check'
   fileRoutesById: FileRoutesById
 }
@@ -401,6 +437,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  InviteRoute: typeof InviteRoute
+  NoAccessRoute: typeof NoAccessRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   WidgetRoute: typeof WidgetRoute
   ApiPublicWidgetDotjsRoute: typeof ApiPublicWidgetDotjsRoute
@@ -411,6 +449,7 @@ export interface RootRouteChildren {
   ApiPublicChatMessageRoute: typeof ApiPublicChatMessageRoute
   ApiPublicChatPollRoute: typeof ApiPublicChatPollRoute
   ApiPublicChatRateRoute: typeof ApiPublicChatRateRoute
+  ApiPublicChatSessionRoute: typeof ApiPublicChatSessionRoute
   ApiPublicHooksSlaCheckRoute: typeof ApiPublicHooksSlaCheckRoute
 }
 
@@ -428,6 +467,20 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/no-access': {
+      id: '/no-access'
+      path: '/no-access'
+      fullPath: '/no-access'
+      preLoaderRoute: typeof NoAccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -584,6 +637,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSlaCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/chat/session': {
+      id: '/api/public/chat/session'
+      path: '/api/public/chat/session'
+      fullPath: '/api/public/chat/session'
+      preLoaderRoute: typeof ApiPublicChatSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/chat/rate': {
       id: '/api/public/chat/rate'
       path: '/api/public/chat/rate'
@@ -683,6 +743,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  InviteRoute: InviteRoute,
+  NoAccessRoute: NoAccessRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   WidgetRoute: WidgetRoute,
   ApiPublicWidgetDotjsRoute: ApiPublicWidgetDotjsRoute,
@@ -693,6 +755,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicChatMessageRoute: ApiPublicChatMessageRoute,
   ApiPublicChatPollRoute: ApiPublicChatPollRoute,
   ApiPublicChatRateRoute: ApiPublicChatRateRoute,
+  ApiPublicChatSessionRoute: ApiPublicChatSessionRoute,
   ApiPublicHooksSlaCheckRoute: ApiPublicHooksSlaCheckRoute,
 }
 export const routeTree = rootRouteImport

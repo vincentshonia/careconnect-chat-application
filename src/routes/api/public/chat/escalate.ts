@@ -2,9 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 const bodySchema = z.object({
-  websiteId: z.string().uuid(),
+  session: z.string().min(20).max(4000),
   host: z.string().max(300).nullable().optional(),
-  sessionToken: z.string().min(8).max(120),
   conversationId: z.string().uuid().nullable().optional(),
   fullName: z.string().trim().min(2).max(120),
   phone: z.string().trim().min(7).max(40),
@@ -36,10 +35,12 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
           const input = parsed.data;
           const ip = mod.clientIp(request);
           await mod.enforceRateLimit(`esc:ip:${ip}`, 10, 300);
-          await mod.enforceRateLimit(`esc:s:${input.sessionToken}`, 5, 300);
-          const website = await mod.resolveWebsite(input.websiteId, input.host ?? null);
-          const visitor = await mod.ensureVisitor(website, input.sessionToken, {});
-          const conversation = await mod.ensureConversation(website, visitor, input.conversationId ?? null);
+          const ctx = await mod.sessionContext(input.session, input.host ?? null);
+          await mod.enforceRateLimit(`esc:s:${ctx.claims.sid}`, 5, 300);
+          const website = ctx.website;
+          const conversation = input.conversationId
+            ? await mod.conversationForSession(ctx, input.conversationId)
+            : await mod.ensureConversation(website, ctx.visitor, null);
           const db = mod.admin();
 
           // De-duplicate contacts on email or phone within the organization.
