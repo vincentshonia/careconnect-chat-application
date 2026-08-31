@@ -292,18 +292,7 @@ function WidgetPage() {
     setMessages((prev) => [...prev, { id: uid(), role: "visitor", text }]);
     setSending(true);
     try {
-      const res = await fetch("/api/public/chat/message", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          websiteId,
-          host: hostOrigin,
-          sessionToken,
-          conversationId,
-          text,
-          meta: { currentPage: page, landingPage: page, referrer: params.get("r") },
-        }),
-      });
+      const res = await chatPost("/api/public/chat/message", { conversationId, text });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong");
       setConversationId(data.conversationId);
