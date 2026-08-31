@@ -7,7 +7,14 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/public/hooks/sla-check")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        // Shared-secret gate: this endpoint sweeps every tenant, so it must
+        // never be callable by an anonymous visitor.
+        const expected = process.env.INTERNAL_WEBHOOK_SECRET;
+        const provided = request.headers.get("x-careconnect-secret") ?? "";
+        if (!expected || provided.length !== expected.length || provided !== expected) {
+          return new Response("Unauthorized", { status: 401 });
+        }
         const { admin } = await import("@/lib/public-chat.server");
         const { notifyStaff } = await import("@/lib/notifications.server");
         const db = admin();
