@@ -157,25 +157,40 @@ export function AdminShell({
         collapsed ? "w-[74px]" : "w-[248px]"
       }`}
     >
-      <div className="flex items-center gap-2.5 px-4 py-5">
-        <Link to="/" className="flex min-w-0 items-center gap-2.5">
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt={`${orgName} logo`}
-              className="h-9 w-9 shrink-0 rounded-xl object-contain bg-sidebar-accent/40 p-0.5"
-            />
+      <div className="px-4 py-5">
+        {/* The uploaded brand logo stands in for the organization name. Without
+            one, the name is rendered as text instead. "Support Console" always
+            sits underneath. */}
+        <Link to="/" className="flex min-w-0 flex-col gap-1.5">
+          {collapsed ? (
+            logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={`${orgName} logo`}
+                className="h-9 w-9 shrink-0 rounded-xl bg-sidebar-accent/40 object-contain p-0.5"
+              />
+            ) : (
+              <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
+                {initials || "PH"}
+              </span>
+            )
           ) : (
-            <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
-              {initials || "PH"}
-            </span>
-          )}
-
-          {!collapsed && (
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold tracking-tight">{orgName}</span>
-              <span className="block truncate text-[11px] text-sidebar-foreground/60">Support Console</span>
-            </span>
+            <>
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={orgName}
+                  className="h-9 w-auto max-w-[184px] self-start object-contain object-left"
+                />
+              ) : (
+                <span className="block truncate text-base font-semibold tracking-tight">
+                  {orgName}
+                </span>
+              )}
+              <span className="block truncate text-[11px] text-sidebar-foreground/60">
+                Support Console
+              </span>
+            </>
           )}
         </Link>
       </div>
