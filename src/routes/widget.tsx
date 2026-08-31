@@ -230,9 +230,13 @@ function WidgetPage() {
   useEffect(() => {
     if (!conversationId || view !== "waiting") return;
     const tick = async () => {
-      const qs = new URLSearchParams({ c: conversationId, s: sessionToken });
-      if (lastSeen.current) qs.set("since", lastSeen.current);
-      const res = await fetch(`/api/public/chat/poll?${qs.toString()}`);
+      const request = async (token: string) => {
+        const qs = new URLSearchParams({ c: conversationId, s: token, h: hostOrigin ?? "" });
+        if (lastSeen.current) qs.set("since", lastSeen.current);
+        return fetch(`/api/public/chat/poll?${qs.toString()}`);
+      };
+      let res = await request(await ensureSession());
+      if (res.status === 401) res = await request(await ensureSession(true));
       if (!res.ok) return;
       const data = await res.json();
       if (data.connected && data.agentName) {
