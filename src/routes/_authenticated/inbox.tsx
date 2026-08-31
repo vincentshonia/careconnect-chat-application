@@ -460,16 +460,11 @@ function InboxPage() {
                   ) : null}
 
                   {canClaim ? (
-                    isAvailable || isSupervisor ? (
-                      <Button size="sm" onClick={() => claim.mutate()} disabled={claim.isPending}>
-                        {claim.isPending ? "Claiming…" : "Claim conversation"}
-                      </Button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        Set yourself Available to claim this conversation
-                      </span>
-                    )
+                    <Button size="sm" onClick={() => claim.mutate()} disabled={claim.isPending}>
+                      {claim.isPending ? "Claiming…" : "Claim conversation"}
+                    </Button>
                   ) : null}
+
 
                   {canReply ? (
                     <Button
