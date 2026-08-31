@@ -138,7 +138,41 @@ function AuthPage() {
               : "Enter your work email and we'll send you a link to set a new password."}
           </p>
 
-          <form onSubmit={submit} className="mt-8 space-y-4">
+          {mode === "signin" ? (
+            <div className="mt-8 space-y-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full gap-3 text-sm font-semibold"
+                disabled={busy}
+                onClick={() => oauth("google")}
+              >
+                <GoogleMark />
+                Continue with Google
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full gap-3 text-sm font-semibold"
+                disabled={busy}
+                onClick={() => oauth("microsoft")}
+              >
+                <MicrosoftMark />
+                Continue with Microsoft
+              </Button>
+
+              <div className="flex items-center gap-3 pt-2">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                  or with email
+                </span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+            </div>
+          ) : null}
+
+          <form onSubmit={submit} className="mt-6 space-y-4">
+
             <div className="space-y-2">
               <Label htmlFor="email" className="sr-only">
                 Work email
