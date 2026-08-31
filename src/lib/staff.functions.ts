@@ -183,6 +183,14 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    const membershipStatus =
+      data.action === "enable" ? "active" : data.action === "remove" ? "removed" : "suspended";
+    await supabaseAdmin
+      .from("organization_memberships")
+      .update({ status: membershipStatus, updated_at: new Date().toISOString() })
+      .eq("user_id", data.userId)
+      .eq("organization_id", organizationId);
+
     if (data.action === "enable") {
       await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: "none" });
       await supabaseAdmin
