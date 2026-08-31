@@ -25,7 +25,7 @@ type ConversationRow = {
 };
 
 const CLOSED_STATUSES = ["closed", "resolved", "archived", "spam"];
-const BUSY_STATUSES = ["assigned", "active", "pending_visitor", "pending_internal", "escalated"];
+
 const CLAIMABLE_STATUSES = ["new", "waiting", "escalated", "follow_up"];
 
 /** Can this actor see the conversation at all? Mirrors the RLS predicate. */
