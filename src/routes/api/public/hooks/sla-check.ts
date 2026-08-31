@@ -10,14 +10,23 @@ export const Route = createFileRoute("/api/public/hooks/sla-check")({
       POST: async ({ request }) => {
         // Shared-secret gate: this endpoint sweeps every tenant, so it must
         // never be callable by an anonymous visitor.
-        const expected = process.env.INTERNAL_WEBHOOK_SECRET;
         const provided = request.headers.get("x-careconnect-secret") ?? "";
-        if (!expected || provided.length !== expected.length || provided !== expected) {
-          return new Response("Unauthorized", { status: 401 });
-        }
         const { admin } = await import("@/lib/public-chat.server");
         const { notifyStaff } = await import("@/lib/notifications.server");
         const db = admin();
+
+        const { data: tokenRow } = await db
+          .from("internal_tokens")
+          .select("token")
+          .eq("name", "sla_check")
+          .maybeSingle();
+        const accepted = [tokenRow?.token, process.env.INTERNAL_WEBHOOK_SECRET].filter(
+          (v): v is string => typeof v === "string" && v.length > 0,
+        );
+        const authorized = accepted.some(
+          (secret) => provided.length === secret.length && provided === secret,
+        );
+        if (!authorized) return new Response("Unauthorized", { status: 401 });
 
         const { data: prefs } = await db
           .from("notification_preferences")
