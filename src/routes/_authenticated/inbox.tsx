@@ -247,15 +247,21 @@ function InboxPage() {
 
   const claim = useMutation({
     mutationFn: async () => claimFn({ data: { conversationId: active!.id } }),
-    onSuccess: () => {
+    onSuccess: async (_res, _v) => {
+      const claimedId = activeId;
       toast.success("You now own this conversation");
-      invalidate();
+      await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["messages", claimedId] });
+      // Stay on the chat you just claimed: it has left the Waiting queue.
+      setTab("mine");
+      if (claimedId) setActiveId(claimedId);
     },
     onError: (e) => {
       fail(e, "Could not claim this conversation");
       invalidate();
     },
   });
+
 
   const sendReply = useMutation({
     mutationFn: async (body: string) => replyFn({ data: { conversationId: active!.id, body } }),
