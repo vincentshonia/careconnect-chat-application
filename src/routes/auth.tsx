@@ -100,16 +100,13 @@ function AuthPage() {
           }}
         />
         <div className="relative flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-sidebar-accent text-sm font-bold text-sidebar-accent-foreground">
-            PH
-          </span>
-          <div className="leading-tight">
-            <p className="font-display text-lg font-semibold">Pacific</p>
-            <p className="text-[0.62rem] uppercase tracking-[0.32em] text-sidebar-foreground/70">
-              Health Group
-            </p>
-          </div>
+          <img
+            src={BRAND_LOGO_URL}
+            alt="Pacific Health Group"
+            className="h-12 w-auto max-w-[220px] object-contain"
+          />
         </div>
+
 
         <div className="relative max-w-lg">
           <h2 className="font-display text-5xl font-bold leading-[1.08] tracking-tight">
