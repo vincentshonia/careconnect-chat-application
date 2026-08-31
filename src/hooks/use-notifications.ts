@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { showDesktopNotification } from "@/lib/desktop-push";
 import { toast } from "sonner";
 
 export type NotificationRow = {
