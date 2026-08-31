@@ -1,0 +1,11 @@
+REVOKE EXECUTE ON FUNCTION public.bump_usage(uuid, text, bigint) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.sync_profile_org() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.is_org_admin(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.is_org_member(uuid, uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.is_platform_admin(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.org_role_rank(uuid, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_org_admin(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.is_org_member(uuid, uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.is_platform_admin(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.org_role_rank(uuid, uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.bump_usage(uuid, text, bigint) TO service_role;
