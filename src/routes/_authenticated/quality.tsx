@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RequirePermission } from "@/components/admin/RequirePermission";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/quality")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: QualityPage,
+  component: QualityPageRoute,
 });
 
 const CRITERIA = [
@@ -46,6 +47,14 @@ type Review = {
   compliance_score: number;
   resolution_score: number;
 };
+
+function QualityPageRoute() {
+  return (
+    <RequirePermission permission="reports.team" title="Quality & QA">
+      <QualityPage />
+    </RequirePermission>
+  );
+}
 
 function QualityPage() {
   const queryClient = useQueryClient();

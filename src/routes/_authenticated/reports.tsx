@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RequirePermission } from "@/components/admin/RequirePermission";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/reports")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: ReportsPage,
+  component: ReportsPageRoute,
 });
 
 const RANGES = [
@@ -26,6 +27,14 @@ const RANGES = [
   { label: "30 days", days: 30 },
   { label: "90 days", days: 90 },
 ];
+
+function ReportsPageRoute() {
+  return (
+    <RequirePermission permission="reports.team" title="Reports">
+      <ReportsPage />
+    </RequirePermission>
+  );
+}
 
 function ReportsPage() {
   const [days, setDays] = useState(30);

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RequirePermission } from "@/components/admin/RequirePermission";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,13 +22,21 @@ export const Route = createFileRoute("/_authenticated/routing")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: RoutingPage,
+  component: RoutingPageRoute,
 });
 
 type Rule = Database["public"]["Tables"]["routing_rules"]["Row"];
 type Template = Database["public"]["Tables"]["response_templates"]["Row"];
 
 const MATCH_TYPES = ["interest", "keyword", "county", "menu_option", "language"];
+
+function RoutingPageRoute() {
+  return (
+    <RequirePermission permission="routing.manage" title="Routing">
+      <RoutingPage />
+    </RequirePermission>
+  );
+}
 
 function RoutingPage() {
   return (

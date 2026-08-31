@@ -1,11 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
-  ROLE_RANK,
   createStaffInput,
   staffAccessInput,
   generateTempPassword,
 } from "@/lib/staff-helpers";
+import {
+  resolveActor,
+  requirePermission,
+  requireOrganization,
+  ForbiddenError,
+} from "@/lib/authz.server";
+import { ROLE_RANK, roleTransitionError, type OrgRole } from "@/lib/permissions";
 
 /** Public origin used for absolute links/images inside outgoing emails. */
 const APP_ORIGIN = "https://chat.mypacifichealth.com";
@@ -18,29 +24,20 @@ export const createStaffFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => createStaffInput.parse(input))
   .handler(async ({ data, context }) => {
-    // Authorize against the caller's own roles (RLS-scoped read, no admin client yet).
-    const { data: callerRoles, error: rolesError } = await context.supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", context.userId);
-    if (rolesError) throw new Error("Could not verify your permissions");
+    // Authorize from the authoritative membership record.
+    const actor = await resolveActor(context.supabase, context.userId);
+    requirePermission(actor, "staff.create", "Only administrators can add staff members");
+    const organizationId = requireOrganization(actor);
+    const callerProfile = { full_name: actor.fullName };
 
-    const callerRank = (callerRoles ?? []).reduce(
-      (max, r) => Math.max(max, ROLE_RANK[r.role as string] ?? 0),
-      0,
-    );
-    if (callerRank < 4) throw new Error("Only administrators can add staff members");
-    if ((ROLE_RANK[data.role] ?? 99) > callerRank) {
-      throw new Error("You cannot assign a role higher than your own");
-    }
-
-    const { data: callerProfile } = await context.supabase
-      .from("profiles")
-      .select("organization_id, full_name")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const organizationId = callerProfile?.organization_id ?? null;
-    if (!organizationId) throw new Error("Your account is not linked to an organization");
+    const transitionError = roleTransitionError({
+      actorRole: actor.role,
+      actorIsSelf: false,
+      actorIsPlatformAdmin: actor.isPlatformAdmin,
+      targetCurrentRole: null,
+      targetNewRole: data.role as OrgRole,
+    });
+    if (transitionError) throw new ForbiddenError(transitionError);
 
     // Departments must belong to the caller's organization (RLS-scoped read).
     let departmentIds: string[] = [];
@@ -183,24 +180,15 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (data.userId === context.userId) throw new Error("You cannot change your own access");
 
-    const { data: callerRoles, error: rolesError } = await context.supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", context.userId);
-    if (rolesError) throw new Error("Could not verify your permissions");
-    const callerRank = (callerRoles ?? []).reduce(
-      (max, r) => Math.max(max, ROLE_RANK[r.role as string] ?? 0),
-      0,
+    const actor = await resolveActor(context.supabase, context.userId);
+    requirePermission(
+      actor,
+      data.action === "remove" ? "staff.remove" : "staff.disable",
+      "Only administrators can change staff access",
     );
-    if (callerRank < 4) throw new Error("Only administrators can change staff access");
-
-    const { data: callerProfile } = await context.supabase
-      .from("profiles")
-      .select("organization_id, full_name")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const organizationId = callerProfile?.organization_id ?? null;
-    if (!organizationId) throw new Error("Your account is not linked to an organization");
+    const organizationId = requireOrganization(actor);
+    const callerRank = actor.rank;
+    const callerProfile = { full_name: actor.fullName };
 
     // Target must be visible under the caller's org RLS.
     const { data: target } = await context.supabase
@@ -212,15 +200,19 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
       throw new Error("Staff member not found in your organization");
     }
 
-    const { data: targetRoles } = await context.supabase
-      .from("user_roles")
+    const { data: targetMembership } = await context.supabase
+      .from("organization_memberships")
       .select("role")
-      .eq("user_id", data.userId);
-    const targetRank = (targetRoles ?? []).reduce(
-      (max, r) => Math.max(max, ROLE_RANK[r.role as string] ?? 0),
-      0,
-    );
-    if (targetRank > callerRank) throw new Error("You cannot change access for a higher role");
+      .eq("user_id", data.userId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+    const targetRank = ROLE_RANK[(targetMembership?.role ?? "agent") as OrgRole] ?? 0;
+    if (targetRank > callerRank && !actor.isPlatformAdmin) {
+      throw new ForbiddenError("You cannot change access for a higher role");
+    }
+    if (targetRank === ROLE_RANK.super_admin && callerRank < ROLE_RANK.super_admin && !actor.isPlatformAdmin) {
+      throw new ForbiddenError("Only a Super Admin can change another Super Admin");
+    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 

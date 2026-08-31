@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RequirePermission } from "@/components/admin/RequirePermission";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -18,10 +19,18 @@ export const Route = createFileRoute("/_authenticated/ai-console")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: AiConsolePage,
+  component: AiConsolePageRoute,
 });
 
 type TestResult = Awaited<ReturnType<typeof testAiAnswerFn>>;
+
+function AiConsolePageRoute() {
+  return (
+    <RequirePermission permission="knowledge.edit" title="the AI console">
+      <AiConsolePage />
+    </RequirePermission>
+  );
+}
 
 function AiConsolePage() {
   const runTest = useServerFn(testAiAnswerFn);

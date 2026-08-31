@@ -1,0 +1,13 @@
+REVOKE EXECUTE ON FUNCTION public.platform_can(text, uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.platform_role_of(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.has_perm(uuid, text, uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.org_role_of(uuid, uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.my_department_ids(uuid, uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.can_view_conversation(uuid, uuid, uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.can_view_conversation_id(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.can_view_intake(uuid, uuid, uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.can_view_contact(uuid, uuid, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.platform_can(text, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.platform_role_of(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.has_perm(uuid, text, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.org_role_of(uuid, uuid) TO authenticated;

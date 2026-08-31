@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RequirePermission } from "@/components/admin/RequirePermission";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,10 +22,18 @@ export const Route = createFileRoute("/_authenticated/security")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: SecurityPage,
+  component: SecurityPageRoute,
 });
 
 type Factor = { id: string; friendly_name?: string | null; status: string; factor_type: string };
+
+function SecurityPageRoute() {
+  return (
+    <RequirePermission permission="security.manage" title="Security">
+      <SecurityPage />
+    </RequirePermission>
+  );
+}
 
 function SecurityPage() {
   const queryClient = useQueryClient();
