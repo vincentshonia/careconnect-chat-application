@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WidgetRouteImport } from './routes/widget'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as NoAccessRouteImport } from './routes/no-access'
+import { Route as MfaRouteImport } from './routes/mfa'
 import { Route as InviteRouteImport } from './routes/invite'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -57,6 +58,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const NoAccessRoute = NoAccessRouteImport.update({
   id: '/no-access',
   path: '/no-access',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MfaRoute = MfaRouteImport.update({
+  id: '/mfa',
+  path: '/mfa',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InviteRoute = InviteRouteImport.update({
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/invite': typeof InviteRoute
+  '/mfa': typeof MfaRoute
   '/no-access': typeof NoAccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/widget': typeof WidgetRoute
@@ -256,6 +263,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/invite': typeof InviteRoute
+  '/mfa': typeof MfaRoute
   '/no-access': typeof NoAccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/widget': typeof WidgetRoute
@@ -293,6 +301,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/invite': typeof InviteRoute
+  '/mfa': typeof MfaRoute
   '/no-access': typeof NoAccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/widget': typeof WidgetRoute
@@ -330,6 +339,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/invite'
+    | '/mfa'
     | '/no-access'
     | '/reset-password'
     | '/widget'
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/invite'
+    | '/mfa'
     | '/no-access'
     | '/reset-password'
     | '/widget'
@@ -401,6 +412,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/invite'
+    | '/mfa'
     | '/no-access'
     | '/reset-password'
     | '/widget'
@@ -438,6 +450,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   InviteRoute: typeof InviteRoute
+  MfaRoute: typeof MfaRoute
   NoAccessRoute: typeof NoAccessRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   WidgetRoute: typeof WidgetRoute
@@ -474,6 +487,13 @@ declare module '@tanstack/react-router' {
       path: '/no-access'
       fullPath: '/no-access'
       preLoaderRoute: typeof NoAccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mfa': {
+      id: '/mfa'
+      path: '/mfa'
+      fullPath: '/mfa'
+      preLoaderRoute: typeof MfaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invite': {
@@ -744,6 +764,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   InviteRoute: InviteRoute,
+  MfaRoute: MfaRoute,
   NoAccessRoute: NoAccessRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   WidgetRoute: WidgetRoute,

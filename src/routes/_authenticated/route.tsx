@@ -23,6 +23,16 @@ export const Route = createFileRoute("/_authenticated")({
 
     if (!membership && !platform) throw redirect({ to: "/no-access" });
 
+    // MFA enforcement. Supabase reports a pending step-up whenever the account
+    // has a verified factor (nextLevel aal2, currentLevel aal1); organizations
+    // can additionally require a factor to exist at all.
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal?.currentLevel !== "aal2") {
+      if (aal?.nextLevel === "aal2") throw redirect({ to: "/mfa" });
+      const { data: required } = await supabase.rpc("my_mfa_requirement");
+      if (required === true) throw redirect({ to: "/mfa" });
+    }
+
     return { user: data.user };
   },
   component: () => <Outlet />,
