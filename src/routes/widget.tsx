@@ -76,6 +76,7 @@ type Bubble = {
   aiResponseId?: string;
   escalate?: boolean;
   author?: string;
+  attachment?: { name: string; url: string | null; type: string };
 };
 
 type View = "menu" | "chat" | "services" | "faq" | "contact" | "form" | "waiting";
