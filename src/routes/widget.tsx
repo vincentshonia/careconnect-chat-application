@@ -76,6 +76,7 @@ type Bubble = {
   aiResponseId?: string;
   escalate?: boolean;
   author?: string;
+  attachment?: { name: string; url: string | null; type: string };
 };
 
 type View = "menu" | "chat" | "services" | "faq" | "contact" | "form" | "waiting";
@@ -112,6 +113,9 @@ function WidgetPage() {
   const [faqQuery, setFaqQuery] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
   const lastSeen = useRef<string | null>(null);
+
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   const storageKey = `phg-widget-${websiteId}`;
 
@@ -319,6 +323,51 @@ function WidgetPage() {
       ]);
     } finally {
       setSending(false);
+    }
+  };
+
+  /** Upload a file to the current conversation so the representative can see it. */
+  const sendAttachment = async (file: File) => {
+    if (!file || !config) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setMessages((prev) => [
+        ...prev,
+        { id: uid(), role: "system", text: "Files must be under 10 MB." },
+      ]);
+      return;
+    }
+    setUploading(true);
+    if (view === "menu") setView("chat");
+    try {
+      const send = async (token: string) => {
+        const form = new FormData();
+        form.append("session", token);
+        if (hostOrigin) form.append("host", hostOrigin);
+        if (conversationId) form.append("conversationId", conversationId);
+        form.append("file", file);
+        return fetch("/api/public/chat/upload", { method: "POST", body: form });
+      };
+      let res = await send(await ensureSession());
+      if (res.status === 401) res = await send(await ensureSession(true));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not upload that file");
+      setConversationId(data.conversationId);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: uid(),
+          role: "visitor",
+          text: `Sent an attachment: ${data.attachment.name}`,
+          attachment: data.attachment,
+        },
+      ]);
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        { id: uid(), role: "system", text: (e as Error).message || "Could not upload that file." },
+      ]);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -675,6 +724,29 @@ function WidgetPage() {
               aria-label="Type your question"
               className="max-h-24 min-h-[36px] flex-1 resize-none border-0 bg-transparent px-2.5 py-2 text-sm outline-none placeholder:text-muted-foreground"
             />
+            <input
+              ref={fileRef}
+              type="file"
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void sendAttachment(file);
+              }}
+            />
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-muted disabled:opacity-40"
+              aria-label="Attach a file"
+              title="Attach a file"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+            </button>
             <button
               type="submit"
               disabled={sending || !input.trim()}
@@ -768,6 +840,22 @@ function MessageBubble({
       <div className="flex justify-end">
         <div className="max-w-[85%] rounded-2xl px-3 py-2 text-sm text-white" style={{ background: brand }}>
           {bubble.text}
+          {bubble.attachment?.url && bubble.attachment.type.startsWith("image/") ? (
+            <img
+              src={bubble.attachment.url}
+              alt={bubble.attachment.name}
+              className="mt-2 max-h-40 rounded-lg"
+            />
+          ) : bubble.attachment?.url ? (
+            <a
+              className="mt-2 block underline"
+              href={bubble.attachment.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {bubble.attachment.name}
+            </a>
+          ) : null}
         </div>
       </div>
     );
