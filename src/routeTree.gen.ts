@@ -35,6 +35,7 @@ import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedAiConsoleRouteImport } from './routes/_authenticated/ai-console'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as ApiPublicHooksSlaCheckRouteImport } from './routes/api/public/hooks/sla-check'
 import { Route as ApiPublicChatSessionRouteImport } from './routes/api/public/chat/session'
 import { Route as ApiPublicChatRateRouteImport } from './routes/api/public/chat/rate'
@@ -177,6 +178,12 @@ const ApiPublicWidgetDotjsRoute = ApiPublicWidgetDotjsRouteImport.update({
   path: '/api/public/widget.js',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSlaCheckRoute = ApiPublicHooksSlaCheckRouteImport.update({
   id: '/api/public/hooks/sla-check',
   path: '/api/public/hooks/sla-check',
@@ -258,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -294,6 +302,7 @@ export interface FileRoutesByTo {
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -332,6 +341,7 @@ export interface FileRoutesById {
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -370,6 +380,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/rate'
     | '/api/public/chat/session'
     | '/api/public/hooks/sla-check'
+    | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -406,6 +417,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/rate'
     | '/api/public/chat/session'
     | '/api/public/hooks/sla-check'
+    | '/lovable/email/transactional/preview'
   id:
     | '__root__'
     | '/'
@@ -443,6 +455,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/rate'
     | '/api/public/chat/session'
     | '/api/public/hooks/sla-check'
+    | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -464,6 +477,7 @@ export interface RootRouteChildren {
   ApiPublicChatRateRoute: typeof ApiPublicChatRateRoute
   ApiPublicChatSessionRoute: typeof ApiPublicChatSessionRoute
   ApiPublicHooksSlaCheckRoute: typeof ApiPublicHooksSlaCheckRoute
+  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -650,6 +664,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWidgetDotjsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sla-check': {
       id: '/api/public/hooks/sla-check'
       path: '/api/public/hooks/sla-check'
@@ -778,6 +799,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicChatRateRoute: ApiPublicChatRateRoute,
   ApiPublicChatSessionRoute: ApiPublicChatSessionRoute,
   ApiPublicHooksSlaCheckRoute: ApiPublicHooksSlaCheckRoute,
+  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
