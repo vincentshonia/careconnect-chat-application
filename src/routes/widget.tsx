@@ -114,16 +114,68 @@ function WidgetPage() {
   const lastSeen = useRef<string | null>(null);
 
   const storageKey = `phg-widget-${websiteId}`;
-  const sessionToken = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    const key = `${storageKey}-session`;
-    let token = window.localStorage.getItem(key);
-    if (!token) {
-      token = uid() + uid();
-      window.localStorage.setItem(key, token);
-    }
-    return token;
-  }, [storageKey]);
+
+  /* ------------------------- signed chat session ------------------------ */
+  // The server mints and signs the session; the browser only stores it.
+  const sessionRef = useRef<{ token: string; expiresAt: string } | null>(null);
+
+  const ensureSession = useCallback(
+    async (force = false): Promise<string> => {
+      const key = `${storageKey}-session-v2`;
+      if (!force) {
+        let cached = sessionRef.current;
+        if (!cached && typeof window !== "undefined") {
+          try {
+            cached = JSON.parse(window.localStorage.getItem(key) ?? "null");
+          } catch {
+            cached = null;
+          }
+        }
+        if (cached?.token && Date.parse(cached.expiresAt) - 60_000 > Date.now()) {
+          sessionRef.current = cached;
+          return cached.token;
+        }
+      }
+      const res = await fetch("/api/public/chat/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          websiteId,
+          host: hostOrigin,
+          meta: {
+            currentPage: page,
+            landingPage: page,
+            referrer: params.get("r"),
+            deviceType: typeof window !== "undefined" && window.innerWidth < 640 ? "mobile" : "desktop",
+          },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Unable to start a chat session");
+      sessionRef.current = { token: json.token, expiresAt: json.expiresAt };
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(key, JSON.stringify(sessionRef.current));
+      }
+      return json.token as string;
+    },
+    [storageKey, websiteId, hostOrigin, page, params],
+  );
+
+  /** POST to a public chat endpoint, transparently re-minting an expired session. */
+  const chatPost = useCallback(
+    async (path: string, body: Record<string, unknown>) => {
+      const send = async (token: string) =>
+        fetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...body, session: token, host: hostOrigin }),
+        });
+      let res = await send(await ensureSession());
+      if (res.status === 401) res = await send(await ensureSession(true));
+      return res;
+    },
+    [ensureSession, hostOrigin],
+  );
 
   /* ---------------------------- load config ---------------------------- */
   useEffect(() => {
