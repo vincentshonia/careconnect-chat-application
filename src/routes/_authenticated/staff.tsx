@@ -51,6 +51,8 @@ function StaffPage() {
   const [createdCredentials, setCreatedCredentials] = useState<{
     email: string;
     tempPassword: string;
+    emailed: boolean;
+    emailError: string | null;
   } | null>(null);
 
   const addStaff = useMutation({
@@ -65,7 +67,13 @@ function StaffPage() {
         },
       }),
     onSuccess: (result) => {
-      setCreatedCredentials({ email: result.email, tempPassword: result.tempPassword });
+      setCreatedCredentials({
+        email: result.email,
+        tempPassword: result.tempPassword,
+        emailed: result.emailed,
+        emailError: result.emailError,
+      });
+
       setForm({ fullName: "", email: "", role: "agent", title: "", phone: "" });
       setShowForm(false);
       queryClient.invalidateQueries({ queryKey: ["staff"] });
