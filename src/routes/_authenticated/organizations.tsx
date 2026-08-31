@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RequirePermission } from "@/components/admin/RequirePermission";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,10 +24,18 @@ export const Route = createFileRoute("/_authenticated/organizations")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: OrganizationsPage,
+  component: OrganizationsPageRoute,
 });
 
 type Organization = Database["public"]["Tables"]["organizations"]["Row"];
+
+function OrganizationsPageRoute() {
+  return (
+    <RequirePermission permission="organization.manage" title="Organizations">
+      <OrganizationsPage />
+    </RequirePermission>
+  );
+}
 
 function OrganizationsPage() {
   const queryClient = useQueryClient();

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RequirePermission } from "@/components/admin/RequirePermission";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/departments")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: DepartmentsPage,
+  component: DepartmentsPageRoute,
 });
 
 type Department = Database["public"]["Tables"]["departments"]["Row"];
@@ -29,6 +30,14 @@ type BusinessHour = Database["public"]["Tables"]["business_hours"]["Row"];
 type Holiday = Database["public"]["Tables"]["holidays"]["Row"];
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function DepartmentsPageRoute() {
+  return (
+    <RequirePermission permission="department.manage" title="Departments">
+      <DepartmentsPage />
+    </RequirePermission>
+  );
+}
 
 function DepartmentsPage() {
   return (

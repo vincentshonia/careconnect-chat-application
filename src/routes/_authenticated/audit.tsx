@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { RequirePermission } from "@/components/admin/RequirePermission";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,10 +18,18 @@ export const Route = createFileRoute("/_authenticated/audit")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: AuditPage,
+  component: AuditPageRoute,
 });
 
 type AuditRow = Database["public"]["Tables"]["audit_logs"]["Row"];
+
+function AuditPageRoute() {
+  return (
+    <RequirePermission permission="audit.view" title="Audit log">
+      <AuditPage />
+    </RequirePermission>
+  );
+}
 
 function AuditPage() {
   const [search, setSearch] = useState("");
