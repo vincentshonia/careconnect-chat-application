@@ -326,6 +326,51 @@ function WidgetPage() {
     }
   };
 
+  /** Upload a file to the current conversation so the representative can see it. */
+  const sendAttachment = async (file: File) => {
+    if (!file || !config) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setMessages((prev) => [
+        ...prev,
+        { id: uid(), role: "system", text: "Files must be under 10 MB." },
+      ]);
+      return;
+    }
+    setUploading(true);
+    if (view === "menu") setView("chat");
+    try {
+      const send = async (token: string) => {
+        const form = new FormData();
+        form.append("session", token);
+        if (hostOrigin) form.append("host", hostOrigin);
+        if (conversationId) form.append("conversationId", conversationId);
+        form.append("file", file);
+        return fetch("/api/public/chat/upload", { method: "POST", body: form });
+      };
+      let res = await send(await ensureSession());
+      if (res.status === 401) res = await send(await ensureSession(true));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not upload that file");
+      setConversationId(data.conversationId);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: uid(),
+          role: "visitor",
+          text: `Sent an attachment: ${data.attachment.name}`,
+          attachment: data.attachment,
+        },
+      ]);
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        { id: uid(), role: "system", text: (e as Error).message || "Could not upload that file." },
+      ]);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const rateAnswer = async (aiResponseId: string, helpful: boolean) => {
     setMessages((prev) =>
       prev.map((m) => (m.aiResponseId === aiResponseId ? { ...m, aiResponseId: undefined } : m)),
