@@ -105,7 +105,6 @@ function InboxPage() {
       return data;
     },
   });
-  const isAvailable = presenceQuery.data?.presence === "available";
 
   const conversationsQuery = useQuery({
     queryKey: ["conversations"],
@@ -339,10 +338,11 @@ function InboxPage() {
   ];
 
   function ownershipLabel(c: Conversation) {
-    if (!c.assigned_to) return "Unclaimed";
+    if (!c.assigned_to) return "";
     if (c.assigned_to === userId) return "Assigned to you";
     const name = (staffQuery.data ?? []).find((s) => s.id === c.assigned_to)?.full_name;
     return name ? `Assigned to ${name}` : "Assigned to a colleague";
+
   }
 
   return (
@@ -417,9 +417,8 @@ function InboxPage() {
                   <Badge>Assigned to you</Badge>
                 ) : active.assigned_to ? (
                   <Badge variant="secondary">Assigned to {ownerName}</Badge>
-                ) : (
-                  <Badge variant="destructive">Unclaimed</Badge>
-                )}
+                ) : null}
+
                 {readOnly ? <Badge variant="outline">View only</Badge> : null}
 
                 <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -460,16 +459,11 @@ function InboxPage() {
                   ) : null}
 
                   {canClaim ? (
-                    isAvailable || isSupervisor ? (
-                      <Button size="sm" onClick={() => claim.mutate()} disabled={claim.isPending}>
-                        {claim.isPending ? "Claiming…" : "Claim conversation"}
-                      </Button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        Set yourself Available to claim this conversation
-                      </span>
-                    )
+                    <Button size="sm" onClick={() => claim.mutate()} disabled={claim.isPending}>
+                      {claim.isPending ? "Claiming…" : "Claim conversation"}
+                    </Button>
                   ) : null}
+
 
                   {canReply ? (
                     <Button

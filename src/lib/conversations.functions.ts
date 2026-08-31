@@ -101,7 +101,7 @@ export const claimConversationFn = createServerFn({ method: "POST" })
     const { admin } = await import("@/lib/public-chat.server");
     const db = admin();
 
-    // Profile eligibility: active account and available presence.
+    // Profile eligibility: account must be active.
     const { data: profile } = await db
       .from("profiles")
       .select("full_name, status, presence, max_concurrent_chats")
@@ -109,9 +109,6 @@ export const claimConversationFn = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!profile || profile.status !== "active") {
       throw new ForbiddenError("Your account is not active");
-    }
-    if (profile.presence !== "available" && !isSupervisor(actor)) {
-      throw new ForbiddenError("Set yourself Available to claim this conversation");
     }
 
     const cap = Number(profile.max_concurrent_chats ?? 0);
