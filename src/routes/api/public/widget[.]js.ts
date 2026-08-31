@@ -47,6 +47,9 @@ export const Route = createFileRoute("/api/public/widget.js")({
     }
     if (d.type === 'hide') { frame.style.display = 'none'; }
   });
+  }
+  if (document.body) { mount(); }
+  else { document.addEventListener('DOMContentLoaded', mount); }
 })();`;
         return new Response(js, {
           headers: {
