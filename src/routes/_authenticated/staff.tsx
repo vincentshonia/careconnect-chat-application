@@ -278,6 +278,7 @@ function StaffPage() {
         </div>
       )}
 
+      {isAdmin ? <InvitationsCard callerRank={callerRank} /> : null}
 
       {staffQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">Loading team…</p>
