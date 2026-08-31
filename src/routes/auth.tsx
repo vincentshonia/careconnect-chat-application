@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const BRAND_LOGO_URL =
-  "/api/public/branding/11111111-1111-1111-1111-111111111111/logo-1785297101851.png";
+import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
+
+const BRAND_LOGO_URL = brandLogoAsset.url;
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
