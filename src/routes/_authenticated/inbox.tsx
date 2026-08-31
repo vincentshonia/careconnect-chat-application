@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { transferConversationFn } from "@/lib/routing.functions";
 import {
+  attachmentUrlFn,
   claimConversationFn,
   closeConversationFn,
   reassignConversationFn,
