@@ -114,6 +114,9 @@ function WidgetPage() {
   const scroller = useRef<HTMLDivElement>(null);
   const lastSeen = useRef<string | null>(null);
 
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
   const storageKey = `phg-widget-${websiteId}`;
 
   /* ------------------------- signed chat session ------------------------ */
