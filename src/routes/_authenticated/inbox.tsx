@@ -496,6 +496,12 @@ function InboxPage() {
                       {new Date(m.created_at).toLocaleTimeString()}
                     </p>
                     <p className="whitespace-pre-wrap">{m.body}</p>
+                    {(m.metadata as { attachment?: Attachment } | null)?.attachment ? (
+                      <AttachmentCard
+                        conversationId={active.id}
+                        attachment={(m.metadata as { attachment: Attachment }).attachment}
+                      />
+                    ) : null}
                   </div>
                 ))}
                 <div ref={bottomRef} />
