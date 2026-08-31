@@ -339,10 +339,11 @@ function InboxPage() {
   ];
 
   function ownershipLabel(c: Conversation) {
-    if (!c.assigned_to) return "Unclaimed";
+    if (!c.assigned_to) return "";
     if (c.assigned_to === userId) return "Assigned to you";
     const name = (staffQuery.data ?? []).find((s) => s.id === c.assigned_to)?.full_name;
     return name ? `Assigned to ${name}` : "Assigned to a colleague";
+
   }
 
   return (
