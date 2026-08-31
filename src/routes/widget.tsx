@@ -988,7 +988,15 @@ function Field({
 }
 
 /** Post-conversation satisfaction rating shown once the chat has some depth. */
-function SatisfactionPrompt({ conversationId, brand }: { conversationId: string; brand: string }) {
+function SatisfactionPrompt({
+  conversationId,
+  brand,
+  chatPost,
+}: {
+  conversationId: string;
+  brand: string;
+  chatPost: (path: string, body: Record<string, unknown>) => Promise<Response>;
+}) {
   const [score, setScore] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const [done, setDone] = useState(false);
