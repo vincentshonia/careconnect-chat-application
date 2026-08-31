@@ -962,6 +962,24 @@ export type Database = {
           },
         ]
       }
+      internal_tokens: {
+        Row: {
+          created_at: string
+          name: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          name: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          name?: string
+          token?: string
+        }
+        Relationships: []
+      }
       knowledge_articles: {
         Row: {
           applies_to_all: boolean
