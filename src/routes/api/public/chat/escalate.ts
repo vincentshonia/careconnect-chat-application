@@ -140,54 +140,38 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             notes: input.reason ?? null,
           });
 
-          // Round-robin the live chat to the next available member of the department.
-          const { assignRoundRobin } = await import("@/lib/assignment.server");
-          const assigned =
-            input.kind === "live_agent"
-              ? await assignRoundRobin({
-                  organizationId: website.organization_id,
-                  departmentId,
-                  conversationId: conversation.id,
-                })
-              : null;
-
+          // Full human hand-off: department routing, staff alerts and — only
+          // when that department is configured for round-robin — auto-assignment.
+          const { handoffToHumans } = await import("@/lib/handoff.server");
           const { notifyStaff } = await import("@/lib/notifications.server");
-          await notifyStaff({
-            organizationId: website.organization_id,
-            departmentId,
-            type: input.kind === "live_agent" ? "escalation" : "new_intake",
-            severity: input.kind === "live_agent" ? "critical" : "info",
-            title:
-              input.kind === "live_agent"
-                ? assigned
-                  ? `${input.fullName} is waiting — assigned to ${assigned.fullName}`
-                  : `${input.fullName} is waiting for an agent`
-                : `New ${input.kind.replace("_", " ")} from ${input.fullName}`,
-            body: input.reason ?? `${input.email} · ${input.phone}`,
-            link: input.kind === "live_agent" ? "/inbox" : "/intake",
-            recordType: "conversations",
-            recordId: conversation.id,
-          });
+          let assigned: { userId: string; fullName: string } | null = null;
 
-          if (assigned) {
+          if (input.kind === "live_agent") {
+            const handoff = await handoffToHumans({
+              conversationId: conversation.id,
+              organizationId: website.organization_id,
+              websiteId: website.id,
+              departmentId,
+              matchValue: input.kind,
+              currentDepartmentId: conversation.department_id ?? null,
+              reason: input.reason ?? `${input.fullName} requested a live representative`,
+              visitorLabel: input.fullName,
+            });
+            assigned = handoff.assigned;
+          } else {
             await notifyStaff({
               organizationId: website.organization_id,
-              userIds: [assigned.userId],
-              type: "escalation",
-              severity: "critical",
-              title: `New chat assigned to you — ${input.fullName}`,
+              departmentId,
+              type: "new_intake",
+              severity: "info",
+              title: `New ${input.kind.replace("_", " ")} from ${input.fullName}`,
               body: input.reason ?? `${input.email} · ${input.phone}`,
-              link: "/inbox",
+              link: "/intake",
               recordType: "conversations",
               recordId: conversation.id,
             });
-            await mod.logEvent(
-              conversation.id,
-              website.organization_id,
-              "auto_assigned",
-              `Round-robin assigned to ${assigned.fullName}`,
-            );
           }
+
 
           const { count } = await db
             .from("profiles")
