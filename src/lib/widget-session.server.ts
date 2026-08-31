@@ -10,7 +10,7 @@
  * derives the visitor, website and organization from the *verified*
  * token — never from request body fields.
  */
-import { PublicChatError } from "./public-chat.server";
+import { PublicChatError } from "./public-chat-error";
 
 const TTL_SECONDS = 60 * 60 * 12;
 
