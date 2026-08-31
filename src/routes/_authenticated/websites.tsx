@@ -149,6 +149,20 @@ function WebsitesPage() {
                     onChange={(e) => setForm({ ...form, chatbot_name: e.target.value })}
                   />
                 </Field>
+                <Field label="Primary domain">
+                  <Input
+                    placeholder="mypacifichealth.com"
+                    value={form.domain ?? ""}
+                    onChange={(e) => setForm({ ...form, domain: e.target.value })}
+                  />
+                </Field>
+                <Field label="Allowed embed domains">
+                  <Input
+                    placeholder="mypacifichealth.com, www.mypacifichealth.com"
+                    value={domainsText}
+                    onChange={(e) => setDomainsText(e.target.value)}
+                  />
+                </Field>
                 <Field label="Primary color">
                   <Input
                     value={form.primary_color ?? ""}
