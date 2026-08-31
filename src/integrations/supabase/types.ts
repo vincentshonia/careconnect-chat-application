@@ -404,12 +404,14 @@ export type Database = {
         Row: {
           assigned_to: string | null
           channel: string
+          claimed_at: string | null
           closed_at: string | null
           contact_id: string | null
           created_at: string
           department_id: string | null
           escalation_reason: string | null
           escalation_requested: boolean
+          first_agent_response_at: string | null
           first_response_at: string | null
           id: string
           is_ai_only: boolean
@@ -432,12 +434,14 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           channel?: string
+          claimed_at?: string | null
           closed_at?: string | null
           contact_id?: string | null
           created_at?: string
           department_id?: string | null
           escalation_reason?: string | null
           escalation_requested?: boolean
+          first_agent_response_at?: string | null
           first_response_at?: string | null
           id?: string
           is_ai_only?: boolean
@@ -460,12 +464,14 @@ export type Database = {
         Update: {
           assigned_to?: string | null
           channel?: string
+          claimed_at?: string | null
           closed_at?: string | null
           contact_id?: string | null
           created_at?: string
           department_id?: string | null
           escalation_reason?: string | null
           escalation_requested?: boolean
+          first_agent_response_at?: string | null
           first_response_at?: string | null
           id?: string
           is_ai_only?: boolean
@@ -2236,6 +2242,10 @@ export type Database = {
         Returns: number
       }
       can_access_org: { Args: { _org: string }; Returns: boolean }
+      can_reply_conversation: {
+        Args: { _conversation: string }
+        Returns: boolean
+      }
       can_view_contact: {
         Args: { _contact: string; _org: string; _owner: string }
         Returns: boolean
