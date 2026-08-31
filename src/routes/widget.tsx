@@ -326,11 +326,8 @@ function WidgetPage() {
     setMessages((prev) =>
       prev.map((m) => (m.aiResponseId === aiResponseId ? { ...m, aiResponseId: undefined } : m)),
     );
-    await fetch("/api/public/chat/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ aiResponseId, helpful }),
-    });
+    if (!conversationId) return;
+    await chatPost("/api/public/chat/feedback", { conversationId, aiResponseId, helpful });
   };
 
   /* -------------------------------- UI --------------------------------- */
