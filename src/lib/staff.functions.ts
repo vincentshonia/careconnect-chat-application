@@ -136,7 +136,7 @@ export const createStaffFn = createServerFn({ method: "POST" })
     try {
       const { data: org } = await supabaseAdmin
         .from("organizations")
-        .select("name")
+        .select("name, logo_url, primary_color")
         .eq("id", organizationId)
         .maybeSingle();
 
@@ -149,7 +149,13 @@ export const createStaffFn = createServerFn({ method: "POST" })
           email,
           tempPassword,
           role: data.role,
-          signInUrl: "https://chat.mypacifichealth.com/auth",
+          signInUrl: `${APP_ORIGIN}/auth`,
+          logoUrl: org?.logo_url
+            ? org.logo_url.startsWith("http")
+              ? org.logo_url
+              : `${APP_ORIGIN}${org.logo_url}`
+            : undefined,
+          primaryColor: org?.primary_color ?? undefined,
         },
       });
       emailed = result.sent;
