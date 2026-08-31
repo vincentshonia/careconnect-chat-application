@@ -30,6 +30,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/use-notifications";
+import { useWaitingCount } from "@/hooks/use-waiting-count";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { useTheme } from "@/hooks/use-theme";
 import type { Permission, PlatformPermission } from "@/lib/permissions";
@@ -106,6 +107,7 @@ export function AdminShell({
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { unread } = useNotifications({ alerts: true });
+  const { count: waitingCount } = useWaitingCount();
   const { theme, toggle: toggleTheme } = useTheme();
   const session = useSessionContext();
   const orgId = session.data?.organizationId ?? null;
@@ -204,13 +206,15 @@ export function AdminShell({
               </p>
             )}
             <ul className="space-y-0.5">
-              {group.items.map((item) => (
+              {group.items.map((item) => {
+                const badge = item.to === "/notifications" ? waitingCount : 0;
+                return (
                 <li key={item.to}>
                   <Link
                     to={item.to}
                     title={collapsed ? item.label : undefined}
                     onClick={() => setMobileOpen(false)}
-                    className={`group flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
+                    className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
                       collapsed ? "justify-center" : ""
                     }`}
                     activeProps={{
@@ -221,9 +225,20 @@ export function AdminShell({
                   >
                     <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
                     {!collapsed && <span className="truncate">{item.label}</span>}
+                    {badge > 0 && (
+                      <span
+                        aria-label={`${badge} conversations waiting for a response`}
+                        className={`grid h-5 min-w-5 place-items-center rounded-full bg-destructive px-1.5 text-[10px] font-semibold text-destructive-foreground ${
+                          collapsed ? "absolute -right-0.5 -top-0.5 h-4 min-w-4 px-1" : "ml-auto"
+                        }`}
+                      >
+                        {badge > 99 ? "99+" : badge}
+                      </span>
+                    )}
                   </Link>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </div>
         ))}

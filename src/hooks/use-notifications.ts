@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { showDesktopNotification } from "@/lib/desktop-push";
 import { toast } from "sonner";
 
 export type NotificationRow = {
@@ -96,6 +97,7 @@ export function useNotifications(options: { alerts?: boolean } = {}) {
     fresh.slice(0, 3).forEach((n) => {
       const show = n.severity === "critical" ? toast.error : n.severity === "warning" ? toast.warning : toast.info;
       show(n.title, { description: n.body ?? undefined, duration: 8000 });
+      showDesktopNotification(n.title, n.body, n.link);
     });
   }, [rows, alerts]);
 

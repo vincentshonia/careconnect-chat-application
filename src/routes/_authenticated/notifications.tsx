@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/use-notifications";
+import { useWaitingCount } from "@/hooks/use-waiting-count";
+import { pushStatus, requestPush, type PushStatus } from "@/lib/desktop-push";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/badge";
@@ -42,8 +44,12 @@ function NotificationsPage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
   const { notifications, unread, markRead } = useNotifications();
+  const { count: waitingCount } = useWaitingCount();
+  const [push, setPush] = useState<PushStatus>("default");
   const [saved, setSaved] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, boolean | number>>({});
+
+  useEffect(() => setPush(pushStatus()), []);
 
   const prefs = useQuery({
     queryKey: ["notification-preferences", session.data?.userId],
@@ -107,6 +113,55 @@ function NotificationsPage() {
         </Button>
       }
     >
+      <div
+        className={`mb-6 flex flex-wrap items-center gap-3 rounded-xl border p-4 ${
+          waitingCount > 0 ? "border-destructive/40 bg-destructive/5" : "border-border bg-card"
+        }`}
+      >
+        <span className="grid h-9 min-w-9 place-items-center rounded-full bg-destructive px-2 text-sm font-semibold text-destructive-foreground">
+          {waitingCount}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">
+            {waitingCount === 1
+              ? "1 conversation is waiting for a human"
+              : `${waitingCount} conversations are waiting for a human`}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Unclaimed chats in your queues. The sidebar badge tracks the same number live.
+          </p>
+        </div>
+        <Link to="/inbox" className="ml-auto text-sm font-medium text-primary hover:underline">
+          Open inbox
+        </Link>
+      </div>
+
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Desktop &amp; device alerts</p>
+          <p className="text-xs text-muted-foreground">
+            {push === "granted"
+              ? "Enabled — new escalations pop up even when this tab is in the background."
+              : push === "denied"
+                ? "Blocked by your browser. Re-enable notifications for this site in your browser settings."
+                : push === "open-in-new-tab"
+                  ? "Open the console in its own browser tab to turn on device notifications."
+                  : push === "unsupported"
+                    ? "This browser does not support desktop notifications."
+                    : "Get a system pop-up on your desktop or phone the moment a chat needs a human."}
+          </p>
+        </div>
+        <Button
+          className="ml-auto"
+          size="sm"
+          variant="outline"
+          disabled={push !== "default"}
+          onClick={async () => setPush(await requestPush())}
+        >
+          {push === "granted" ? "Enabled" : "Enable notifications"}
+        </Button>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <section className="space-y-2">
           {notifications.map((n) => (
