@@ -840,6 +840,22 @@ function MessageBubble({
       <div className="flex justify-end">
         <div className="max-w-[85%] rounded-2xl px-3 py-2 text-sm text-white" style={{ background: brand }}>
           {bubble.text}
+          {bubble.attachment?.url && bubble.attachment.type.startsWith("image/") ? (
+            <img
+              src={bubble.attachment.url}
+              alt={bubble.attachment.name}
+              className="mt-2 max-h-40 rounded-lg"
+            />
+          ) : bubble.attachment?.url ? (
+            <a
+              className="mt-2 block underline"
+              href={bubble.attachment.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {bubble.attachment.name}
+            </a>
+          ) : null}
         </div>
       </div>
     );
