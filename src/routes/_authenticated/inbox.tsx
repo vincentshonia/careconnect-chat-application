@@ -3,15 +3,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
 import { transferConversationFn } from "@/lib/routing.functions";
+import {
+  claimConversationFn,
+  closeConversationFn,
+  reassignConversationFn,
+  replyToConversationFn,
+} from "@/lib/conversations.functions";
+import { useSessionContext } from "@/hooks/use-session-context";
 import { toast } from "sonner";
-import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   head: () => ({
@@ -32,7 +36,6 @@ type Conversation = {
   priority: string;
   assigned_to: string | null;
   department_id: string | null;
-
   escalation_requested: boolean;
   last_message_at: string;
   organization_id: string;
@@ -41,6 +44,8 @@ type Conversation = {
   contact_id: string | null;
 };
 
+type Tab = "waiting" | "mine" | "department" | "active" | "closed" | "all";
+
 const OPEN_STATUSES = [
   "new",
   "waiting",
@@ -48,66 +53,112 @@ const OPEN_STATUSES = [
   "active",
   "escalated",
   "pending_visitor",
-] as const;
+  "pending_internal",
+  "follow_up",
+];
+const CLOSED_STATUSES = ["closed", "resolved", "archived", "spam"];
+const CLAIMABLE_STATUSES = ["new", "waiting", "escalated", "follow_up"];
+
+const STATUS_LABEL: Record<string, string> = {
+  new: "AI handling",
+  waiting: "Waiting for human",
+  assigned: "Claimed",
+  active: "Active",
+  pending_visitor: "Waiting for visitor",
+  pending_internal: "Internal follow-up",
+  follow_up: "Follow-up",
+  escalated: "Escalated",
+  resolved: "Resolved",
+  closed: "Closed",
+  spam: "Spam",
+  archived: "Archived",
+};
 
 function statusTone(status: string) {
-  if (status === "closed" || status === "resolved") return "secondary" as const;
+  if (CLOSED_STATUSES.includes(status)) return "secondary" as const;
   if (status === "escalated" || status === "waiting") return "destructive" as const;
   return "default" as const;
 }
 
 function InboxPage() {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<"open" | "all">("open");
+  const session = useSessionContext();
+  const [tab, setTab] = useState<Tab>("waiting");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  const [userId, setUserId] = useState<string | null>(null);
-  const [agentName, setAgentName] = useState<string>("Support agent");
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return;
-      setUserId(data.user.id);
-      const { data: profile } = await supabase
+  const userId = session.data?.userId ?? null;
+  const can = (p: string) => session.data?.permissions.has(p) ?? false;
+  const isSupervisor = can("conversation.reassign") || can("conversation.view_all");
+  const departmentIds = session.data?.departmentIds ?? [];
+
+  const presenceQuery = useQuery({
+    queryKey: ["my-presence", userId],
+    enabled: Boolean(userId),
+    queryFn: async () => {
+      const { data } = await supabase
         .from("profiles")
-        .select("full_name")
-        .eq("id", data.user.id)
+        .select("full_name, presence, max_concurrent_chats")
+        .eq("id", userId!)
         .maybeSingle();
-      if (profile?.full_name) setAgentName(profile.full_name);
-    });
-  }, []);
+      return data;
+    },
+  });
+  const isAvailable = presenceQuery.data?.presence === "available";
 
   const conversationsQuery = useQuery({
-    queryKey: ["conversations", filter],
+    queryKey: ["conversations"],
     refetchInterval: 60_000,
-
     queryFn: async () => {
-      let q = supabase
+      const { data, error } = await supabase
         .from("conversations")
         .select(
           "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, organization_id, website_id, visitor_type, contact_id",
         )
         .order("last_message_at", { ascending: false })
-        .limit(100);
-      if (filter === "open") q = q.in("status", [...OPEN_STATUSES]);
-      const { data, error } = await q;
+        .limit(200);
       if (error) throw error;
       return (data ?? []) as Conversation[];
     },
   });
 
-  const conversations = conversationsQuery.data ?? [];
+  const all = useMemo(() => conversationsQuery.data ?? [], [conversationsQuery.data]);
+
+  const conversations = useMemo(() => {
+    switch (tab) {
+      case "waiting":
+        return all.filter((c) => !c.assigned_to && CLAIMABLE_STATUSES.includes(c.status));
+      case "mine":
+        return all.filter((c) => c.assigned_to === userId && !CLOSED_STATUSES.includes(c.status));
+      case "department":
+        return all.filter(
+          (c) =>
+            !CLOSED_STATUSES.includes(c.status) &&
+            c.department_id &&
+            departmentIds.includes(c.department_id),
+        );
+      case "active":
+        return all.filter((c) => c.status === "active" || c.status === "assigned");
+      case "closed":
+        return all.filter((c) => CLOSED_STATUSES.includes(c.status));
+      default:
+        return all.filter((c) => OPEN_STATUSES.includes(c.status) || can("conversation.view_all"));
+    }
+  }, [all, tab, userId, departmentIds]);
+
   const active = useMemo(
-    () => conversations.find((c) => c.id === activeId) ?? null,
-    [conversations, activeId],
+    () => all.find((c) => c.id === activeId) ?? null,
+    [all, activeId],
   );
 
   useEffect(() => {
-    if (!activeId && conversations.length) setActiveId(conversations[0].id);
+    if (conversations.length && !conversations.some((c) => c.id === activeId)) {
+      setActiveId(conversations[0].id);
+    }
   }, [conversations, activeId]);
 
-  // Live updates: new visitor messages and conversation changes push instantly.
+  // Live updates: claims, replies, status changes and new chats push instantly.
   useEffect(() => {
     const channel = supabase
       .channel("inbox-live")
@@ -120,7 +171,6 @@ function InboxPage() {
         if (convId) queryClient.invalidateQueries({ queryKey: ["messages", convId] });
       })
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
@@ -142,10 +192,31 @@ function InboxPage() {
     },
   });
 
-
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messagesQuery.data]);
+
+  const staffQuery = useQuery({
+    queryKey: ["inbox-staff"],
+    enabled: isSupervisor,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("status", "active")
+        .order("full_name");
+      return data ?? [];
+    },
+  });
+
+  const ownerName = useMemo(() => {
+    if (!active?.assigned_to) return null;
+    if (active.assigned_to === userId) return "You";
+    return (
+      (staffQuery.data ?? []).find((s) => s.id === active.assigned_to)?.full_name ??
+      "another team member"
+    );
+  }, [active, staffQuery.data, userId]);
 
   const contactQuery = useQuery({
     queryKey: ["contact", active?.contact_id],
@@ -161,58 +232,57 @@ function InboxPage() {
     },
   });
 
-  const sendReply = useMutation({
-    mutationFn: async (body: string) => {
-      if (!active) throw new Error("No conversation selected");
-      const { error } = await supabase.from("messages").insert({
-        conversation_id: active.id,
-        organization_id: active.organization_id,
-        website_id: active.website_id,
-        sender_type: "agent",
-        sender_user_id: userId,
-        sender_name: agentName,
-        body,
-      });
-      if (error) throw error;
-      const { error: convError } = await supabase
-        .from("conversations")
-        .update({
-          status: "active",
-          assigned_to: active.assigned_to ?? userId,
-          last_message_at: new Date().toISOString(),
-          unread_agent_count: 0,
-        })
-        .eq("id", active.id);
-      if (convError) throw convError;
-      await logAudit({
-        action: "conversation.agent_replied",
-        recordType: "conversations",
-        recordId: active.id,
-        websiteId: active.website_id,
-      });
-    },
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    queryClient.invalidateQueries({ queryKey: ["messages", activeId] });
+  };
+  const fail = (error: unknown, fallback: string) =>
+    toast.error(error instanceof Error ? error.message : fallback);
+
+  const claimFn = useServerFn(claimConversationFn);
+  const replyFn = useServerFn(replyToConversationFn);
+  const closeFn = useServerFn(closeConversationFn);
+  const reassignFn = useServerFn(reassignConversationFn);
+  const transferFn = useServerFn(transferConversationFn);
+
+  const claim = useMutation({
+    mutationFn: async () => claimFn({ data: { conversationId: active!.id } }),
     onSuccess: () => {
-      setDraft("");
-      queryClient.invalidateQueries({ queryKey: ["messages", activeId] });
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      toast.success("You now own this conversation");
+      invalidate();
+    },
+    onError: (e) => {
+      fail(e, "Could not claim this conversation");
+      invalidate();
     },
   });
 
-  const updateConversation = useMutation({
-    mutationFn: async (patch: Database["public"]["Tables"]["conversations"]["Update"]) => {
-      if (!active) return;
-      const { error } = await supabase.from("conversations").update(patch).eq("id", active.id);
-      if (error) throw error;
-      await logAudit({
-        action: "conversation.updated",
-        recordType: "conversations",
-        recordId: active.id,
-        websiteId: active.website_id,
-        previousValue: { status: active.status, assigned_to: active.assigned_to, priority: active.priority },
-        newValue: patch as Record<string, unknown>,
-      });
+  const sendReply = useMutation({
+    mutationFn: async (body: string) => replyFn({ data: { conversationId: active!.id, body } }),
+    onSuccess: () => {
+      setDraft("");
+      invalidate();
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+    onError: (e) => fail(e, "Could not send that reply"),
+  });
+
+  const closeConversation = useMutation({
+    mutationFn: async () => closeFn({ data: { conversationId: active!.id } }),
+    onSuccess: () => {
+      toast.success("Conversation closed");
+      invalidate();
+    },
+    onError: (e) => fail(e, "Could not close this conversation"),
+  });
+
+  const reassign = useMutation({
+    mutationFn: async (targetUserId: string | null) =>
+      reassignFn({ data: { conversationId: active!.id, userId: targetUserId } }),
+    onSuccess: (r) => {
+      toast.success(r?.assignedName ? `Reassigned to ${r.assignedName}` : "Returned to the queue");
+      invalidate();
+    },
+    onError: (e) => fail(e, "Could not reassign this conversation"),
   });
 
   const departmentsQuery = useQuery({
@@ -228,48 +298,63 @@ function InboxPage() {
     },
   });
 
-  const transferConversation = useServerFn(transferConversationFn);
   const transfer = useMutation({
-    mutationFn: async (departmentId: string) => {
-      if (!active) throw new Error("No conversation selected");
-      return transferConversation({ data: { conversationId: active.id, departmentId } });
-    },
+    mutationFn: async (departmentId: string) =>
+      transferFn({ data: { conversationId: active!.id, departmentId } }),
     onSuccess: (result) => {
       toast.success(
         result?.assignedTo
           ? `Transferred to ${result.departmentName} — assigned to ${result.assignedTo}`
           : `Transferred to ${result?.departmentName ?? "department"} — waiting for an agent`,
       );
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
-      queryClient.invalidateQueries({ queryKey: ["messages", active?.id] });
+      invalidate();
     },
-    onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : "Could not transfer this conversation");
-    },
+    onError: (e) => fail(e, "Could not transfer this conversation"),
   });
 
+  const isOwner = Boolean(active && active.assigned_to === userId);
+  const isClosed = Boolean(active && CLOSED_STATUSES.includes(active.status));
+  const canClaim =
+    Boolean(active) &&
+    !active!.assigned_to &&
+    !isClosed &&
+    CLAIMABLE_STATUSES.includes(active!.status) &&
+    can("conversation.claim");
+  const canReply = Boolean(active) && !isClosed && (isOwner || isSupervisor);
+  const readOnly = Boolean(active) && !canReply && !canClaim;
 
+  const tabs: Array<{ key: Tab; label: string }> = [
+    { key: "waiting", label: "Waiting" },
+    { key: "mine", label: "Mine" },
+    { key: "department", label: "Department" },
+    { key: "active", label: "Active" },
+    { key: "closed", label: "Closed" },
+    ...(can("conversation.view_all") ? [{ key: "all" as Tab, label: "All conversations" }] : []),
+  ];
+
+  function ownershipLabel(c: Conversation) {
+    if (!c.assigned_to) return "Waiting for agent";
+    if (c.assigned_to === userId) return "Assigned to you";
+    const name = (staffQuery.data ?? []).find((s) => s.id === c.assigned_to)?.full_name;
+    return name ? `Assigned to ${name}` : "Assigned to a colleague";
+  }
 
   return (
     <AdminShell
       title="Inbox"
       description="Website chat conversations, AI answers, and live agent replies."
       actions={
-        <div className="flex gap-2">
-          <Button
-            variant={filter === "open" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter("open")}
-          >
-            Open
-          </Button>
-          <Button
-            variant={filter === "all" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter("all")}
-          >
-            All
-          </Button>
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((t) => (
+            <Button
+              key={t.key}
+              variant={tab === t.key ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+            </Button>
+          ))}
         </div>
       }
     >
@@ -278,7 +363,7 @@ function InboxPage() {
           {conversationsQuery.isLoading ? (
             <p className="p-4 text-sm text-muted-foreground">Loading conversations…</p>
           ) : conversations.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">No conversations yet.</p>
+            <p className="p-4 text-sm text-muted-foreground">Nothing in this queue right now.</p>
           ) : (
             <ul className="divide-y divide-border">
               {conversations.map((c) => (
@@ -294,9 +379,14 @@ function InboxPage() {
                       <span className="truncate text-sm font-medium">
                         {c.subject ?? "Website chat"}
                       </span>
-                      <Badge variant={statusTone(c.status)}>{c.status}</Badge>
+                      <Badge variant={statusTone(c.status)}>
+                        {STATUS_LABEL[c.status] ?? c.status}
+                      </Badge>
                     </div>
-                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                    <p className="mt-1 truncate text-xs font-medium text-muted-foreground">
+                      {ownershipLabel(c)}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
                       {c.reference} · {new Date(c.last_message_at).toLocaleString()}
                     </p>
                   </button>
@@ -314,46 +404,77 @@ function InboxPage() {
               <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
                 <span className="text-sm font-medium">{active.subject ?? "Website chat"}</span>
                 <Badge variant="outline">{active.priority}</Badge>
-                {active.escalation_requested ? <Badge>Agent requested</Badge> : null}
-                <div className="ml-auto flex flex-wrap items-center gap-2">
-                  <select
-                    aria-label="Transfer to department"
-                    value={active.department_id ?? ""}
-                    disabled={transfer.isPending}
-                    onChange={(e) => {
-                      if (e.target.value) transfer.mutate(e.target.value);
-                    }}
-                    className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                  >
-                    <option value="">Transfer to…</option>
-                    {(departmentsQuery.data ?? []).map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
+                <Badge variant={statusTone(active.status)}>
+                  {STATUS_LABEL[active.status] ?? active.status}
+                </Badge>
+                {isOwner ? (
+                  <Badge>Assigned to you</Badge>
+                ) : active.assigned_to ? (
+                  <Badge variant="secondary">Assigned to {ownerName}</Badge>
+                ) : (
+                  <Badge variant="destructive">Waiting for agent</Badge>
+                )}
+                {readOnly ? <Badge variant="outline">View only</Badge> : null}
 
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      updateConversation.mutate({ assigned_to: userId, status: "assigned" })
-                    }
-                  >
-                    Assign to me
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      updateConversation.mutate({
-                        status: "closed",
-                        closed_at: new Date().toISOString(),
-                      })
-                    }
-                  >
-                    Close
-                  </Button>
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  {can("conversation.transfer") ? (
+                    <select
+                      aria-label="Transfer to department"
+                      value={active.department_id ?? ""}
+                      disabled={transfer.isPending}
+                      onChange={(e) => {
+                        if (e.target.value) transfer.mutate(e.target.value);
+                      }}
+                      className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      <option value="">Transfer to…</option>
+                      {(departmentsQuery.data ?? []).map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : null}
+
+                  {isSupervisor && !isClosed ? (
+                    <select
+                      aria-label="Reassign conversation"
+                      value={active.assigned_to ?? ""}
+                      disabled={reassign.isPending}
+                      onChange={(e) => reassign.mutate(e.target.value || null)}
+                      className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      <option value="">Unassigned (queue)</option>
+                      {(staffQuery.data ?? []).map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.full_name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : null}
+
+                  {canClaim ? (
+                    isAvailable || isSupervisor ? (
+                      <Button size="sm" onClick={() => claim.mutate()} disabled={claim.isPending}>
+                        {claim.isPending ? "Claiming…" : "Claim conversation"}
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        Set yourself Available to claim this conversation
+                      </span>
+                    )
+                  ) : null}
+
+                  {canReply ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => closeConversation.mutate()}
+                      disabled={closeConversation.isPending}
+                    >
+                      Close
+                    </Button>
+                  ) : null}
                 </div>
               </div>
 
@@ -379,25 +500,35 @@ function InboxPage() {
                 <div ref={bottomRef} />
               </div>
 
-              <form
-                className="border-t border-border p-3"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (draft.trim()) sendReply.mutate(draft.trim());
-                }}
-              >
-                <Textarea
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Reply to the visitor…"
-                  rows={3}
-                />
-                <div className="mt-2 flex justify-end">
-                  <Button type="submit" size="sm" disabled={sendReply.isPending || !draft.trim()}>
-                    {sendReply.isPending ? "Sending…" : "Send reply"}
-                  </Button>
+              {canReply ? (
+                <form
+                  className="border-t border-border p-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (draft.trim()) sendReply.mutate(draft.trim());
+                  }}
+                >
+                  <Textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder="Reply to the visitor…"
+                    rows={3}
+                  />
+                  <div className="mt-2 flex justify-end">
+                    <Button type="submit" size="sm" disabled={sendReply.isPending || !draft.trim()}>
+                      {sendReply.isPending ? "Sending…" : "Send reply"}
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="border-t border-border p-4 text-sm text-muted-foreground">
+                  {isClosed
+                    ? "This conversation is closed."
+                    : active.assigned_to
+                      ? `${ownerName} is currently handling this conversation.`
+                      : "Claim this conversation to reply."}
                 </div>
-              </form>
+              )}
             </>
           )}
         </section>
