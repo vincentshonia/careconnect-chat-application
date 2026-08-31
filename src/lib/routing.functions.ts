@@ -16,6 +16,15 @@ export const transferConversationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => transferInput.parse(input))
   .handler(async ({ data, context }) => {
+    // Transfer is a supervisory action — Standard Users may not perform it.
+    const { resolveActor, requirePermission } = await import("@/lib/authz.server");
+    const actorContext = await resolveActor(context.supabase, context.userId);
+    requirePermission(
+      actorContext,
+      "conversation.transfer",
+      "Only team leads and above can transfer conversations",
+    );
+
     // RLS-scoped reads confirm the caller may touch this conversation/department.
     const { data: conversation, error } = await context.supabase
       .from("conversations")
