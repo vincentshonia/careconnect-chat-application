@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
+import chatBubblesAsset from "@/assets/chat-bubbles.png.asset.json";
 
 const BRAND_LOGO_URL = brandLogoAsset.url;
 
@@ -97,12 +98,22 @@ function AuthPage() {
       {/* Brand panel */}
       <aside className="relative hidden overflow-hidden bg-sidebar px-14 py-12 text-sidebar-foreground lg:flex lg:flex-col lg:justify-between">
         <div
+          className="pointer-events-none absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: `url(${chatBubblesAsset.url})`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+            backgroundSize: "min(70%, 420px)",
+          }}
+        />
+        <div
           className="pointer-events-none absolute inset-0 opacity-70"
           style={{
             background:
               "radial-gradient(80% 60% at 0% 0%, color-mix(in oklab, var(--brand-from) 45%, transparent), transparent 65%), radial-gradient(70% 70% at 100% 100%, color-mix(in oklab, var(--brand-via) 45%, transparent), transparent 70%)",
           }}
         />
+
         <div className="relative flex items-center gap-3">
           <img
             src={BRAND_LOGO_URL}
