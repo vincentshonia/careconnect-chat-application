@@ -62,6 +62,11 @@ function WebsitesPage() {
         .from("websites")
         .update({
           name: form.name,
+          domain: (form.domain ?? "").trim().toLowerCase(),
+          allowed_domains: String(domainsText)
+            .split(/[\s,]+/)
+            .map((d) => d.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""))
+            .filter(Boolean),
           chatbot_name: form.chatbot_name,
           welcome_message: form.welcome_message,
           trigger_message: form.trigger_message,
