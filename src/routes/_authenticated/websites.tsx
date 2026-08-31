@@ -33,6 +33,7 @@ function WebsitesPage() {
   const [form, setForm] = useState<Partial<Website>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
+  const [domainsText, setDomainsText] = useState("");
 
   useEffect(() => setOrigin(window.location.origin), []);
 
@@ -52,6 +53,7 @@ function WebsitesPage() {
     if (active) {
       setActiveId(active.id);
       setForm(active);
+      setDomainsText(((active.allowed_domains as string[] | null) ?? []).join(", "));
     }
   }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -62,6 +64,11 @@ function WebsitesPage() {
         .from("websites")
         .update({
           name: form.name,
+          domain: (form.domain ?? "").trim().toLowerCase(),
+          allowed_domains: String(domainsText)
+            .split(/[\s,]+/)
+            .map((d) => d.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""))
+            .filter(Boolean),
           chatbot_name: form.chatbot_name,
           welcome_message: form.welcome_message,
           trigger_message: form.trigger_message,
@@ -139,6 +146,20 @@ function WebsitesPage() {
                   <Input
                     value={form.chatbot_name ?? ""}
                     onChange={(e) => setForm({ ...form, chatbot_name: e.target.value })}
+                  />
+                </Field>
+                <Field label="Primary domain">
+                  <Input
+                    placeholder="mypacifichealth.com"
+                    value={form.domain ?? ""}
+                    onChange={(e) => setForm({ ...form, domain: e.target.value })}
+                  />
+                </Field>
+                <Field label="Allowed embed domains">
+                  <Input
+                    placeholder="mypacifichealth.com, www.mypacifichealth.com"
+                    value={domainsText}
+                    onChange={(e) => setDomainsText(e.target.value)}
                   />
                 </Field>
                 <Field label="Primary color">
