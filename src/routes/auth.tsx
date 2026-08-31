@@ -144,7 +144,7 @@ function AuthPage() {
             <img
               src={BRAND_LOGO_URL}
               alt="Pacific Health Group"
-              className="h-9 w-auto max-w-[180px] object-contain dark:brightness-0 dark:invert-0"
+              className="h-9 w-auto max-w-[180px] object-contain brightness-0 dark:brightness-100"
             />
           </div>
 
