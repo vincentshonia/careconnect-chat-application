@@ -262,7 +262,7 @@ function WidgetPage() {
     void tick();
     const interval = setInterval(tick, 5000);
     return () => clearInterval(interval);
-  }, [conversationId, view, sessionToken]);
+  }, [conversationId, view, ensureSession, hostOrigin]);
 
   const brand = config?.website.primaryColor ?? "#0f766e";
   const radius = config?.website.borderRadius ?? 16;
