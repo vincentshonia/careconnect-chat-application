@@ -207,7 +207,8 @@ export function AdminShell({
             )}
             <ul className="space-y-0.5">
               {group.items.map((item) => {
-                const badge = item.to === "/notifications" ? waitingCount : 0;
+                const badge =
+                  item.to === "/notifications" || item.to === "/inbox" ? waitingCount : 0;
                 return (
                 <li key={item.to}>
                   <Link
