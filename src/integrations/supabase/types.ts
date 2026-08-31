@@ -1545,6 +1545,24 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_role_permissions: {
+        Row: {
+          created_at: string
+          permission: string
+          role: Database["public"]["Enums"]["platform_role"]
+        }
+        Insert: {
+          created_at?: string
+          permission: string
+          role: Database["public"]["Enums"]["platform_role"]
+        }
+        Update: {
+          created_at?: string
+          permission?: string
+          role?: Database["public"]["Enums"]["platform_role"]
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1759,6 +1777,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      role_permissions: {
+        Row: {
+          created_at: string
+          permission: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          permission: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          permission?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
       }
       routing_rules: {
         Row: {
@@ -2200,8 +2236,28 @@ export type Database = {
         Returns: number
       }
       can_access_org: { Args: { _org: string }; Returns: boolean }
+      can_view_contact: {
+        Args: { _contact: string; _org: string; _owner: string }
+        Returns: boolean
+      }
+      can_view_conversation: {
+        Args: { _assigned: string; _dept: string; _org: string }
+        Returns: boolean
+      }
+      can_view_conversation_id: {
+        Args: { _conversation: string }
+        Returns: boolean
+      }
+      can_view_intake: {
+        Args: { _assigned: string; _dept: string; _org: string }
+        Returns: boolean
+      }
       current_org_id: { Args: never; Returns: string }
       current_rank: { Args: never; Returns: number }
+      has_perm: {
+        Args: { _org: string; _perm: string; _user?: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2232,8 +2288,24 @@ export type Database = {
           title: string
         }[]
       }
+      my_department_ids: {
+        Args: { _org: string; _user?: string }
+        Returns: string[]
+      }
       my_mfa_requirement: { Args: never; Returns: boolean }
+      org_role_of: {
+        Args: { _org: string; _user?: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
       org_role_rank: { Args: { _org: string; _user?: string }; Returns: number }
+      platform_can: {
+        Args: { _perm: string; _user?: string }
+        Returns: boolean
+      }
+      platform_role_of: {
+        Args: { _user?: string }
+        Returns: Database["public"]["Enums"]["platform_role"]
+      }
       role_rank: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: number
