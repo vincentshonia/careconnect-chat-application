@@ -53,7 +53,9 @@ function WebsitesPage() {
     if (active) {
       setActiveId(active.id);
       setForm(active);
+      setDomainsText(((active.allowed_domains as string[] | null) ?? []).join(", "));
     }
+  }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = useMutation({
