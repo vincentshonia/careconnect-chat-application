@@ -5,6 +5,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { createStaffFn, setStaffAccessFn } from "@/lib/staff.functions";
+import { setUserRoleFn } from "@/lib/rbac.functions";
+import { ROLE_LABEL, roleTransitionError, type OrgRole } from "@/lib/permissions";
+import { RequirePermission } from "@/components/admin/RequirePermission";
 import { InvitationsCard } from "@/components/admin/InvitationsCard";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -26,8 +29,16 @@ export const Route = createFileRoute("/_authenticated/staff")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: StaffPage,
+  component: StaffRoute,
 });
+
+function StaffRoute() {
+  return (
+    <RequirePermission permission="staff.view" title="Staff & roles">
+      <StaffPage />
+    </RequirePermission>
+  );
+}
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 const ROLES: AppRole[] = ["agent", "team_lead", "manager", "administrator", "super_admin"];
@@ -36,7 +47,11 @@ const PRESENCE = ["available", "busy", "away", "offline"];
 function StaffPage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
-  const isAdmin = session.data?.isAdmin ?? false;
+  const can = (p: string) => session.data?.permissions.has(p) ?? false;
+  const isAdmin = can("staff.edit");
+  const canManageRoles = can("role.manage");
+  const actorRole = (session.data?.role ?? null) as OrgRole | null;
+  const isPlatformAdmin = session.data?.isPlatformAdmin ?? false;
   const callerRank = session.data?.rank ?? 0;
   const createStaff = useServerFn(createStaffFn);
 
@@ -87,7 +102,9 @@ function StaffPage() {
     queryFn: async () => {
       const [profiles, roles, departments, members] = await Promise.all([
         supabase.from("profiles").select("*").order("full_name"),
-        supabase.from("user_roles").select("id, user_id, role, organization_id"),
+        supabase
+          .from("organization_memberships")
+          .select("id, user_id, role, organization_id, status"),
         supabase.from("departments").select("id, name").order("name"),
         supabase.from("department_members").select("id, user_id, department_id"),
       ]);
@@ -101,17 +118,12 @@ function StaffPage() {
     },
   });
 
+  // Role writes are blocked in the database for browser clients; they go
+  // through an audited server function that verifies the caller's authority.
+  const changeRole = useServerFn(setUserRoleFn);
   const setRole = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const orgId = session.data?.organizationId ?? null;
-      const { error: delError } = await supabase.from("user_roles").delete().eq("user_id", userId);
-      if (delError) throw delError;
-      const { error } = await supabase
-        .from("user_roles")
-        .insert({ user_id: userId, role, organization_id: orgId });
-      if (error) throw error;
-      await logAudit({ action: "user_role.changed", recordType: "user_roles", recordId: userId, newValue: { role } });
-    },
+    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) =>
+      changeRole({ data: { userId, role: role as OrgRole } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
   });
 
@@ -172,7 +184,7 @@ function StaffPage() {
       title="Staff & roles"
       description="Roles control what each teammate can change. Departments drive conversation routing."
     >
-      {!isAdmin ? (
+      {!can("staff.create") ? (
         <p className="mb-4 rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
           You can view the team, but only administrators can change roles or departments.
         </p>
@@ -226,7 +238,7 @@ function StaffPage() {
                 >
                   {ROLES.filter((r) => ROLE_RANK[r] <= callerRank).map((r) => (
                     <option key={r} value={r}>
-                      {r.replace(/_/g, " ")}
+                      {ROLE_LABEL[r as OrgRole]}
                     </option>
                   ))}
                 </select>
@@ -293,17 +305,25 @@ function StaffPage() {
         </div>
       )}
 
-      {isAdmin ? <InvitationsCard callerRank={callerRank} /> : null}
+      {can("staff.create") ? <InvitationsCard callerRank={callerRank} /> : null}
 
       {staffQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">Loading team…</p>
       ) : (
         <div className="space-y-3">
           {(data?.profiles ?? []).map((p) => {
-            const role = (data?.roles ?? [])
-              .filter((r) => r.user_id === p.id)
-              .map((r) => r.role as AppRole)
-              .sort((a, b) => ROLES.indexOf(b) - ROLES.indexOf(a))[0];
+            const role = (data?.roles ?? []).find((r) => r.user_id === p.id)?.role as
+              | AppRole
+              | undefined;
+            const roleLocked = Boolean(
+              roleTransitionError({
+                actorRole,
+                actorIsSelf: session.data?.userId === p.id,
+                actorIsPlatformAdmin: isPlatformAdmin,
+                targetCurrentRole: (role ?? null) as OrgRole | null,
+                targetNewRole: (role ?? "agent") as OrgRole,
+              }),
+            );
             return (
               <article key={p.id} className="rounded-xl border border-border p-4">
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -312,7 +332,7 @@ function StaffPage() {
                     <p className="text-xs text-muted-foreground">{p.email}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Badge variant="outline" className="capitalize">
-                        {(role ?? "no role").replace(/_/g, " ")}
+                        {role ? ROLE_LABEL[role as OrgRole] : "No role"}
                       </Badge>
                       <Badge variant="outline" className="capitalize">
                         {p.presence}
@@ -330,7 +350,7 @@ function StaffPage() {
                     <div className="space-y-1">
                       <Label className="text-xs">Role</Label>
                       <select
-                        disabled={!isAdmin}
+                        disabled={!canManageRoles || roleLocked}
                         className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm disabled:opacity-60"
                         value={role ?? ""}
                         onChange={(e) => setRole.mutate({ userId: p.id, role: e.target.value as AppRole })}
@@ -338,9 +358,18 @@ function StaffPage() {
                         <option value="" disabled>
                           Select role
                         </option>
-                        {ROLES.map((r) => (
+                        {ROLES.filter(
+                          (r) =>
+                            !roleTransitionError({
+                              actorRole,
+                              actorIsSelf: session.data?.userId === p.id,
+                              actorIsPlatformAdmin: isPlatformAdmin,
+                              targetCurrentRole: (role ?? null) as OrgRole | null,
+                              targetNewRole: r as OrgRole,
+                            }),
+                        ).map((r) => (
                           <option key={r} value={r}>
-                            {r.replace(/_/g, " ")}
+                            {ROLE_LABEL[r as OrgRole]}
                           </option>
                         ))}
                       </select>
@@ -401,7 +430,7 @@ function StaffPage() {
                           type="button"
                           size="sm"
                           variant={member ? "default" : "outline"}
-                          disabled={!isAdmin || toggleDepartment.isPending}
+                          disabled={!can("staff.edit") || toggleDepartment.isPending}
                           onClick={() =>
                             toggleDepartment.mutate({
                               userId: p.id,
@@ -418,7 +447,7 @@ function StaffPage() {
                   </div>
                 </div>
 
-                {isAdmin && session.data?.userId !== p.id ? (
+                {can("staff.disable") && session.data?.userId !== p.id && !roleLocked ? (
                   <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3">
                     <p className="text-xs text-muted-foreground">
                       Account access — history and past conversations are always kept.
