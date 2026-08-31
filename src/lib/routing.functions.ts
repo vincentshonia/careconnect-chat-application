@@ -16,6 +16,15 @@ export const transferConversationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => transferInput.parse(input))
   .handler(async ({ data, context }) => {
+    // Transfer is a supervisory action — Standard Users may not perform it.
+    const { resolveActor, requirePermission } = await import("@/lib/authz.server");
+    const actorContext = await resolveActor(context.supabase, context.userId);
+    requirePermission(
+      actorContext,
+      "conversation.transfer",
+      "Only team leads and above can transfer conversations",
+    );
+
     // RLS-scoped reads confirm the caller may touch this conversation/department.
     const { data: conversation, error } = await context.supabase
       .from("conversations")
@@ -72,11 +81,18 @@ export const transferConversationFn = createServerFn({ method: "POST" })
       new_value: department.id,
     });
 
-    const assigned = await assignRoundRobin({
-      organizationId: conversation.organization_id,
-      departmentId: department.id,
-      conversationId: conversation.id,
-    });
+    // Only auto-assign when the destination department round-robins; a shared
+    // queue leaves the chat waiting for the first eligible agent to claim.
+    const { departmentRoutingMode } = await import("@/lib/assignment.server");
+    const mode = await departmentRoutingMode(department.id);
+    const assigned =
+      mode === "round_robin"
+        ? await assignRoundRobin({
+            organizationId: conversation.organization_id,
+            departmentId: department.id,
+            conversationId: conversation.id,
+          })
+        : null;
 
     await notifyStaff({
       organizationId: conversation.organization_id,

@@ -80,58 +80,25 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             contactId = created.id;
           }
 
-          // The visitor's chosen department wins; otherwise fall back to routing rules.
-          let departmentId: string | null = null;
-          if (input.departmentId) {
-            const { data: dept } = await db
-              .from("departments")
-              .select("id")
-              .eq("id", input.departmentId)
-              .eq("organization_id", website.organization_id)
-              .eq("status", "active")
-              .maybeSingle();
-            departmentId = dept?.id ?? null;
-          }
-          if (!departmentId) {
-            const { data: rules } = await db
-              .from("routing_rules")
-              .select("match_value, department_id, priority")
-              .eq("organization_id", website.organization_id)
-              .eq("status", "active")
-              .order("priority");
-            const rule =
-              (rules ?? []).find((r: any) => r.match_value === input.kind) ??
-              (rules ?? []).find((r: any) => r.match_value === "*");
-            departmentId = rule?.department_id ?? conversation.department_id ?? null;
-          }
-          if (!departmentId) {
-            // Last resort: the organization's default department keeps round-robin working.
-            const { data: fallback } = await db
-              .from("departments")
-              .select("id")
-              .eq("organization_id", website.organization_id)
-              .eq("status", "active")
-              .eq("is_default", true)
-              .maybeSingle();
-            departmentId = fallback?.id ?? null;
-          }
-
+          // The visitor's chosen department wins; otherwise routing rules, then default.
+          const { resolveDepartment } = await import("@/lib/handoff.server");
+          const departmentId = await resolveDepartment({
+            organizationId: website.organization_id,
+            preferredDepartmentId: input.departmentId ?? null,
+            matchValue: input.kind,
+            currentDepartmentId: conversation.department_id ?? null,
+          });
 
           await db
             .from("conversations")
             .update({
               contact_id: contactId,
-              department_id: departmentId,
-              status: "waiting",
-              is_ai_only: false,
-              escalation_requested: true,
-              escalation_reason: input.reason ?? `Visitor requested: ${input.kind.replace("_", " ")}`,
               visitor_type: "prospect",
-              requested_agent_at: new Date().toISOString(),
               priority: input.kind === "live_agent" ? "high" : "normal",
               subject: `${input.kind.replace("_", " ")} — ${input.fullName}`,
             })
             .eq("id", conversation.id);
+
 
 
           await mod.insertMessage(
@@ -173,54 +140,38 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             notes: input.reason ?? null,
           });
 
-          // Round-robin the live chat to the next available member of the department.
-          const { assignRoundRobin } = await import("@/lib/assignment.server");
-          const assigned =
-            input.kind === "live_agent"
-              ? await assignRoundRobin({
-                  organizationId: website.organization_id,
-                  departmentId,
-                  conversationId: conversation.id,
-                })
-              : null;
-
+          // Full human hand-off: department routing, staff alerts and — only
+          // when that department is configured for round-robin — auto-assignment.
+          const { handoffToHumans } = await import("@/lib/handoff.server");
           const { notifyStaff } = await import("@/lib/notifications.server");
-          await notifyStaff({
-            organizationId: website.organization_id,
-            departmentId,
-            type: input.kind === "live_agent" ? "escalation" : "new_intake",
-            severity: input.kind === "live_agent" ? "critical" : "info",
-            title:
-              input.kind === "live_agent"
-                ? assigned
-                  ? `${input.fullName} is waiting — assigned to ${assigned.fullName}`
-                  : `${input.fullName} is waiting for an agent`
-                : `New ${input.kind.replace("_", " ")} from ${input.fullName}`,
-            body: input.reason ?? `${input.email} · ${input.phone}`,
-            link: input.kind === "live_agent" ? "/inbox" : "/intake",
-            recordType: "conversations",
-            recordId: conversation.id,
-          });
+          let assigned: { userId: string; fullName: string } | null = null;
 
-          if (assigned) {
+          if (input.kind === "live_agent") {
+            const handoff = await handoffToHumans({
+              conversationId: conversation.id,
+              organizationId: website.organization_id,
+              websiteId: website.id,
+              departmentId,
+              matchValue: input.kind,
+              currentDepartmentId: conversation.department_id ?? null,
+              reason: input.reason ?? `${input.fullName} requested a live representative`,
+              visitorLabel: input.fullName,
+            });
+            assigned = handoff.assigned;
+          } else {
             await notifyStaff({
               organizationId: website.organization_id,
-              userIds: [assigned.userId],
-              type: "escalation",
-              severity: "critical",
-              title: `New chat assigned to you — ${input.fullName}`,
+              departmentId,
+              type: "new_intake",
+              severity: "info",
+              title: `New ${input.kind.replace("_", " ")} from ${input.fullName}`,
               body: input.reason ?? `${input.email} · ${input.phone}`,
-              link: "/inbox",
+              link: "/intake",
               recordType: "conversations",
               recordId: conversation.id,
             });
-            await mod.logEvent(
-              conversation.id,
-              website.organization_id,
-              "auto_assigned",
-              `Round-robin assigned to ${assigned.fullName}`,
-            );
           }
+
 
           const { count } = await db
             .from("profiles")

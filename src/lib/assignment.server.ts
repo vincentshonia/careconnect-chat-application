@@ -8,9 +8,45 @@
  */
 import { admin } from "./public-chat.server";
 
-const BUSY_STATUSES = ["assigned", "active", "pending_visitor", "pending_internal", "escalated"];
+export const BUSY_STATUSES = [
+  "assigned",
+  "active",
+  "pending_visitor",
+  "pending_internal",
+  "escalated",
+];
+
+/** Statuses a conversation may be claimed from. */
+export const CLAIMABLE_STATUSES = ["new", "waiting", "escalated", "follow_up"];
+
+export type RoutingMode = "shared_queue" | "round_robin";
 
 export type AssignedAgent = { userId: string; fullName: string };
+
+/**
+ * How a department distributes incoming live chats.
+ * `shared_queue` leaves the chat unassigned for the first eligible agent to
+ * claim; `round_robin` auto-assigns. Anything else falls back to shared queue.
+ */
+export async function departmentRoutingMode(departmentId: string | null): Promise<RoutingMode> {
+  if (!departmentId) return "shared_queue";
+  const { data } = await admin()
+    .from("departments")
+    .select("routing_method")
+    .eq("id", departmentId)
+    .maybeSingle();
+  return data?.routing_method === "round_robin" ? "round_robin" : "shared_queue";
+}
+
+/** Count an agent's current live workload, for concurrent-chat caps. */
+export async function activeChatCount(userId: string): Promise<number> {
+  const { count } = await admin()
+    .from("conversations")
+    .select("id", { count: "exact", head: true })
+    .eq("assigned_to", userId)
+    .in("status", BUSY_STATUSES);
+  return count ?? 0;
+}
 
 /** Staff who should be alerted: the department's members, or the whole org. */
 export async function alertRecipients(

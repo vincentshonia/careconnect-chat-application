@@ -106,7 +106,21 @@ export const Route = createFileRoute("/api/public/chat/message")({
           });
 
           if (result.escalate) {
-            await db.from("conversations").update({ status: "waiting" }).eq("id", conversation.id);
+            // Run the complete human hand-off: route to a department, alert the
+            // team and expose the chat in the Waiting queue for claiming.
+            const { handoffToHumans } = await import("@/lib/handoff.server");
+            await handoffToHumans({
+              conversationId: conversation.id,
+              organizationId: website.organization_id,
+              websiteId: website.id,
+              departmentId: conversation.department_id ?? null,
+              currentDepartmentId: conversation.department_id ?? null,
+              matchValue: result.crisis ? "crisis" : "ai_escalation",
+              reason: result.crisis
+                ? "Crisis language detected — human assistance required"
+                : "The assistant could not answer confidently",
+              eventType: "ai_escalation",
+            });
           }
 
           return Response.json({
