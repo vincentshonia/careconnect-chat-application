@@ -4,6 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { MfaPolicyCard } from "@/components/admin/MfaPolicyCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +104,7 @@ function SecurityPage() {
       description="Protect your staff account with an authenticator app. Required for anyone handling protected health information."
     >
       <div className="grid max-w-4xl gap-6 lg:grid-cols-2">
+        <MfaPolicyCard />
         <section className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">Two-factor authentication</h2>

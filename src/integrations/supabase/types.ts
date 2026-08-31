@@ -1475,6 +1475,8 @@ export type Database = {
           phone: string | null
           primary_color: string
           privacy_notice: string
+          require_mfa: boolean
+          require_mfa_for_admins: boolean
           slug: string
           status: Database["public"]["Enums"]["entity_status"]
           timezone: string
@@ -1493,6 +1495,8 @@ export type Database = {
           phone?: string | null
           primary_color?: string
           privacy_notice?: string
+          require_mfa?: boolean
+          require_mfa_for_admins?: boolean
           slug: string
           status?: Database["public"]["Enums"]["entity_status"]
           timezone?: string
@@ -1511,6 +1515,8 @@ export type Database = {
           phone?: string | null
           primary_color?: string
           privacy_notice?: string
+          require_mfa?: boolean
+          require_mfa_for_admins?: boolean
           slug?: string
           status?: Database["public"]["Enums"]["entity_status"]
           timezone?: string
@@ -2226,6 +2232,7 @@ export type Database = {
           title: string
         }[]
       }
+      my_mfa_requirement: { Args: never; Returns: boolean }
       org_role_rank: { Args: { _org: string; _user?: string }; Returns: number }
       role_rank: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
