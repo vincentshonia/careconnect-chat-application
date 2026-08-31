@@ -1,5 +1,5 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 /**
  * Automated test suite.
