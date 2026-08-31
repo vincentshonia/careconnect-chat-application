@@ -104,24 +104,13 @@ export const claimConversationFn = createServerFn({ method: "POST" })
     // Profile eligibility: account must be active.
     const { data: profile } = await db
       .from("profiles")
-      .select("full_name, status, presence, max_concurrent_chats")
+      .select("full_name, status")
       .eq("id", actor.userId)
       .maybeSingle();
     if (!profile || profile.status !== "active") {
       throw new ForbiddenError("Your account is not active");
     }
 
-    const cap = Number(profile.max_concurrent_chats ?? 0);
-    if (cap > 0) {
-      const { count } = await db
-        .from("conversations")
-        .select("id", { count: "exact", head: true })
-        .eq("assigned_to", actor.userId)
-        .in("status", BUSY_STATUSES);
-      if ((count ?? 0) >= cap) {
-        throw new ForbiddenError("You have reached your maximum number of active conversations.");
-      }
-    }
 
     const now = new Date().toISOString();
     const { data: updated } = await db
