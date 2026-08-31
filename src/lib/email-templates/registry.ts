@@ -1,4 +1,6 @@
 import type { ComponentType } from 'react'
+import { template as staffWelcomeTemplate } from './staff-welcome'
+
 
 export interface TemplateEntry {
   component: ComponentType<any>
