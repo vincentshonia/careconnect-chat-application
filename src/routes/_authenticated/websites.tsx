@@ -98,8 +98,16 @@ function WebsitesPage() {
     onError: (err) => setNotice(err instanceof Error ? err.message : "Save failed"),
   });
 
+  // Preview/sandbox origins are auth-gated, so a snippet pointing at them never
+  // loads on a customer site. Always emit the public production origin.
+  const PUBLIC_EMBED_ORIGIN = "https://chat.mypacifichealth.com";
+  const isPrivateOrigin =
+    !origin ||
+    /lovableproject\.com|gpt-eng\.com|id-preview|-dev\.lovable\.app|localhost|127\.0\.0\.1/.test(origin);
+  const embedOrigin = isPrivateOrigin ? PUBLIC_EMBED_ORIGIN : origin;
+
   const snippet = active
-    ? `<script src="${origin}/api/public/widget.js" data-website-id="${active.id}"></script>`
+    ? `<script src="${embedOrigin}/api/public/widget.js" data-website-id="${active.id}"></script>`
     : "";
 
   return (
