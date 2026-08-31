@@ -105,7 +105,6 @@ function InboxPage() {
       return data;
     },
   });
-  const isAvailable = presenceQuery.data?.presence === "available";
 
   const conversationsQuery = useQuery({
     queryKey: ["conversations"],

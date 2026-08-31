@@ -110,9 +110,6 @@ export const claimConversationFn = createServerFn({ method: "POST" })
     if (!profile || profile.status !== "active") {
       throw new ForbiddenError("Your account is not active");
     }
-    if (profile.presence !== "available" && !isSupervisor(actor)) {
-      throw new ForbiddenError("Set yourself Available to claim this conversation");
-    }
 
     const cap = Number(profile.max_concurrent_chats ?? 0);
     if (cap > 0) {
