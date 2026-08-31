@@ -511,7 +511,13 @@ function InboxPage() {
                   <Textarea
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
-                    placeholder="Reply to the visitor…"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        if (draft.trim() && !sendReply.isPending) sendReply.mutate(draft.trim());
+                      }
+                    }}
+                    placeholder="Reply to the visitor… (Enter to send, Shift+Enter for a new line)"
                     rows={3}
                   />
                   <div className="mt-2 flex justify-end">
