@@ -573,18 +573,11 @@ function WidgetPage() {
             brand={brand}
             onCancel={() => setView("menu")}
             onSubmit={async (payload) => {
-              const res = await fetch("/api/public/chat/escalate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  websiteId,
-                  host: hostOrigin,
-                  sessionToken,
-                  conversationId,
-                  kind: formKind,
-                  ...payload,
-                  departmentId: (payload.departmentId as string) || null,
-                }),
+              const res = await chatPost("/api/public/chat/escalate", {
+                conversationId,
+                kind: formKind,
+                ...payload,
+                departmentId: (payload.departmentId as string) || null,
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data.error ?? "Submission failed");
