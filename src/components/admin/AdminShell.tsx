@@ -107,6 +107,7 @@ export function AdminShell({
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { unread } = useNotifications({ alerts: true });
+  const { count: waitingCount } = useWaitingCount();
   const { theme, toggle: toggleTheme } = useTheme();
   const session = useSessionContext();
   const orgId = session.data?.organizationId ?? null;
