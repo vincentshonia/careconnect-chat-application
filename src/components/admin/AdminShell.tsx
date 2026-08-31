@@ -30,6 +30,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/use-notifications";
+import { useWaitingCount } from "@/hooks/use-waiting-count";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { useTheme } from "@/hooks/use-theme";
 import type { Permission, PlatformPermission } from "@/lib/permissions";
