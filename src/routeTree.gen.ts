@@ -37,6 +37,7 @@ import { Route as AuthenticatedAiConsoleRouteImport } from './routes/_authentica
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as ApiPublicHooksSlaCheckRouteImport } from './routes/api/public/hooks/sla-check'
+import { Route as ApiPublicChatUploadRouteImport } from './routes/api/public/chat/upload'
 import { Route as ApiPublicChatSessionRouteImport } from './routes/api/public/chat/session'
 import { Route as ApiPublicChatRateRouteImport } from './routes/api/public/chat/rate'
 import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
@@ -189,6 +190,11 @@ const ApiPublicHooksSlaCheckRoute = ApiPublicHooksSlaCheckRouteImport.update({
   path: '/api/public/hooks/sla-check',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicChatUploadRoute = ApiPublicChatUploadRouteImport.update({
+  id: '/api/public/chat/upload',
+  path: '/api/public/chat/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicChatSessionRoute = ApiPublicChatSessionRouteImport.update({
   id: '/api/public/chat/session',
   path: '/api/public/chat/session',
@@ -264,6 +270,7 @@ export interface FileRoutesByFullPath {
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
+  '/api/public/chat/upload': typeof ApiPublicChatUploadRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -301,6 +308,7 @@ export interface FileRoutesByTo {
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
+  '/api/public/chat/upload': typeof ApiPublicChatUploadRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -340,6 +348,7 @@ export interface FileRoutesById {
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
+  '/api/public/chat/upload': typeof ApiPublicChatUploadRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
@@ -379,6 +388,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/poll'
     | '/api/public/chat/rate'
     | '/api/public/chat/session'
+    | '/api/public/chat/upload'
     | '/api/public/hooks/sla-check'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
@@ -416,6 +426,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/poll'
     | '/api/public/chat/rate'
     | '/api/public/chat/session'
+    | '/api/public/chat/upload'
     | '/api/public/hooks/sla-check'
     | '/lovable/email/transactional/preview'
   id:
@@ -454,6 +465,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/poll'
     | '/api/public/chat/rate'
     | '/api/public/chat/session'
+    | '/api/public/chat/upload'
     | '/api/public/hooks/sla-check'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
@@ -476,6 +488,7 @@ export interface RootRouteChildren {
   ApiPublicChatPollRoute: typeof ApiPublicChatPollRoute
   ApiPublicChatRateRoute: typeof ApiPublicChatRateRoute
   ApiPublicChatSessionRoute: typeof ApiPublicChatSessionRoute
+  ApiPublicChatUploadRoute: typeof ApiPublicChatUploadRoute
   ApiPublicHooksSlaCheckRoute: typeof ApiPublicHooksSlaCheckRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
@@ -678,6 +691,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSlaCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/chat/upload': {
+      id: '/api/public/chat/upload'
+      path: '/api/public/chat/upload'
+      fullPath: '/api/public/chat/upload'
+      preLoaderRoute: typeof ApiPublicChatUploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/chat/session': {
       id: '/api/public/chat/session'
       path: '/api/public/chat/session'
@@ -798,6 +818,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicChatPollRoute: ApiPublicChatPollRoute,
   ApiPublicChatRateRoute: ApiPublicChatRateRoute,
   ApiPublicChatSessionRoute: ApiPublicChatSessionRoute,
+  ApiPublicChatUploadRoute: ApiPublicChatUploadRoute,
   ApiPublicHooksSlaCheckRoute: ApiPublicHooksSlaCheckRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
