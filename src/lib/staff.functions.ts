@@ -128,8 +128,40 @@ export const createStaffFn = createServerFn({ method: "POST" })
       new_value: { email, role: data.role, full_name: data.fullName },
     });
 
-    return { userId: newUserId, email, tempPassword };
+    // Welcome email with the temporary password. A failure here must never
+    // undo the account that was just created — the password is still shown
+    // once in the admin UI as a fallback.
+    let emailed = false;
+    let emailError: string | null = null;
+    try {
+      const { data: org } = await supabaseAdmin
+        .from("organizations")
+        .select("name")
+        .eq("id", organizationId)
+        .maybeSingle();
+
+      const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
+      const result = await sendTemplateEmail("staff-welcome", email, {
+        idempotencyKey: `staff-welcome-${newUserId}`,
+        templateData: {
+          fullName: data.fullName,
+          organizationName: org?.name ?? "your care team",
+          email,
+          tempPassword,
+          role: data.role,
+          signInUrl: "https://chat.mypacifichealth.com/auth",
+        },
+      });
+      emailed = result.sent;
+      if (!result.sent) emailError = "This address is blocked from receiving email.";
+    } catch (error) {
+      emailError = error instanceof Error ? error.message : "Could not send the welcome email";
+      console.error("[staff.created] welcome email failed", emailError);
+    }
+
+    return { userId: newUserId, email, tempPassword, emailed, emailError };
   });
+
 
 /**
  * Administrator-only: disable, re-enable, or revoke a staff account.

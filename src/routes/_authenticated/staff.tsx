@@ -51,6 +51,8 @@ function StaffPage() {
   const [createdCredentials, setCreatedCredentials] = useState<{
     email: string;
     tempPassword: string;
+    emailed: boolean;
+    emailError: string | null;
   } | null>(null);
 
   const addStaff = useMutation({
@@ -65,7 +67,13 @@ function StaffPage() {
         },
       }),
     onSuccess: (result) => {
-      setCreatedCredentials({ email: result.email, tempPassword: result.tempPassword });
+      setCreatedCredentials({
+        email: result.email,
+        tempPassword: result.tempPassword,
+        emailed: result.emailed,
+        emailError: result.emailError,
+      });
+
       setForm({ fullName: "", email: "", role: "agent", title: "", phone: "" });
       setShowForm(false);
       queryClient.invalidateQueries({ queryKey: ["staff"] });
@@ -265,6 +273,12 @@ function StaffPage() {
               <p className="mt-2 text-xs text-muted-foreground">
                 This password will not be shown again. Ask them to sign in at /auth and change it from Security.
               </p>
+              <p className="mt-2 text-xs">
+                {createdCredentials.emailed
+                  ? "A welcome email with these details was sent to them."
+                  : `Welcome email not sent${createdCredentials.emailError ? ` — ${createdCredentials.emailError}` : ""}. Share the password directly.`}
+              </p>
+
               <Button
                 type="button"
                 size="sm"
