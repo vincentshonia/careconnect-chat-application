@@ -33,6 +33,7 @@ import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAiConsoleRouteImport } from './routes/_authenticated/ai-console'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
 import { Route as ApiPublicHooksSlaCheckRouteImport } from './routes/api/public/hooks/sla-check'
+import { Route as ApiPublicChatSessionRouteImport } from './routes/api/public/chat/session'
 import { Route as ApiPublicChatRateRouteImport } from './routes/api/public/chat/rate'
 import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
 import { Route as ApiPublicChatMessageRouteImport } from './routes/api/public/chat/message'
@@ -163,6 +164,11 @@ const ApiPublicHooksSlaCheckRoute = ApiPublicHooksSlaCheckRouteImport.update({
   path: '/api/public/hooks/sla-check',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicChatSessionRoute = ApiPublicChatSessionRouteImport.update({
+  id: '/api/public/chat/session',
+  path: '/api/public/chat/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicChatRateRoute = ApiPublicChatRateRouteImport.update({
   id: '/api/public/chat/rate',
   path: '/api/public/chat/rate',
@@ -229,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
+  '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
 }
 export interface FileRoutesByTo {
@@ -261,6 +268,7 @@ export interface FileRoutesByTo {
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
+  '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
 }
 export interface FileRoutesById {
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
+  '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
 }
 export interface FileRouteTypes {
@@ -329,6 +338,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
     | '/api/public/chat/rate'
+    | '/api/public/chat/session'
     | '/api/public/hooks/sla-check'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -361,6 +371,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
     | '/api/public/chat/rate'
+    | '/api/public/chat/session'
     | '/api/public/hooks/sla-check'
   id:
     | '__root__'
@@ -394,6 +405,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/message'
     | '/api/public/chat/poll'
     | '/api/public/chat/rate'
+    | '/api/public/chat/session'
     | '/api/public/hooks/sla-check'
   fileRoutesById: FileRoutesById
 }
@@ -411,6 +423,7 @@ export interface RootRouteChildren {
   ApiPublicChatMessageRoute: typeof ApiPublicChatMessageRoute
   ApiPublicChatPollRoute: typeof ApiPublicChatPollRoute
   ApiPublicChatRateRoute: typeof ApiPublicChatRateRoute
+  ApiPublicChatSessionRoute: typeof ApiPublicChatSessionRoute
   ApiPublicHooksSlaCheckRoute: typeof ApiPublicHooksSlaCheckRoute
 }
 
@@ -584,6 +597,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSlaCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/chat/session': {
+      id: '/api/public/chat/session'
+      path: '/api/public/chat/session'
+      fullPath: '/api/public/chat/session'
+      preLoaderRoute: typeof ApiPublicChatSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/chat/rate': {
       id: '/api/public/chat/rate'
       path: '/api/public/chat/rate'
@@ -693,6 +713,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicChatMessageRoute: ApiPublicChatMessageRoute,
   ApiPublicChatPollRoute: ApiPublicChatPollRoute,
   ApiPublicChatRateRoute: ApiPublicChatRateRoute,
+  ApiPublicChatSessionRoute: ApiPublicChatSessionRoute,
   ApiPublicHooksSlaCheckRoute: ApiPublicHooksSlaCheckRoute,
 }
 export const routeTree = rootRouteImport

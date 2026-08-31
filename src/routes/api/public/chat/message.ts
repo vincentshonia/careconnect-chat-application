@@ -2,13 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 const bodySchema = z.object({
-  websiteId: z.string().uuid(),
+  session: z.string().min(20).max(4000),
   host: z.string().max(300).nullable().optional(),
-  sessionToken: z.string().min(8).max(120),
   conversationId: z.string().uuid().nullable().optional(),
-  text: z.string().trim().min(1).max(2000),
+  text: z.string().trim().min(1).max(4000),
   menuOption: z.string().max(60).nullable().optional(),
-  meta: z.record(z.any()).optional(),
 });
 
 export const Route = createFileRoute("/api/public/chat/message")({
@@ -24,16 +22,32 @@ export const Route = createFileRoute("/api/public/chat/message")({
           }
           const input = parsed.data;
           const ip = mod.clientIp(request);
-          await mod.enforceRateLimit(`msg:ip:${ip}`, 60, 60);
-          await mod.enforceRateLimit(`msg:s:${input.sessionToken}`, 15, 60);
-          const website = await mod.resolveWebsite(input.websiteId, input.host ?? null);
-          const visitor = await mod.ensureVisitor(website, input.sessionToken, input.meta ?? {});
-          const conversation = await mod.ensureConversation(
-            website,
-            visitor,
-            input.conversationId ?? null,
-            input.menuOption ? `${input.menuOption} enquiry` : undefined,
+
+          // Session is verified first: website + visitor come from the token,
+          // never from client-supplied ids.
+          const ctx = await mod.sessionContext(input.session, input.host ?? null);
+          const limits = await mod.orgLimits(ctx.claims.org);
+
+          await mod.enforceRateLimit(`msg:ip:${ip}`, limits.ip_requests_per_minute, 60);
+          await mod.enforceRateLimit(
+            `msg:s:${ctx.claims.sid}`,
+            limits.session_ai_messages_per_minute,
+            60,
           );
+
+          if (input.text.length > limits.max_prompt_chars) {
+            return Response.json({ error: "That message is too long." }, { status: 400 });
+          }
+
+          const website = ctx.website;
+          const conversation = input.conversationId
+            ? await mod.conversationForSession(ctx, input.conversationId)
+            : await mod.ensureConversation(
+                website,
+                ctx.visitor,
+                null,
+                input.menuOption ? `${input.menuOption} enquiry` : undefined,
+              );
 
           const visitorMessage = await mod.insertMessage(conversation, "visitor", input.text, "Visitor");
 
@@ -45,6 +59,8 @@ export const Route = createFileRoute("/api/public/chat/message")({
               liveAgent: true,
             });
           }
+
+          await mod.enforceAiBudget(ctx.claims.org, limits);
 
           const db = mod.admin();
           const { data: prior } = await db
@@ -66,6 +82,13 @@ export const Route = createFileRoute("/api/public/chat/message")({
             history,
             conversationId: conversation.id,
           });
+
+          await mod.recordUsage(ctx.claims.org, "ai_messages", 1);
+          await mod.recordUsage(
+            ctx.claims.org,
+            "ai_tokens",
+            Math.ceil((input.text.length + result.answer.length) / 4),
+          );
 
           const aiMessage = await mod.insertMessage(
             conversation,
