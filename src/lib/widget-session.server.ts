@@ -84,7 +84,7 @@ export async function verifySession(token: unknown): Promise<WidgetSessionClaims
     ok = await crypto.subtle.verify(
       "HMAC",
       await key(),
-      fromB64url(sig),
+      fromB64url(sig) as unknown as BufferSource,
       new TextEncoder().encode(body),
     );
   } catch {

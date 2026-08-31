@@ -2073,7 +2073,7 @@ export type Database = {
           organization_id: string
           primary_color?: string
           privacy_disclaimer?: string
-          public_key: string
+          public_key?: string
           status?: Database["public"]["Enums"]["entity_status"]
           timezone?: string
           trigger_delay_seconds?: number
