@@ -1290,6 +1290,159 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_user_id: string | null
+          created_at: string
+          department_ids: string[]
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          organization_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          title: string | null
+          token_hash: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_user_id?: string | null
+          created_at?: string
+          department_ids?: string[]
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          organization_id: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          title?: string | null
+          token_hash: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_user_id?: string | null
+          created_at?: string
+          department_ids?: string[]
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          organization_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          title?: string | null
+          token_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_limits: {
+        Row: {
+          created_at: string
+          hard_stop: boolean
+          ip_requests_per_minute: number
+          max_prompt_chars: number
+          monthly_ai_messages: number
+          monthly_ai_tokens: number
+          organization_id: string
+          session_ai_messages_per_minute: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hard_stop?: boolean
+          ip_requests_per_minute?: number
+          max_prompt_chars?: number
+          monthly_ai_messages?: number
+          monthly_ai_tokens?: number
+          organization_id: string
+          session_ai_messages_per_minute?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hard_stop?: boolean
+          ip_requests_per_minute?: number
+          max_prompt_chars?: number
+          monthly_ai_messages?: number
+          monthly_ai_tokens?: number
+          organization_id?: string
+          session_ai_messages_per_minute?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_limits_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_memberships: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          organization_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: Database["public"]["Enums"]["membership_status"]
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          organization_id: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["membership_status"]
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          organization_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: Database["public"]["Enums"]["membership_status"]
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_memberships_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           address: string | null
@@ -1344,6 +1497,27 @@ export type Database = {
           status?: Database["public"]["Enums"]["entity_status"]
           timezone?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_admins: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["platform_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["platform_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["platform_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -1688,6 +1862,38 @@ export type Database = {
           },
         ]
       }
+      usage_counters: {
+        Row: {
+          metric: string
+          organization_id: string
+          period: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          metric: string
+          organization_id: string
+          period: string
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          metric?: string
+          organization_id?: string
+          period?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_counters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1800,6 +2006,7 @@ export type Database = {
           chatbot_name: string
           consent_language: string
           created_at: string
+          dev_mode: boolean
           domain: string
           font_family: string
           hidden_paths: string[]
@@ -1811,6 +2018,7 @@ export type Database = {
           organization_id: string
           primary_color: string
           privacy_disclaimer: string
+          public_key: string
           status: Database["public"]["Enums"]["entity_status"]
           timezone: string
           trigger_delay_seconds: number
@@ -1818,6 +2026,8 @@ export type Database = {
           trigger_once_per_visit: boolean
           trigger_repeat_days: number
           updated_at: string
+          verification_token: string | null
+          verified_at: string | null
           welcome_message: string
           widget_position: string
           widget_size: string
@@ -1833,6 +2043,7 @@ export type Database = {
           chatbot_name?: string
           consent_language?: string
           created_at?: string
+          dev_mode?: boolean
           domain: string
           font_family?: string
           hidden_paths?: string[]
@@ -1844,6 +2055,7 @@ export type Database = {
           organization_id: string
           primary_color?: string
           privacy_disclaimer?: string
+          public_key: string
           status?: Database["public"]["Enums"]["entity_status"]
           timezone?: string
           trigger_delay_seconds?: number
@@ -1851,6 +2063,8 @@ export type Database = {
           trigger_once_per_visit?: boolean
           trigger_repeat_days?: number
           updated_at?: string
+          verification_token?: string | null
+          verified_at?: string | null
           welcome_message?: string
           widget_position?: string
           widget_size?: string
@@ -1866,6 +2080,7 @@ export type Database = {
           chatbot_name?: string
           consent_language?: string
           created_at?: string
+          dev_mode?: boolean
           domain?: string
           font_family?: string
           hidden_paths?: string[]
@@ -1877,6 +2092,7 @@ export type Database = {
           organization_id?: string
           primary_color?: string
           privacy_disclaimer?: string
+          public_key?: string
           status?: Database["public"]["Enums"]["entity_status"]
           timezone?: string
           trigger_delay_seconds?: number
@@ -1884,6 +2100,8 @@ export type Database = {
           trigger_once_per_visit?: boolean
           trigger_repeat_days?: number
           updated_at?: string
+          verification_token?: string | null
+          verified_at?: string | null
           welcome_message?: string
           widget_position?: string
           widget_size?: string
@@ -1953,6 +2171,10 @@ export type Database = {
         Args: { _key: string; _limit: number; _window_seconds: number }
         Returns: boolean
       }
+      bump_usage: {
+        Args: { _amount?: number; _metric: string; _org: string }
+        Returns: number
+      }
       can_access_org: { Args: { _org: string }; Returns: boolean }
       current_org_id: { Args: never; Returns: string }
       current_rank: { Args: never; Returns: number }
@@ -1963,6 +2185,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_org_admin: { Args: { _org: string }; Returns: boolean }
+      is_org_member: {
+        Args: { _org: string; _user?: string }
+        Returns: boolean
+      }
+      is_platform_admin: { Args: { _user?: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       match_knowledge: {
         Args: {
@@ -1980,6 +2208,7 @@ export type Database = {
           title: string
         }[]
       }
+      org_role_rank: { Args: { _org: string; _user?: string }; Returns: number }
       role_rank: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: number
@@ -2024,6 +2253,13 @@ export type Database = {
         | "published"
         | "archived"
         | "expired"
+      membership_status: "invited" | "active" | "suspended" | "removed"
+      platform_role:
+        | "platform_owner"
+        | "platform_admin"
+        | "platform_support"
+        | "platform_billing"
+        | "platform_read_only"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2192,6 +2428,14 @@ export const Constants = {
         "published",
         "archived",
         "expired",
+      ],
+      membership_status: ["invited", "active", "suspended", "removed"],
+      platform_role: [
+        "platform_owner",
+        "platform_admin",
+        "platform_support",
+        "platform_billing",
+        "platform_read_only",
       ],
     },
   },
