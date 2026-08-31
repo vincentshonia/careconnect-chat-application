@@ -32,43 +32,62 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { useTheme } from "@/hooks/use-theme";
+import type { Permission } from "@/lib/permissions";
 
 import { Button } from "@/components/ui/button";
 
-const navGroups = [
+/**
+ * Navigation is permission-driven: an item only renders when the signed-in
+ * member holds at least one of its permissions. Route guards and RLS enforce
+ * the same rules, so hiding here is purely for clarity.
+ */
+const navGroups: {
+  label: string;
+  items: { to: string; label: string; icon: typeof Inbox; perms?: Permission[] }[];
+}[] = [
   {
     label: "Workspace",
     items: [
       { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { to: "/inbox", label: "Inbox", icon: Inbox },
-      { to: "/intake", label: "Intake", icon: ClipboardList },
-      { to: "/contacts", label: "Contacts", icon: Contact },
+      { to: "/inbox", label: "Inbox", icon: Inbox, perms: ["conversation.view_assigned"] },
+      { to: "/intake", label: "Intake", icon: ClipboardList, perms: ["workflow.view_assigned"] },
+      { to: "/contacts", label: "Contacts", icon: Contact, perms: ["contact.view_related"] },
       { to: "/notifications", label: "Notifications", icon: Bell },
     ],
   },
   {
     label: "Content & AI",
     items: [
-      { to: "/knowledge", label: "Knowledge", icon: LibraryBig },
-      { to: "/ai-console", label: "AI console", icon: Bot },
-      { to: "/quality", label: "Quality & QA", icon: Star },
-      { to: "/reports", label: "Reports", icon: BarChart3 },
+      { to: "/knowledge", label: "Knowledge", icon: LibraryBig, perms: ["knowledge.read"] },
+      { to: "/ai-console", label: "AI console", icon: Bot, perms: ["knowledge.edit"] },
+      { to: "/quality", label: "Quality & QA", icon: Star, perms: ["reports.team"] },
+      {
+        to: "/reports",
+        label: "Reports",
+        icon: BarChart3,
+        perms: ["reports.team", "reports.organization", "reports.platform"],
+      },
     ],
   },
   {
     label: "Configuration",
     items: [
-      { to: "/websites", label: "Websites", icon: Globe },
-      { to: "/departments", label: "Departments", icon: Users2 },
-      { to: "/routing", label: "Routing", icon: Shuffle },
-      { to: "/staff", label: "Staff", icon: Users },
-      { to: "/organizations", label: "Organizations", icon: Building2 },
-      { to: "/settings", label: "Settings", icon: Settings },
-      { to: "/security", label: "Security", icon: ShieldCheck },
-      { to: "/audit", label: "Audit log", icon: Activity },
+      { to: "/websites", label: "Websites", icon: Globe, perms: ["website.manage"] },
+      { to: "/departments", label: "Departments", icon: Users2, perms: ["department.manage"] },
+      { to: "/routing", label: "Routing", icon: Shuffle, perms: ["routing.manage"] },
+      { to: "/staff", label: "Staff", icon: Users, perms: ["staff.view"] },
+      {
+        to: "/organizations",
+        label: "Organizations",
+        icon: Building2,
+        perms: ["organization.manage", "platform.tenant_admin"],
+      },
+      { to: "/settings", label: "Settings", icon: Settings, perms: ["settings.manage"] },
+      { to: "/security", label: "Security", icon: ShieldCheck, perms: ["security.manage"] },
+      { to: "/audit", label: "Audit log", icon: Activity, perms: ["audit.view"] },
     ],
   },
-] as const;
+];
 
 
 export function AdminShell({
@@ -103,6 +122,16 @@ export function AdminShell({
       return data;
     },
   });
+  const permissions = session.data?.permissions;
+  const visibleGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => !item.perms || item.perms.some((p) => permissions?.has(p)),
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+
   const orgName = branding.data?.name ?? "Pacific Health";
   const logoUrl = branding.data?.logo_url ?? null;
   const initials = orgName
@@ -152,7 +181,7 @@ export function AdminShell({
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
-        {navGroups.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.label}>
             {!collapsed && (
               <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/45">
