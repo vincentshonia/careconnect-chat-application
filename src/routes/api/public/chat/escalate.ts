@@ -2,9 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 const bodySchema = z.object({
-  websiteId: z.string().uuid(),
+  session: z.string().min(20).max(4000),
   host: z.string().max(300).nullable().optional(),
-  sessionToken: z.string().min(8).max(120),
   conversationId: z.string().uuid().nullable().optional(),
   fullName: z.string().trim().min(2).max(120),
   phone: z.string().trim().min(7).max(40),
