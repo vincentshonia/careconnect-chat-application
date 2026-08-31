@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/public/widget.js")({
     handlers: {
       GET: async ({ request }) => {
         const js = `(function(){
-  var cur = document.currentScript;
+  var cur = document.currentScript || document.querySelector('script[data-website-id]');
   var id = cur && cur.getAttribute('data-website-id');
   if (!id) { console.error('[chat-widget] data-website-id is required'); return; }
   if (window.__lovableChatWidget) return;
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/api/public/widget.js")({
 
   var host = encodeURIComponent(window.location.origin);
   var page = encodeURIComponent(window.location.pathname);
+  function mount() {
   var frame = document.createElement('iframe');
   frame.title = 'Customer support chat';
   frame.src = widgetOrigin + '/widget?w=' + encodeURIComponent(id) + '&h=' + host + '&p=' + page +
