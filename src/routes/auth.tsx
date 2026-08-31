@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const BRAND_LOGO_URL =
+  "/api/public/branding/11111111-1111-1111-1111-111111111111/logo-1785297101851.png";
+
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
@@ -137,13 +140,11 @@ function AuthPage() {
       <main className="flex items-center justify-center bg-background px-6 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">
-              PH
-            </span>
-            <div>
-              <p className="text-sm font-semibold">Pacific Health Group</p>
-              <p className="text-xs text-muted-foreground">Support console</p>
-            </div>
+            <img
+              src={BRAND_LOGO_URL}
+              alt="Pacific Health Group"
+              className="h-9 w-auto max-w-[180px] object-contain dark:brightness-0 dark:invert-0"
+            />
           </div>
 
           <h1 className="font-display text-2xl font-bold tracking-tight">
