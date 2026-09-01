@@ -186,8 +186,16 @@ export async function loadWidgetConfig(websiteId: string, hostOrigin: string | n
     services: services ?? [],
 
     faqs: faqs ?? [],
+    team: ((team ?? []) as Array<Record<string, any>>)
+      .filter((p) => typeof p.avatar_url === "string" && p.avatar_url)
+      .map((p) => ({
+        id: p.id as string,
+        name: (p.display_name || p.full_name || "Team member") as string,
+        avatarUrl: p.avatar_url as string,
+      })),
     businessOpen: open,
     agentsAvailable: open && agentsAvailable,
+
   };
 }
 
