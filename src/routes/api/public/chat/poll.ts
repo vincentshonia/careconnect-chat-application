@@ -30,12 +30,14 @@ export const Route = createFileRoute("/api/public/chat/poll")({
           if (conversation.assigned_to) {
             const { data: agent } = await db
               .from("profiles")
-              .select("full_name, display_name, avatar_url")
+              .select("full_name, display_name, avatar_url, show_in_widget_team")
               .eq("id", conversation.assigned_to)
               .maybeSingle();
             agentName = agent?.display_name ?? agent?.full_name ?? null;
-            agentAvatarUrl = agent?.avatar_url ?? null;
+            // The photo is only shared with visitors when the employee opted in.
+            agentAvatarUrl = agent?.show_in_widget_team ? (agent?.avatar_url ?? null) : null;
           }
+
 
           return Response.json(
             {
