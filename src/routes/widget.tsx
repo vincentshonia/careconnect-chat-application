@@ -859,7 +859,7 @@ function WidgetPage() {
 
       <nav
         aria-label="Chat sections"
-        className="grid grid-cols-5 border-t border-border/70 bg-card px-1 pb-1.5 pt-1"
+        className="grid shrink-0 grid-cols-5 gap-0.5 border-t border-border/60 bg-card px-1.5 pb-2 pt-1.5"
       >
         {TABS.map((tab) => {
           const active = tabForView(view) === tab.key;
@@ -872,27 +872,29 @@ function WidgetPage() {
                 if (tab.key === "chat" && conversationId && liveStatus) setView("waiting");
                 else setView(tab.view);
               }}
-              className="flex flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-medium transition"
-              style={active ? { color: brand } : { color: "hsl(var(--muted-foreground))" }}
+              className="flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-medium transition hover:bg-muted/60"
+              style={active ? { color: brand } : undefined}
             >
               <svg
-                width="18"
-                height="18"
+                width="19"
+                height="19"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth={active ? 2.2 : 1.7}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 aria-hidden="true"
+                className={active ? undefined : "text-muted-foreground"}
               >
                 <path d={tab.icon} />
               </svg>
-              <span>{tab.label}</span>
+              <span className={active ? undefined : "text-muted-foreground"}>{tab.label}</span>
             </button>
           );
         })}
       </nav>
+
     </div>
 
   );
