@@ -19,6 +19,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
+  // `?c=<id>` lets report drill-downs open a specific conversation.
+  validateSearch: (search: Record<string, unknown>) => ({
+    c: typeof search['c'] === "string" ? (search['c'] as string) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Inbox — Pacific Health Group Support Console" },
@@ -28,6 +32,7 @@ export const Route = createFileRoute("/_authenticated/inbox")({
   }),
   component: InboxPage,
 });
+
 
 type Conversation = {
   id: string;
