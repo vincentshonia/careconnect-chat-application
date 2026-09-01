@@ -1,9 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { useDebounced } from "@/hooks/use-debounced";
+import { Pager } from "@/components/admin/Pager";
+import { exportCsvFn } from "@/lib/exports.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
-import { downloadCsv } from "@/lib/csv";
+import { saveCsv } from "@/lib/csv";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useSessionContext } from "@/hooks/use-session-context";
@@ -47,38 +52,101 @@ const TYPES: IntakeType[] = ["referral", "enrollment", "general", "callback"];
 
 const label = (s: string) => s.replace(/_/g, " ");
 
+const PAGE_SIZE = 25;
+
+/** Strip characters that would break a PostgREST `or=` expression. */
+const sanitize = (term: string) => term.trim().replace(/[%,()*]/g, "").slice(0, 80);
+
 function IntakePage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
+  const organizationId = session.data?.organizationId ?? null;
   const [typeFilter, setTypeFilter] = useState<"all" | IntakeType>("all");
+  const [stageFilter, setStageFilter] = useState<"all" | Stage>("all");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const debouncedSearch = useDebounced(search, 300);
 
-  const listQuery = useQuery({
-    queryKey: ["intakes"],
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, typeFilter, stageFilter]);
+
+  /**
+   * Pipeline totals come from a single SQL aggregate, so the board headline
+   * numbers stay correct no matter how many requests exist.
+   */
+  const countsQuery = useQuery({
+    queryKey: ["intake-counts", organizationId, typeFilter, debouncedSearch],
+    enabled: Boolean(organizationId),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("intake_requests")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(300);
+      const { data, error } = await supabase.rpc("intake_stage_counts", {
+        _org: organizationId!,
+        _type: typeFilter,
+        _search: debouncedSearch.trim() || null,
+      });
       if (error) throw error;
-      return (data ?? []) as Intake[];
+      return (data ?? { total: 0, by_stage: {}, by_type: {} }) as {
+        total: number;
+        by_stage: Record<string, number>;
+        by_type: Record<string, number>;
+      };
     },
   });
+  const counts = countsQuery.data;
+  const byStage = counts?.by_stage ?? {};
+  const byType = counts?.by_type ?? {};
+
+  /** One page of requests, filtered and ordered by the database. */
+  const listQuery = useQuery({
+    queryKey: ["intakes", typeFilter, stageFilter, debouncedSearch, page],
+    placeholderData: (prev) => prev,
+    queryFn: async () => {
+      let q = supabase.from("intake_requests").select("*", { count: "exact" });
+      if (typeFilter !== "all") q = q.eq("request_type", typeFilter);
+      if (stageFilter !== "all") q = q.eq("stage", stageFilter);
+      const term = sanitize(debouncedSearch);
+      if (term) {
+        q = q.or(`full_name.ilike.%${term}%,reference.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`);
+      }
+      const { data, error, count } = await q
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: true })
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+      if (error) throw error;
+      return { rows: (data ?? []) as Intake[], total: count ?? 0 };
+    },
+  });
+
+  const items = listQuery.data?.rows ?? [];
+  const total = listQuery.data?.total ?? 0;
 
   const staffQuery = useQuery({
     queryKey: ["staff-lite"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("id, full_name").order("full_name");
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("status", "active")
+        .order("full_name")
+        .range(0, 199);
       if (error) throw error;
       return data ?? [];
     },
   });
 
-  const all = listQuery.data ?? [];
-  const items = typeFilter === "all" ? all : all.filter((i) => i.request_type === typeFilter);
-  const active = all.find((i) => i.id === activeId) ?? null;
+  // The open request is fetched by id, so it survives paging and filtering.
+  const activeQuery = useQuery({
+    queryKey: ["intake-record", activeId],
+    enabled: Boolean(activeId),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("intake_requests").select("*").eq("id", activeId!).maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as Intake | null;
+    },
+  });
+  const active = activeQuery.data ?? null;
 
   const eventsQuery = useQuery({
     queryKey: ["intake-events", activeId],
@@ -88,11 +156,19 @@ function IntakePage() {
         .from("intake_events")
         .select("*")
         .eq("intake_id", activeId!)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(0, 49);
       if (error) throw error;
       return data ?? [];
     },
   });
+
+  const invalidateLists = () => {
+    queryClient.invalidateQueries({ queryKey: ["intakes"] });
+    queryClient.invalidateQueries({ queryKey: ["intake-counts"] });
+    queryClient.invalidateQueries({ queryKey: ["intake-record", activeId] });
+    queryClient.invalidateQueries({ queryKey: ["intake-events"] });
+  };
 
   const update = useMutation({
     mutationFn: async ({
@@ -104,7 +180,7 @@ function IntakePage() {
       patch: Database["public"]["Tables"]["intake_requests"]["Update"];
       event?: { type: string; detail?: string; previous?: string; next?: string };
     }) => {
-      const target = all.find((i) => i.id === id);
+      const target = active?.id === id ? active : items.find((i) => i.id === id) ?? null;
       const { error } = await supabase.from("intake_requests").update(patch).eq("id", id);
       if (error) throw error;
       await logAudit({
@@ -126,10 +202,7 @@ function IntakePage() {
         });
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["intakes"] });
-      queryClient.invalidateQueries({ queryKey: ["intake-events"] });
-    },
+    onSuccess: invalidateLists,
   });
 
   const addNote = useMutation({
@@ -150,67 +223,78 @@ function IntakePage() {
     },
   });
 
+  // Exports are generated server-side with the same filters and permissions.
+  const runExport = useServerFn(exportCsvFn);
+  const exportCsv = useMutation({
+    mutationFn: async () =>
+      runExport({
+        data: {
+          dataset: "intake",
+          search: debouncedSearch,
+          status: stageFilter === "all" ? null : stageFilter,
+          type: typeFilter === "all" ? null : typeFilter,
+        },
+      }),
+    onSuccess: (result) => {
+      if (!result.rows) {
+        toast.info("Nothing to export with these filters.");
+        return;
+      }
+      saveCsv("intake-requests", result.csv);
+      toast.success(
+        `Exported ${result.rows.toLocaleString()} requests${result.truncated ? " (capped — narrow the filters for the rest)" : ""}`,
+      );
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not build that export"),
+  });
+
   return (
     <AdminShell
       title="Referrals & enrollments"
       description="Every intake from the widget, tracked from first contact to a final decision."
       actions={
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => downloadCsv("intake-requests", all as unknown as Record<string, unknown>[])}
-        >
-          Export CSV
-        </Button>
+        <>
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, reference, email…"
+            className="w-72"
+          />
+          <Button variant="outline" size="sm" disabled={exportCsv.isPending} onClick={() => exportCsv.mutate()}>
+            {exportCsv.isPending ? "Preparing…" : "Export CSV"}
+          </Button>
+        </>
       }
     >
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <FilterChip active={typeFilter === "all"} onClick={() => setTypeFilter("all")}>
-          All ({all.length})
+          All ({(counts?.total ?? 0).toLocaleString()})
         </FilterChip>
         {TYPES.map((t) => (
           <FilterChip key={t} active={typeFilter === t} onClick={() => setTypeFilter(t)}>
-            {label(t)} ({all.filter((i) => i.request_type === t).length})
+            {label(t)} ({(byType[t] ?? 0).toLocaleString()})
           </FilterChip>
         ))}
       </div>
 
+      {/* Stage tiles are SQL aggregates, not counted rows in the browser. */}
       <div className="mb-6 grid gap-3 overflow-x-auto md:grid-cols-5">
-        {OPEN_STAGES.map((stage) => {
-          const stageItems = items.filter((i) => i.stage === stage);
-          return (
-            <div key={stage} className="min-w-[200px] rounded-xl border border-border bg-card p-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {label(stage)}
-                </h2>
-                <Badge variant="outline">{stageItems.length}</Badge>
-              </div>
-              <ul className="mt-3 space-y-2">
-                {stageItems.slice(0, 8).map((i) => (
-                  <li key={i.id}>
-                    <button
-                      type="button"
-                      onClick={() => setActiveId(i.id)}
-                      className={`w-full rounded-lg border border-border px-3 py-2 text-left text-sm hover:bg-accent ${
-                        i.id === activeId ? "bg-accent" : ""
-                      }`}
-                    >
-                      <span className="block truncate font-medium">{i.full_name}</span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {label(i.request_type)} · {i.county ?? "—"}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-                {stageItems.length === 0 ? (
-                  <li className="text-xs text-muted-foreground">Empty</li>
-                ) : null}
-              </ul>
-            </div>
-          );
-        })}
+        {OPEN_STAGES.map((stage) => (
+          <button
+            key={stage}
+            type="button"
+            onClick={() => setStageFilter(stageFilter === stage ? "all" : stage)}
+            className={`min-w-[160px] rounded-xl border p-3 text-left transition ${
+              stageFilter === stage ? "border-primary bg-primary/5" : "border-border bg-card hover:bg-accent"
+            }`}
+          >
+            <span className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {label(stage)}
+            </span>
+            <span className="mt-1 block text-2xl font-semibold">{(byStage[stage] ?? 0).toLocaleString()}</span>
+          </button>
+        ))}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -246,12 +330,22 @@ function IntakePage() {
               {items.length === 0 && !listQuery.isLoading ? (
                 <tr>
                   <td className="px-4 py-6 text-muted-foreground" colSpan={5}>
-                    No intakes yet.
+                    No requests match these filters.
                   </td>
                 </tr>
               ) : null}
             </tbody>
           </table>
+          <div className="px-4 pb-3">
+            <Pager
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={total}
+              onPage={setPage}
+              noun="requests"
+              busy={listQuery.isFetching}
+            />
+          </div>
         </section>
 
         <aside className="h-fit rounded-xl border border-border p-4">
