@@ -26,38 +26,52 @@ function record(name, ok, detail) {
  * 1. Environment variables required by the mandatory suites
  * ------------------------------------------------------------------ */
 
-/** Integration/security/scale Vitest suites run against the shared backend. */
-const VITEST_ENV = ["SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SERVICE_ROLE_KEY"];
-/** Browser E2E fixtures MUST run against the dedicated non-production project. */
-const E2E_ENV = ["E2E_SUPABASE_URL", "E2E_SUPABASE_PUBLISHABLE_KEY", "E2E_SUPABASE_SERVICE_ROLE_KEY"];
+/**
+ * Both the Vitest integration suites and the browser E2E suite run against the
+ * shared backend. The E2E suite is isolated by tenant, not by project: every
+ * artefact lives inside a synthetic `__e2e_`-prefixed organization created and
+ * destroyed by the fixtures.
+ */
+const BACKEND_ENV = [
+  "SUPABASE_URL",
+  "SUPABASE_PUBLISHABLE_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "WIDGET_SESSION_SECRET",
+];
 
 function present(name) {
   const value = process.env[name];
   return typeof value === "string" && value.trim() !== "";
 }
 
-for (const name of [...VITEST_ENV, ...E2E_ENV]) {
+for (const name of BACKEND_ENV) {
   record(`env:${name}`, present(name), "not set (value never printed)");
 }
 
 /**
- * Hard safety interlock: the browser E2E fixtures create and destroy data, so
- * they may never point at the same backend that serves the live application.
+ * Safety interlock for the tenant-isolation model: the fixture module must
+ * declare the `__e2e_` prefix and must guard every delete behind it, and no
+ * spec may hold the service role key itself.
  */
-function projectRef(url) {
-  try {
-    return new URL(url).hostname.split(".")[0] ?? null;
-  } catch {
-    return null;
-  }
-}
-if (present("E2E_SUPABASE_URL") && present("SUPABASE_URL")) {
-  const e2eRef = projectRef(process.env.E2E_SUPABASE_URL);
-  const liveRef = projectRef(process.env.SUPABASE_URL);
+const fixtureFile = path.join(ROOT, "tests/e2e/fixtures/e2e-fixtures.ts");
+if (!existsSync(fixtureFile)) {
+  record("fixtures:synthetic tenant guard", false, "tests/e2e/fixtures/e2e-fixtures.ts is absent");
+} else {
+  const source = readFileSync(fixtureFile, "utf8");
   record(
-    "env:E2E backend is not the live backend",
-    Boolean(e2eRef) && e2eRef !== liveRef,
-    "E2E_SUPABASE_URL resolves to the same project as SUPABASE_URL — destructive fixtures must never run there",
+    "fixtures:synthetic tenant guard",
+    source.includes('E2E_PREFIX = "__e2e_"') && source.includes("assertSynthetic"),
+    "fixtures must declare the __e2e_ prefix and guard every destructive call with it",
+  );
+}
+for (const spec of existsSync(path.join(ROOT, "tests/e2e"))
+  ? readdirSync(path.join(ROOT, "tests/e2e")).filter((f) => f.endsWith(".spec.ts"))
+  : []) {
+  const source = readFileSync(path.join(ROOT, "tests/e2e", spec), "utf8");
+  record(
+    `spec:${spec} does not use the service role key directly`,
+    !source.includes("SUPABASE_SERVICE_ROLE_KEY"),
+    "the service role key belongs to the fixture module only",
   );
 }
 
