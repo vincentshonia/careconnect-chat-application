@@ -8,7 +8,7 @@
  * `.dev.vars` is git-ignored and is rewritten on every preview start. No value
  * is ever printed — only the names of the variables that were forwarded.
  */
-import { writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
@@ -31,6 +31,11 @@ if (missing.length > 0) {
 
 const forwarded = [...REQUIRED, ...OPTIONAL].filter((name) => process.env[name]?.trim());
 const body = forwarded.map((name) => `${name}=${JSON.stringify(process.env[name])}`).join("\n");
-writeFileSync(path.join(process.cwd(), ".dev.vars"), `${body}\n`);
+// wrangler resolves `.dev.vars` relative to the directory of the config file
+// it was given, so the built worker's directory gets a copy as well.
+const targets = [path.join(process.cwd(), ".dev.vars")];
+const built = path.join(process.cwd(), "dist", "server");
+if (existsSync(built)) targets.push(path.join(built, ".dev.vars"));
+for (const target of targets) writeFileSync(target, `${body}\n`);
 
 console.log(`e2e preview vars written: ${forwarded.join(", ")} (values not printed)`);
