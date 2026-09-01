@@ -362,16 +362,32 @@ export async function insertMessage(
     .select("*")
     .single();
   if (error) throw new PublicChatError(500, "Could not save the message");
+  // A visitor writing into a finished thread reopens it, so it re-enters the
+  // queue instead of silently landing in a closed conversation.
+  const reopens =
+    senderType === "visitor" && ["resolved", "closed"].includes(String(conversation.status));
   await db
     .from("conversations")
     .update({
       last_message_at: new Date().toISOString(),
       unread_agent_count:
         senderType === "visitor" ? (conversation.unread_agent_count ?? 0) + 1 : conversation.unread_agent_count,
+      ...(reopens ? { status: "follow_up", closed_at: null, resolved_at: null } : {}),
     })
     .eq("id", conversation.id);
+  if (reopens) {
+    await db.from("conversation_events").insert({
+      conversation_id: conversation.id,
+      organization_id: conversation.organization_id,
+      event_type: "reopened",
+      detail: "Visitor replied after the conversation was closed",
+      previous_value: String(conversation.status),
+      new_value: "follow_up",
+    });
+  }
   return data;
 }
+
 
 /* --------------------------------- RAG ----------------------------------- */
 
