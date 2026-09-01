@@ -58,6 +58,20 @@ const TYPES = [
   { value: "escalated", label: "Escalated" },
 ];
 
+/** Conversation statuses a report may be narrowed to. */
+const STATUSES = [
+  "new",
+  "waiting",
+  "assigned",
+  "active",
+  "pending_visitor",
+  "pending_internal",
+  "follow_up",
+  "escalated",
+  "resolved",
+  "closed",
+] as const;
+
 const TRANSFERS = [
   { value: "all", label: "Any transfers" },
   { value: "never", label: "Never transferred" },
@@ -84,6 +98,7 @@ function ReportsPage() {
   const [type, setType] = useState("all");
   const [transfer, setTransfer] = useState("all");
   const [priority, setPriority] = useState("");
+  const [status, setStatus] = useState("");
   const [sla, setSla] = useState(15);
 
   const session = useSessionContext();
@@ -129,6 +144,7 @@ function ReportsPage() {
     setType("all");
     setTransfer("all");
     setPriority("");
+    setStatus("");
     setCustomFrom("");
     setCustomTo("");
     setDays(30);
@@ -213,6 +229,13 @@ function ReportsPage() {
             {TRANSFERS.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
+              </option>
+            ))}
+          </Select>
+          <Select value={status} onChange={setStatus} label="Any status">
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s.replace(/_/g, " ")}
               </option>
             ))}
           </Select>
@@ -307,6 +330,7 @@ function useFiltersType() {
     departmentId: string | null;
     staffId: string | null;
     websiteId: string | null;
+    statuses: string[] | null;
     type: "all";
     transfer: "all";
     priority: null;
