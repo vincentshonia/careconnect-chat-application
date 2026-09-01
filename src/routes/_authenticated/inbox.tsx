@@ -10,6 +10,7 @@ import {
   closeConversationFn,
   reassignConversationFn,
   replyToConversationFn,
+  resolveConversationFn,
 } from "@/lib/conversations.functions";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { toast } from "sonner";
@@ -249,6 +250,7 @@ function InboxPage() {
   const claimFn = useServerFn(claimConversationFn);
   const replyFn = useServerFn(replyToConversationFn);
   const closeFn = useServerFn(closeConversationFn);
+  const resolveFn = useServerFn(resolveConversationFn);
   const reassignFn = useServerFn(reassignConversationFn);
   const transferFn = useServerFn(transferConversationFn);
 
