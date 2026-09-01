@@ -3,12 +3,13 @@
 Executed in phases. Each phase ends with typecheck + build + tests.
 
 ## Phase 1 — Concurrency, routing & notification scale (in progress)
-- [ ] Atomic `claim_conversation` RPC (membership, profile, presence, capacity, visibility, one winner)
-- [ ] `assign_round_robin` in SQL (no in-memory conversation scans)
-- [ ] Eligible notification recipients in SQL (active membership + active profile + prefs), batched inserts
-- [ ] Sidebar badges: Inbox = waiting/authorized, Notifications = unread count
-- [ ] Scale indexes (conversations, notifications, memberships, department_members)
+- [x] Atomic `claim_conversation` RPC (membership, profile, presence, capacity, visibility, one winner)
+- [x] `assign_round_robin` in SQL (no in-memory conversation scans)
+- [x] Eligible notification recipients in SQL (active membership + active profile + prefs), batched inserts
+- [x] Sidebar badges: Inbox = waiting/authorized, Notifications = unread count
+- [x] Scale indexes (conversations, notifications, memberships, department_members)
 - [ ] Concurrency + routing tests
+
 
 ## Phase 2 — Authorization scoping
 - [ ] Reports role scoping (empty department scope => zero rows, never org-wide)
