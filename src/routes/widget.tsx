@@ -156,6 +156,34 @@ function WidgetPage() {
 
   const storageKey = `phg-widget-${websiteId}`;
 
+  // Personalized greeting when the visitor has already told us their name.
+  const [visitorName, setVisitorName] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(`phg-widget-${websiteId}-name`);
+      if (stored) setVisitorName(stored.split(" ")[0]);
+    } catch {
+      /* storage unavailable */
+    }
+  }, [websiteId]);
+
+  // Suggested help topics on Home: services first, then FAQ questions.
+  const homeTopics = useMemo(() => {
+    if (!config) return [];
+    const services = (config.services ?? []).slice(0, 2).map((s) => ({
+      id: `svc-${s.id}`,
+      label: s.name,
+      kind: "service" as const,
+    }));
+    const faqs = (config.faqs ?? []).slice(0, 4 - services.length).map((f) => ({
+      id: `faq-${f.id}`,
+      label: f.question,
+      kind: "faq" as const,
+    }));
+    return [...services, ...faqs];
+  }, [config]);
+
+
   /* ------------------------- signed chat session ------------------------ */
   // The server mints and signs the session; the browser only stores it.
   const sessionRef = useRef<{ token: string; expiresAt: string } | null>(null);
