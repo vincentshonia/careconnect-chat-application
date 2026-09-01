@@ -24,49 +24,55 @@ const PREF_COLUMN: Record<NotifyInput["type"], string> = {
 };
 
 
+/** Insert size cap per round-trip, so large teams do not produce one giant statement. */
+const INSERT_BATCH = 500;
+
 /**
- * Fan a notification out to the relevant staff (department members when a
- * department is given, otherwise the whole organization) who opted in.
- * Never throws — alerting must not break the action that triggered it.
+ * Fan a notification out to eligible staff.
+ *
+ * Eligibility (active membership, active profile, department membership,
+ * opted-in preference) is resolved in PostgreSQL, and rows are inserted in
+ * bounded batches. Never throws — alerting must not break the action that
+ * triggered it.
  */
 export async function notifyStaff(input: NotifyInput) {
   try {
     const db = admin();
-    const ids = input.userIds?.length
-      ? input.userIds
-      : await alertRecipients(input.organizationId, input.departmentId ?? null);
-    if (ids.length === 0) return;
-
-
-    const { data: prefs } = await db
-      .from("notification_preferences")
-      .select("*")
-      .in("user_id", ids);
-
-    const prefByUser = new Map<string, Record<string, unknown>>(
-      (prefs ?? []).map((p: Record<string, unknown>) => [p.user_id as string, p]),
-    );
     const column = PREF_COLUMN[input.type];
 
-    const rows = ids
-      .filter((id) => {
-        const p = prefByUser.get(id);
-        return p ? p[column] !== false : true; // default: opted in
-      })
-      .map((id) => ({
-        organization_id: input.organizationId,
-        user_id: id,
-        type: input.type,
-        severity: input.severity ?? "info",
-        title: input.title,
-        body: input.body ?? null,
-        link: input.link ?? null,
-        record_type: input.recordType ?? null,
-        record_id: input.recordId ?? null,
-      }));
+    let ids: string[];
+    if (input.userIds?.length) {
+      // Explicit recipients still have to be eligible.
+      const eligible = new Set(
+        await alertRecipients(input.organizationId, null, column),
+      );
+      ids = input.userIds.filter((id) => eligible.has(id));
+    } else {
+      ids = await alertRecipients(input.organizationId, input.departmentId ?? null, column);
+    }
+    if (ids.length === 0) return;
 
-    if (rows.length) await db.from("notifications").insert(rows);
+    const rows = ids.map((id) => ({
+      organization_id: input.organizationId,
+      user_id: id,
+      type: input.type,
+      severity: input.severity ?? "info",
+      title: input.title,
+      body: input.body ?? null,
+      link: input.link ?? null,
+      record_type: input.recordType ?? null,
+      record_id: input.recordId ?? null,
+    }));
+
+    for (let i = 0; i < rows.length; i += INSERT_BATCH) {
+      const { error } = await db.from("notifications").insert(rows.slice(i, i + INSERT_BATCH));
+      if (error) {
+        console.warn("[notifications] batch insert failed", error);
+        break;
+      }
+    }
   } catch (error) {
     console.warn("[notifications] fan-out failed", error);
   }
 }
+
