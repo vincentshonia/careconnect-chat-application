@@ -62,23 +62,44 @@ export function useNotifications(options: { alerts?: boolean } = {}) {
       const { data, error } = await supabase
         .from("notifications")
         .select("id, type, severity, title, body, link, read_at, created_at")
+        .eq("user_id", auth.user.id)
+        // Bounded feed: the bell shows the newest slice, the notifications
+        // page marks older ones read rather than loading the whole history.
         .order("created_at", { ascending: false })
-        .limit(100);
+        .range(0, 49);
       if (error) throw error;
       return (data ?? []) as NotificationRow[];
     },
   });
 
   useEffect(() => {
-    // Unique per hook instance: the bell and the notifications page both subscribe.
-    const channel = supabase
-      .channel(`notifications-feed-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      })
-      .subscribe();
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    // Scoped to this user's rows only, so an org-wide notification storm does
+    // not wake every open tab in the tenant.
+    void (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (cancelled || !auth.user) return;
+      channel = supabase
+        // Unique per hook instance: the bell and the page both subscribe.
+        .channel(`notifications-${auth.user.id}-${Math.random().toString(36).slice(2)}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${auth.user.id}`,
+          },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["notifications"] });
+          },
+        )
+        .subscribe();
+    })();
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
     };
   }, [queryClient]);
 

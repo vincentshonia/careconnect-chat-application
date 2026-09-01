@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { downloadCsv } from "@/lib/csv";
 import { runReportFn, reportFilterOptionsFn } from "@/lib/reports.functions";
 import { BarList, ColumnChart, DataTable, Panel, Stat, fmtDate, fmtMin, fmtNum } from "@/components/reports/primitives";
+import { Pager } from "@/components/admin/Pager";
+import { useSessionContext } from "@/hooks/use-session-context";
+import { dateRangeInZone, lastDaysWindow, formatInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
@@ -82,18 +85,17 @@ function ReportsPage() {
   const [priority, setPriority] = useState("");
   const [sla, setSla] = useState(15);
 
+  const session = useSessionContext();
   const optionsFn = useServerFn(reportFilterOptionsFn);
   const options = useQuery({ queryKey: ["report-options"], queryFn: () => optionsFn({}) });
 
+  // Reporting days start and end in the organization's own timezone, so a
+  // report reads the same for a viewer in another zone, DST included.
+  const timeZone = session.data?.timezone ?? "America/Los_Angeles";
   const range = useMemo(() => {
-    if (customFrom && customTo) {
-      return {
-        from: new Date(`${customFrom}T00:00:00`).toISOString(),
-        to: new Date(`${customTo}T23:59:59`).toISOString(),
-      };
-    }
-    return { from: new Date(Date.now() - days * 86_400_000).toISOString(), to: new Date().toISOString() };
-  }, [customFrom, customTo, days]);
+    if (customFrom && customTo) return dateRangeInZone(customFrom, customTo, timeZone);
+    return lastDaysWindow(days, timeZone);
+  }, [customFrom, customTo, days, timeZone]);
 
   const filters = useMemo(
     () => ({
@@ -110,7 +112,7 @@ function ReportsPage() {
     [range, departmentId, staffId, websiteId, type, transfer, priority, sla],
   );
 
-  const filterSummary = `${new Date(range.from).toLocaleDateString()} – ${new Date(range.to).toLocaleDateString()}`;
+  const filterSummary = `${formatInZone(range.from, timeZone)} – ${formatInZone(range.to, timeZone)}`;
 
   // Sections the server says this caller may run; a hidden tab renders nothing.
   const sections = options.data?.sections as readonly string[] | undefined;
@@ -849,7 +851,10 @@ function AiTab({ filters }: { filters: Filters }) {
 }
 
 function IntakeTab({ filters }: { filters: Filters }) {
-  const q = useReport<Row>("intake", filters);
+  // The request list is paged in SQL; the tiles above it are SQL aggregates.
+  const [page, setPage] = useState(0);
+  const limit = 50;
+  const q = useReport<Row>("intake", filters, { limit, offset: page * limit });
   if (q.isLoading || q.error) return <Loading query={q} />;
   const d = q.data ?? {};
   const byType = (d['by_type'] as Row[]) ?? [];
@@ -887,7 +892,7 @@ function IntakeTab({ filters }: { filters: Filters }) {
 
       <Panel title="Recent requests" actions={exportBtn("requests", (d['rows'] as Row[]) ?? [])}>
         <DataTable
-          rows={((d['rows'] as Row[]) ?? []).slice(0, 50)}
+          rows={(d['rows'] as Row[]) ?? []}
           columns={[
             { key: "reference", label: "Reference", render: (r) => String(r['reference']) },
             { key: "created_at", label: "Received", render: (r) => fmtDate(r['created_at']) },
@@ -898,6 +903,14 @@ function IntakeTab({ filters }: { filters: Filters }) {
             { key: "stage", label: "Stage", render: (r) => String(r['stage']).replace(/_/g, " ") },
             { key: "assigned_name", label: "Owner", render: (r) => String(r['assigned_name'] ?? "Unassigned") },
           ]}
+        />
+        <Pager
+          page={page}
+          pageSize={limit}
+          total={Number(d['rows_total'] ?? 0)}
+          onPage={setPage}
+          noun="requests"
+          busy={q.isFetching}
         />
       </Panel>
     </div>

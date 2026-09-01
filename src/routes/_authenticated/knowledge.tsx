@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Pager } from "@/components/admin/Pager";
+import { useSessionContext } from "@/hooks/use-session-context";
 import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { reindexArticleFn } from "@/lib/admin.functions";
@@ -296,21 +298,26 @@ function Articles() {
 function Faqs() {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState({ category: "General", question: "", answer: "" });
+  const [page, setPage] = useState(0);
+  const PAGE = 25;
+  const session = useSessionContext();
 
   const faqQuery = useQuery({
-    queryKey: ["kb-faqs"],
+    queryKey: ["kb-faqs", page],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("faqs")
-        .select("*")
+        .select("*", { count: "exact" })
+        // sort_order alone repeats across pages when values tie; id breaks it.
         .order("sort_order")
-        .limit(200);
+        .order("id")
+        .range(page * PAGE, page * PAGE + PAGE - 1);
       if (error) throw error;
-      return (data ?? []) as Faq[];
+      return { rows: (data ?? []) as Faq[], total: count ?? 0 };
     },
   });
 
-  const orgId = faqQuery.data?.[0]?.organization_id ?? null;
+  const orgId = session.data?.organizationId ?? faqQuery.data?.rows?.[0]?.organization_id ?? null;
 
   const create = useMutation({
     mutationFn: async () => {
@@ -344,7 +351,7 @@ function Faqs() {
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="space-y-3">
-        {(faqQuery.data ?? []).map((f) => (
+        {(faqQuery.data?.rows ?? []).map((f) => (
           <article key={f.id} className="rounded-xl border border-border p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -358,6 +365,14 @@ function Faqs() {
             </div>
           </article>
         ))}
+        <Pager
+          page={page}
+          pageSize={PAGE}
+          total={faqQuery.data?.total ?? 0}
+          onPage={setPage}
+          noun="FAQs"
+          busy={faqQuery.isFetching}
+        />
       </div>
 
       <form

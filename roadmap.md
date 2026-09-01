@@ -23,11 +23,13 @@ Executed in phases. Each phase ends with typecheck + build + tests.
 
 ## Phase 3 — Data-volume scale
 - [x] Server-side pagination/search for the Inbox queues (25/page, DB-side tab filters)
-- [ ] Server-side pagination/search/filters: Staff, Contacts, Intake, drill-downs
-- [ ] Remove remaining `.limit(100/200/2000)` client-side aggregation patterns
-- [ ] Tighter realtime subscription scoping
-- [ ] Tenant-timezone-aware reporting periods
-- [ ] AI reporting definitions (no false "deflection")
+- [x] Server-side pagination/search/filters: Staff, Contacts, Intake, Audit, drill-downs
+- [x] Remove remaining `.limit(...)` client-side aggregation patterns (quality, FAQs, inbox, notifications)
+- [x] Tighter realtime subscription scoping (org-scoped conversations, per-chat messages, per-user notifications)
+- [x] Tenant-timezone-aware reporting/dashboard periods (DST safe)
+- [x] AI reporting definitions (AI-only / escalation / helpful rates, no false "deflection")
+- [x] Server-side chunked CSV exports respecting RBAC + filters
+- [x] Search indexes (pg_trgm) and pagination indexes
 
 
 ## Phase 4 — Widget & visitor workflows

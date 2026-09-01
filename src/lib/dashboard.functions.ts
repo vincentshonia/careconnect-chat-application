@@ -10,6 +10,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveActor, requireOrganization, ForbiddenError } from "@/lib/authz.server";
+import { periodWindow, safeTimeZone } from "@/lib/org-time";
 import {
   dashboardScopeFor,
   scopeDashboardMetrics,
@@ -22,42 +23,6 @@ export type DashboardPeriod = (typeof DASHBOARD_PERIODS)[number];
 const inputSchema = z.object({
   period: z.enum(DASHBOARD_PERIODS).default("today"),
 });
-
-/** Current and comparison window for a named period, in UTC. */
-function windows(period: DashboardPeriod) {
-  const now = new Date();
-  const start = new Date(now);
-  switch (period) {
-    case "today":
-      start.setHours(0, 0, 0, 0);
-      break;
-    case "week": {
-      start.setHours(0, 0, 0, 0);
-      const dow = (start.getDay() + 6) % 7; // Monday-based
-      start.setDate(start.getDate() - dow);
-      break;
-    }
-    case "last7":
-      start.setDate(start.getDate() - 7);
-      break;
-    case "month":
-      start.setHours(0, 0, 0, 0);
-      start.setDate(1);
-      break;
-    case "last30":
-      start.setDate(start.getDate() - 30);
-      break;
-  }
-  const span = now.getTime() - start.getTime();
-  const prevTo = new Date(start.getTime());
-  const prevFrom = new Date(start.getTime() - span);
-  return {
-    from: start.toISOString(),
-    to: now.toISOString(),
-    prevFrom: prevFrom.toISOString(),
-    prevTo: prevTo.toISOString(),
-  };
-}
 
 export const getDashboardMetricsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -81,7 +46,15 @@ export const getDashboardMetricsFn = createServerFn({ method: "POST" })
     const NO_DEPARTMENT = "00000000-0000-0000-0000-000000000000";
     const deptScope = actor.departmentIds.length ? actor.departmentIds : [NO_DEPARTMENT];
 
-    const { from, to, prevFrom, prevTo } = windows(data.period);
+    // "Today" and "This week" mean the tenant's local day, not UTC and not
+    // the viewer's browser clock — including across daylight-saving shifts.
+    const { data: org } = await context.supabase
+      .from("organizations")
+      .select("timezone")
+      .eq("id", organizationId)
+      .maybeSingle();
+    const timeZone = safeTimeZone(org?.timezone);
+    const { from, to, prevFrom, prevTo } = periodWindow(data.period, timeZone);
     const { admin } = await import("@/lib/public-chat.server");
     const db = admin() as unknown as {
       rpc: (
@@ -111,6 +84,7 @@ export const getDashboardMetricsFn = createServerFn({ method: "POST" })
       scope: scope as string,
       role: (actor.role ?? "agent") as string,
       period: data.period as string,
+      timezone: timeZone,
       canTransfer: actor.permissions.has("conversation.transfer"),
       canViewStaff: actor.permissions.has("staff.view"),
       slaMinutes: 15,
