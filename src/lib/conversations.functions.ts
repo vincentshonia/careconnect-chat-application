@@ -349,8 +349,9 @@ export const closeConversationFn = createServerFn({ method: "POST" })
     const now = new Date().toISOString();
     await db
       .from("conversations")
-      .update({ status: "closed", closed_at: now })
+      .update({ status: "closed", closed_at: now, closed_by: actor.userId })
       .eq("id", conversation.id);
+
 
     await db.from("conversation_events").insert({
       conversation_id: conversation.id,
