@@ -532,29 +532,31 @@ function WidgetPage() {
       </header>
 
 
-      <div ref={scroller} className="flex-1 overflow-y-auto bg-background px-4 py-4">
+      <div
+        ref={scroller}
+        className={`flex-1 overflow-y-auto bg-background ${view === "menu" ? "" : "px-4 py-4"}`}
+      >
         {view === "menu" && (
-          <MenuView
+          <HomeView
             config={config}
             brand={brand}
-            onSelect={(key) => {
-              if (key === "services") setView("services");
-              else if (key === "faq") setView("faq");
-              else if (key === "contact") setView("contact");
-              else if (key === "referral") {
-                setFormKind("referral");
-                setView("form");
-              } else if (key === "enrollment") {
-                setFormKind("enrollment");
-                setView("form");
-              } else setView("chat");
-            }}
-            onLiveAgent={() => {
-              setFormKind(config.agentsAvailable ? "live_agent" : "message");
-              setView("form");
+            logoUrl={config.website.logoUrl || BRAND_LOGO_URL}
+            visitorName={visitorName}
+            topics={homeTopics}
+            onClose={closeWidget}
+            onStartChat={() => setView("chat")}
+            onOpenHelp={() => setView("faq")}
+            onTopic={(topic) => {
+              if (topic.kind === "faq") {
+                setFaqQuery(topic.label);
+                setView("faq");
+              } else {
+                void sendQuestion(`Tell me more about ${topic.label}`);
+              }
             }}
           />
         )}
+
 
         {view === "services" && (
           <div className="space-y-3">
