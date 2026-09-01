@@ -377,6 +377,56 @@ export const closeConversationFn = createServerFn({ method: "POST" })
   });
 
 /**
+ * Mark a conversation resolved. Resolution is credited to the acting agent so
+ * reporting can attribute outcomes even if the ticket is reassigned later.
+ */
+export const resolveConversationFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => idInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    const conversation = await loadConversation(data.conversationId);
+    if (!canView(actor, conversation)) throw new ForbiddenError("Conversation not found");
+
+    const isOwner = conversation.assigned_to === actor.userId;
+    if (!isOwner && !isSupervisor(actor)) {
+      throw new ForbiddenError("Only the assigned agent can resolve this conversation");
+    }
+
+    const { admin } = await import("@/lib/public-chat.server");
+    const db = admin();
+    const now = new Date().toISOString();
+    await db
+      .from("conversations")
+      .update({ status: "resolved", resolved_at: now, resolved_by: actor.userId })
+      .eq("id", conversation.id);
+
+    await db.from("conversation_events").insert({
+      conversation_id: conversation.id,
+      organization_id: conversation.organization_id,
+      actor_id: actor.userId,
+      event_type: "resolved",
+      detail: `Resolved by ${actor.fullName ?? "an agent"}`,
+      previous_value: conversation.status,
+      new_value: "resolved",
+    });
+
+    await writeAudit(db as never, {
+      actor,
+      organizationId: conversation.organization_id,
+      action: "conversation.resolved",
+      recordType: "conversations",
+      recordId: conversation.id,
+      previousValue: { status: conversation.status },
+      newValue: { status: "resolved", resolved_at: now },
+    });
+
+    return { ok: true };
+  });
+
+
+
+/**
  * Mint a short-lived signed URL for a visitor attachment so the agent can
  * view or save it. Access mirrors conversation visibility.
  */
