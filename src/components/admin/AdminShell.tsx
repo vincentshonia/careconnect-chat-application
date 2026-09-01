@@ -210,8 +210,18 @@ export function AdminShell({
             )}
             <ul className="space-y-0.5">
               {group.items.map((item) => {
+                // Inbox counts conversations waiting for action; Notifications
+                // counts this person's unread alerts. They are different things.
                 const badge =
-                  item.to === "/notifications" || item.to === "/inbox" ? waitingCount : 0;
+                  item.to === "/inbox"
+                    ? waitingCount
+                    : item.to === "/notifications"
+                      ? unread.length
+                      : 0;
+                const badgeLabel =
+                  item.to === "/inbox"
+                    ? `${badge} conversations waiting for a response`
+                    : `${badge} unread notifications`;
                 return (
                 <li key={item.to}>
                   <Link
@@ -231,7 +241,7 @@ export function AdminShell({
                     {!collapsed && <span className="truncate">{item.label}</span>}
                     {badge > 0 && (
                       <span
-                        aria-label={`${badge} conversations waiting for a response`}
+                        aria-label={badgeLabel}
                         className={`grid h-5 min-w-5 place-items-center rounded-full bg-destructive px-1.5 text-[10px] font-semibold text-destructive-foreground ${
                           collapsed ? "absolute -right-0.5 -top-0.5 h-4 min-w-4 px-1" : "ml-auto"
                         }`}
@@ -243,6 +253,7 @@ export function AdminShell({
                 </li>
                 );
               })}
+
             </ul>
           </div>
         ))}
