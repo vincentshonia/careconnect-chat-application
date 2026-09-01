@@ -21,8 +21,16 @@ import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   // `?c=<id>` lets report drill-downs open a specific conversation.
-  validateSearch: (search: Record<string, unknown>): { c?: string } =>
-    typeof search['c'] === "string" ? { c: search['c'] as string } : {},
+  // `?c=<id>` opens a conversation; `?tab=` / `?status=` let dashboard and
+  // report drill-downs land on a pre-filtered queue.
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { c?: string; tab?: string; status?: string } => ({
+    ...(typeof search['c'] === "string" ? { c: search['c'] } : {}),
+    ...(typeof search['tab'] === "string" ? { tab: search['tab'] } : {}),
+    ...(typeof search['status'] === "string" ? { status: search['status'] } : {}),
+  }),
+
 
   head: () => ({
     meta: [
@@ -91,7 +99,17 @@ function InboxPage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
   const search = Route.useSearch();
-  const [tab, setTab] = useState<Tab>(search.c ? "all" : "waiting");
+  const [tab, setTab] = useState<Tab>(
+    (["waiting", "mine", "department", "active", "closed", "all"] as const).includes(
+      search.tab as Tab,
+    )
+      ? (search.tab as Tab)
+      : search.c
+        ? "all"
+        : "waiting",
+  );
+  const statusFilter = search.status ?? null;
+
   const [activeId, setActiveId] = useState<string | null>(search.c ?? null);
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -134,26 +152,30 @@ function InboxPage() {
   const all = useMemo(() => conversationsQuery.data ?? [], [conversationsQuery.data]);
 
   const conversations = useMemo(() => {
-    switch (tab) {
-      case "waiting":
-        return all.filter((c) => !c.assigned_to && CLAIMABLE_STATUSES.includes(c.status));
-      case "mine":
-        return all.filter((c) => c.assigned_to === userId && !CLOSED_STATUSES.includes(c.status));
-      case "department":
-        return all.filter(
-          (c) =>
-            !CLOSED_STATUSES.includes(c.status) &&
-            c.department_id &&
-            departmentIds.includes(c.department_id),
-        );
-      case "active":
-        return all.filter((c) => c.status === "active" || c.status === "assigned");
-      case "closed":
-        return all.filter((c) => CLOSED_STATUSES.includes(c.status));
-      default:
-        return all.filter((c) => OPEN_STATUSES.includes(c.status) || can("conversation.view_all"));
-    }
-  }, [all, tab, userId, departmentIds]);
+    const byTab = (() => {
+      switch (tab) {
+        case "waiting":
+          return all.filter((c) => !c.assigned_to && CLAIMABLE_STATUSES.includes(c.status));
+        case "mine":
+          return all.filter((c) => c.assigned_to === userId && !CLOSED_STATUSES.includes(c.status));
+        case "department":
+          return all.filter(
+            (c) =>
+              !CLOSED_STATUSES.includes(c.status) &&
+              c.department_id &&
+              departmentIds.includes(c.department_id),
+          );
+        case "active":
+          return all.filter((c) => c.status === "active" || c.status === "assigned");
+        case "closed":
+          return all.filter((c) => CLOSED_STATUSES.includes(c.status));
+        default:
+          return all.filter((c) => OPEN_STATUSES.includes(c.status) || can("conversation.view_all"));
+      }
+    })();
+    return statusFilter ? byTab.filter((c) => c.status === statusFilter) : byTab;
+  }, [all, tab, userId, departmentIds, statusFilter]);
+
 
   const active = useMemo(
     () => all.find((c) => c.id === activeId) ?? null,
