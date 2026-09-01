@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { downloadCsv } from "@/lib/csv";
 import { runReportFn, reportFilterOptionsFn } from "@/lib/reports.functions";
 import { BarList, ColumnChart, DataTable, Panel, Stat, fmtDate, fmtMin, fmtNum } from "@/components/reports/primitives";
+import { Pager } from "@/components/admin/Pager";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
