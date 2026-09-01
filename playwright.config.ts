@@ -1,3 +1,6 @@
+import { existsSync, readdirSync } from "node:fs";
+import path from "node:path";
+
 import { defineConfig, devices } from "@playwright/test";
 
 import { ensureBrowserLibraryPath } from "./tests/e2e/helpers/browser-libs";
@@ -16,6 +19,27 @@ ensureBrowserLibraryPath();
 const PORT = Number(process.env["E2E_PORT"] ?? 4173);
 const BASE_URL = process.env["E2E_BASE_URL"] ?? `http://127.0.0.1:${PORT}`;
 
+/**
+ * Sandboxes preinstall Chromium under a pinned build number that can differ
+ * from the one this Playwright version expects (and they may omit the
+ * headless-shell build entirely). Prefer an installed full Chromium when the
+ * expected download is absent; elsewhere this resolves to undefined and
+ * Playwright uses its own browser as normal.
+ */
+function resolveChromium(): string | undefined {
+  const root = "/opt/ms-playwright";
+  if (!existsSync(root)) return undefined;
+  const build = readdirSync(root)
+    .filter((entry) => /^chromium-\d+$/.test(entry))
+    .sort()
+    .pop();
+  if (!build) return undefined;
+  const binary = path.join(root, build, "chrome-linux", "chrome");
+  return existsSync(binary) ? binary : undefined;
+}
+
+const CHROMIUM_PATH = resolveChromium();
+
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: /.*\.spec\.ts$/,
@@ -32,7 +56,15 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(CHROMIUM_PATH ? { launchOptions: { executablePath: CHROMIUM_PATH } } : {}),
+      },
+    },
+  ],
   webServer: process.env["E2E_BASE_URL"]
     ? undefined
     : {

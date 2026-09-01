@@ -12,9 +12,10 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "preview:e2e": "rm -f .wrangler/deploy/config.json && wrangler dev -c dist/server/wrangler.json --ip 127.0.0.1",
+    "preview:e2e": "node scripts/e2e-dev-vars.mjs && rm -f .wrangler/deploy/config.json && wrangler dev -c dist/server/wrangler.json --ip 127.0.0.1",
     "e2e": "bun run build && playwright test",
     "e2e:smoke": "bun run build && playwright test tests/e2e/smoke.spec.ts",
+    "e2e:golden": "bun run build && playwright test tests/e2e/golden-path.spec.ts",
     "release:preflight": "node scripts/release-preflight.mjs",
     "release:gate": "node scripts/release-gate.mjs"
   },
