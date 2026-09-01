@@ -1,0 +1,1 @@
+ALTER TABLE public.websites ADD COLUMN IF NOT EXISTS tab_config jsonb NOT NULL DEFAULT '[]'::jsonb;

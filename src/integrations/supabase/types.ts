@@ -2193,6 +2193,7 @@ export type Database = {
           show_requests_tab: boolean
           show_services_tab: boolean
           status: Database["public"]["Enums"]["entity_status"]
+          tab_config: Json
           timezone: string
           trigger_delay_seconds: number
           trigger_message: string
@@ -2241,6 +2242,7 @@ export type Database = {
           show_requests_tab?: boolean
           show_services_tab?: boolean
           status?: Database["public"]["Enums"]["entity_status"]
+          tab_config?: Json
           timezone?: string
           trigger_delay_seconds?: number
           trigger_message?: string
@@ -2289,6 +2291,7 @@ export type Database = {
           show_requests_tab?: boolean
           show_services_tab?: boolean
           status?: Database["public"]["Enums"]["entity_status"]
+          tab_config?: Json
           timezone?: string
           trigger_delay_seconds?: number
           trigger_message?: string
