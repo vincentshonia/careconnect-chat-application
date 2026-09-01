@@ -11,6 +11,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveActor, ForbiddenError, writeAudit, type Actor } from "@/lib/authz.server";
+import { decideTransfer } from "@/lib/transfer-eligibility";
 
 const idInput = z.object({ conversationId: z.string().uuid() });
 
@@ -323,32 +324,18 @@ export const reassignConversationFn = createServerFn({ method: "POST" })
     let overrideReason: string | null = null;
 
     if (data.userId) {
+      // Eligibility is re-resolved here, at the moment of the transfer, so a
+      // candidate list the browser rendered minutes ago can never be trusted.
       const candidates = await loadCandidates(conversation.organization_id, conversation.id);
-      const target = candidates.find((c) => c.user_id === data.userId);
-      if (!target) {
-        throw new ForbiddenError(
-          "That teammate cannot receive this conversation — they are not an active member of this organization with a role that takes chats",
-        );
-      }
-      if (!target.eligible) {
-        // Availability and capacity may be overridden, but only explicitly, by
-        // an administrator, and never silently.
-        if (!data.override) {
-          throw new ForbiddenError(
-            `${target.full_name} is not available for this transfer (${target.reason ?? "not eligible"})`,
-          );
-        }
-        if (!actor.permissions.has("staff.edit")) {
-          throw new ForbiddenError("Only administrators can override transfer eligibility");
-        }
-        if (target.reason === "Not in this department" || target.reason === "Account is not active") {
-          throw new ForbiddenError(
-            `${target.full_name} cannot receive this conversation: ${target.reason.toLowerCase()}`,
-          );
-        }
-        overrideUsed = true;
-        overrideReason = data.overrideReason?.trim() || target.reason || "eligibility override";
-      }
+      const decision = decideTransfer({
+        target: candidates.find((c) => c.user_id === data.userId),
+        override: data.override,
+        overrideReason: data.overrideReason,
+        actorCanOverride: actor.permissions.has("staff.edit"),
+      });
+      if (!decision.allowed) throw new ForbiddenError(decision.error);
+      overrideUsed = decision.overrideUsed;
+      overrideReason = decision.overrideReason;
     }
 
     await db
