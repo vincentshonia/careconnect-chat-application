@@ -1,3 +1,4 @@
+import { resolveWidgetTabs } from "@/lib/widget-tabs";
 /**
  * Server-only logic backing the public chat widget endpoints.
  * Uses the service-role client because visitors are anonymous, so every
@@ -183,6 +184,7 @@ export async function loadWidgetConfig(websiteId: string, hostOrigin: string | n
       showHelpTab: website.show_help_tab !== false,
       showServicesTab: website.show_services_tab !== false,
       showRequestsTab: website.show_requests_tab !== false,
+      tabs: resolveWidgetTabs(website.tab_config),
     },
     organization: {
       name: org?.name ?? "",
