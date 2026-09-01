@@ -305,6 +305,8 @@ export const reportFilterOptionsFn = createServerFn({ method: "POST" })
 
     return {
       scope: scope.level,
+      sections: SECTIONS_BY_LEVEL[scope.level] as readonly string[],
+
       selfId: actor.userId,
       departments: (departments.data ?? []).map((d) => ({ id: d.id as string, name: d.name as string })),
       websites: (websites.data ?? []).map((w) => ({ id: w.id as string, name: w.name as string })),
