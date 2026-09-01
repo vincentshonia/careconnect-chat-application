@@ -849,7 +849,10 @@ function AiTab({ filters }: { filters: Filters }) {
 }
 
 function IntakeTab({ filters }: { filters: Filters }) {
-  const q = useReport<Row>("intake", filters);
+  // The request list is paged in SQL; the tiles above it are SQL aggregates.
+  const [page, setPage] = useState(0);
+  const limit = 50;
+  const q = useReport<Row>("intake", filters, { limit, offset: page * limit });
   if (q.isLoading || q.error) return <Loading query={q} />;
   const d = q.data ?? {};
   const byType = (d['by_type'] as Row[]) ?? [];
@@ -887,7 +890,7 @@ function IntakeTab({ filters }: { filters: Filters }) {
 
       <Panel title="Recent requests" actions={exportBtn("requests", (d['rows'] as Row[]) ?? [])}>
         <DataTable
-          rows={((d['rows'] as Row[]) ?? []).slice(0, 50)}
+          rows={(d['rows'] as Row[]) ?? []}
           columns={[
             { key: "reference", label: "Reference", render: (r) => String(r['reference']) },
             { key: "created_at", label: "Received", render: (r) => fmtDate(r['created_at']) },
