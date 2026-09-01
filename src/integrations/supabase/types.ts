@@ -2523,6 +2523,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      refresh_report_statistics: { Args: never; Returns: undefined }
       report_ai: {
         Args: {
           _dept?: string[]
