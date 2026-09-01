@@ -45,6 +45,8 @@ function PersonalSettingsPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  // Public visibility of name + photo in the widget. Opt-in, never assumed.
+  const [showInWidget, setShowInWidget] = useState(false);
   const [form, setForm] = useState({
     full_name: "",
     display_name: "",
@@ -78,6 +80,7 @@ function PersonalSettingsPage() {
       presence: p.presence ?? "available",
     });
     setAvatarUrl(p.avatar_url ?? null);
+    setShowInWidget(p.show_in_widget_team === true);
   }, [profile.data]);
 
   // Reflect the saved appearance choice once the profile loads.
@@ -99,6 +102,7 @@ function PersonalSettingsPage() {
           phone: form.phone || null,
           timezone: form.timezone || null,
           presence: form.presence,
+          show_in_widget_team: showInWidget,
           languages: form.languages
             .split(",")
             .map((l) => l.trim())
@@ -194,9 +198,11 @@ function PersonalSettingsPage() {
           <div>
             <Label>Profile photo</Label>
             <p className="text-xs text-muted-foreground">
-              PNG or JPG up to 5 MB. Shown to teammates and to visitors while you are chatting.
+              PNG or JPG up to 5 MB. Shown to teammates in CareConnect. It is only shown to
+              website visitors if you turn on public visibility below.
             </p>
           </div>
+
           <div className="flex flex-wrap items-center gap-4">
             <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-full border border-border bg-muted text-sm font-semibold text-muted-foreground">
               {avatarUrl ? (
@@ -232,7 +238,23 @@ function PersonalSettingsPage() {
               )}
             </div>
           </div>
+          <label className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-[hsl(var(--primary))]"
+              checked={showInWidget}
+              onChange={(e) => setShowInWidget(e.target.checked)}
+            />
+            <span>
+              <span className="font-medium">Show my name and photo to website visitors</span>
+              <span className="block text-xs text-muted-foreground">
+                Off by default. When on, your photo can appear on the chat widget and while you
+                are chatting with a visitor.
+              </span>
+            </span>
+          </label>
         </section>
+
 
         {/* Personal details */}
         <form

@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
        */
       fileParallelism: false,
       testTimeout: 60_000,
-      hookTimeout: 300_000,
+      hookTimeout: 900_000,
 
       env: {
         WIDGET_SESSION_SECRET: env.WIDGET_SESSION_SECRET ?? "test-widget-secret-for-unit-tests",

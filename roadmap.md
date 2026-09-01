@@ -54,8 +54,9 @@ Executed in phases. Each phase ends with typecheck + build + tests.
 
 
 ## Phase 4 — Widget & visitor workflows
-- [ ] Visitor first-name personalization persistence
-- [ ] Agent identity snapshot on historical messages
-- [ ] `show_in_widget_team` staff flag for public avatars
-- [ ] Regression pass over website/widget config + visitor flows
-- [ ] Scale fixture generator + E2E flow tests
+- [x] Visitor first-name personalization persistence (widget stores and greets by name)
+- [x] Agent identity snapshot on historical messages (`messages.sender_name` written at send time)
+- [x] `show_in_widget_team` staff flag for public avatars — default false; gates the widget team list, the in-chat agent photo, and `/api/public/staff-avatar/*`
+- [x] Regression pass over website/widget config + visitor flows (widget-session, tenant-isolation, rbac suites green)
+- [ ] End-to-end browser flow tests (visitor → AI → escalation → agent reply → resolution)
+

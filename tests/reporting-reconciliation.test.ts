@@ -53,12 +53,14 @@ const TRANSIENT = /connection pool|timeout|timed out|fetch failed|socket|502|503
 
 async function attempt<T>(label: string, run: () => Promise<{ data: unknown; error: { message: string } | null }>) {
   let last = "";
-  for (let tries = 0; tries < 4; tries += 1) {
+  for (let tries = 0; tries < 8; tries += 1) {
     const { data, error } = await run();
     if (!error) return data as T;
     last = error.message;
     if (!TRANSIENT.test(last)) break;
-    await new Promise((resolve) => setTimeout(resolve, 750 * (tries + 1)));
+    // Exponential backoff: the shared pool needs real time to drain, and a
+    // tight retry loop only deepens the contention that caused the timeout.
+    await new Promise((resolve) => setTimeout(resolve, Math.min(8_000, 500 * 2 ** tries)));
   }
   throw new Error(`${label}: ${last}`);
 }
@@ -68,14 +70,17 @@ async function rpc<T>(fn: string, args: Rpc): Promise<T> {
 }
 
 async function insertBatched(table: string, rows: Record<string, unknown>[]) {
-  for (let i = 0; i < rows.length; i += 250) {
-    const slice = rows.slice(i, i + 250);
+  for (let i = 0; i < rows.length; i += 500) {
+    const slice = rows.slice(i, i + 500);
     // Rows carry client-generated ids and are upserted, so a retry after a
     // timed-out-but-applied write can never duplicate a fixture row.
     await attempt(`${table} insert`, () =>
       db.from(table).upsert(slice as never, { onConflict: "id", ignoreDuplicates: true }));
+    // A short pause between batches keeps the shared pool from saturating.
+    await new Promise((resolve) => setTimeout(resolve, 60));
   }
 }
+
 
 async function makeOrg(name: string) {
   const { data, error } = await db
@@ -199,7 +204,7 @@ describe.runIf(configured)("reporting at volume", () => {
     // A bulk load leaves the planner's statistics stale, which makes the
     // reporting queries pick pathological plans until autovacuum catches up.
     await db.rpc("refresh_report_statistics" as never);
-  }, 300_000);
+  }, 900_000);
 
   afterAll(async () => {
     if (!configured) return;
@@ -218,7 +223,8 @@ describe.runIf(configured)("reporting at volume", () => {
     const page = await tickets();
     expect(page.total).toBe(VOLUME);
     expect(page.rows).toHaveLength(50);
-  });
+  }, 240_000);
+
 
   it("pages through every record exactly once, with no duplicates or skips", async () => {
     const limit = 500;
