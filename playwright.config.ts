@@ -1,3 +1,6 @@
+import { existsSync, readdirSync } from "node:fs";
+import path from "node:path";
+
 import { defineConfig, devices } from "@playwright/test";
 
 import { ensureBrowserLibraryPath } from "./tests/e2e/helpers/browser-libs";
@@ -53,7 +56,15 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(CHROMIUM_PATH ? { launchOptions: { executablePath: CHROMIUM_PATH } } : {}),
+      },
+    },
+  ],
   webServer: process.env["E2E_BASE_URL"]
     ? undefined
     : {
