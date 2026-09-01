@@ -1,11 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
-import { downloadCsv } from "@/lib/csv";
+import { saveCsv } from "@/lib/csv";
+import { exportCsvFn } from "@/lib/exports.functions";
+import { useDebounced } from "@/hooks/use-debounced";
+import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { Pager } from "@/components/admin/Pager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,38 +31,67 @@ export const Route = createFileRoute("/_authenticated/contacts")({
 type Contact = Database["public"]["Tables"]["contacts"]["Row"];
 
 const LEAD_STATUSES = ["new", "working", "qualified", "converted", "closed"];
+const PAGE_SIZE = 25;
+
+/** Strip characters that would break a PostgREST `or=` expression. */
+const sanitize = (term: string) => term.trim().replace(/[%,()*]/g, "").slice(0, 80);
 
 function ContactsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
+  const debouncedSearch = useDebounced(search, 300);
 
+  // Any filter change restarts paging, so a page number can never outlive
+  // the result set it belonged to.
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, status]);
+
+  /**
+   * One page at a time, filtered and counted by the database. RLS decides
+   * which contacts are visible, so the list matches the caller's scope.
+   */
   const listQuery = useQuery({
-    queryKey: ["contacts"],
+    queryKey: ["contacts", debouncedSearch, status, page],
+    placeholderData: (prev) => prev,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("contacts")
-        .select("*")
+      let q = supabase.from("contacts").select("*", { count: "exact" });
+      const term = sanitize(debouncedSearch);
+      if (term) {
+        q = q.or(
+          `full_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%,county.ilike.%${term}%,health_plan.ilike.%${term}%,service_interest.ilike.%${term}%`,
+        );
+      }
+      if (status !== "all") q = q.eq("lead_status", status);
+
+      const { data, error, count } = await q
+        // `id` breaks ties so a row never repeats or disappears between pages.
         .order("last_contact_at", { ascending: false })
-        .limit(300);
+        .order("id", { ascending: true })
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
       if (error) throw error;
-      return (data ?? []) as Contact[];
+      return { rows: (data ?? []) as Contact[], total: count ?? 0 };
     },
   });
 
-  const contacts = listQuery.data ?? [];
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return contacts;
-    return contacts.filter((c) =>
-      [c.full_name, c.email, c.phone, c.county, c.health_plan, c.service_interest]
-        .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(q)),
-    );
-  }, [contacts, search]);
+  const contacts = listQuery.data?.rows ?? [];
+  const total = listQuery.data?.total ?? 0;
 
-  const active = contacts.find((c) => c.id === activeId) ?? null;
+  // The open record is fetched by id so it survives paging and filtering.
+  const activeQuery = useQuery({
+    queryKey: ["contact-record", activeId],
+    enabled: Boolean(activeId),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("contacts").select("*").eq("id", activeId!).maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as Contact | null;
+    },
+  });
+  const active = activeQuery.data ?? null;
 
   const update = useMutation({
     mutationFn: async (patch: Database["public"]["Tables"]["contacts"]["Update"]) => {
@@ -72,7 +106,10 @@ function ContactsPage() {
         newValue: patch as Record<string, unknown>,
       });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["contacts"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contact-record", activeId] });
+    },
   });
 
   const history = useQuery({
@@ -85,16 +122,34 @@ function ContactsPage() {
           .select("id, reference, subject, status, last_message_at")
           .eq("contact_id", activeId!)
           .order("last_message_at", { ascending: false })
-          .limit(20),
+          .range(0, 19),
         supabase
           .from("intake_requests")
           .select("id, reference, request_type, stage, created_at")
           .eq("contact_id", activeId!)
           .order("created_at", { ascending: false })
-          .limit(20),
+          .range(0, 19),
       ]);
       return { conversations: conv.data ?? [], intakes: intakes.data ?? [] };
     },
+  });
+
+  // Exports are built server-side under the same filters and the same RLS.
+  const runExport = useServerFn(exportCsvFn);
+  const exportCsv = useMutation({
+    mutationFn: async () =>
+      runExport({ data: { dataset: "contacts", search: debouncedSearch, status: status === "all" ? null : status } }),
+    onSuccess: (result) => {
+      if (!result.rows) {
+        toast.info("Nothing to export with these filters.");
+        return;
+      }
+      saveCsv("contacts", result.csv);
+      toast.success(
+        `Exported ${result.rows.toLocaleString()} contacts${result.truncated ? " (capped — narrow the filters for the rest)" : ""}`,
+      );
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not build that export"),
   });
 
   return (
@@ -109,47 +164,67 @@ function ContactsPage() {
             placeholder="Search name, email, county…"
             className="w-72"
           />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => downloadCsv("contacts", filtered as unknown as Record<string, unknown>[])}
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            aria-label="Lead status"
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm capitalize"
           >
-            Export CSV
+            <option value="all">All statuses</option>
+            {LEAD_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <Button variant="outline" size="sm" disabled={exportCsv.isPending} onClick={() => exportCsv.mutate()}>
+            {exportCsv.isPending ? "Preparing…" : "Export CSV"}
           </Button>
         </>
       }
-
     >
       <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="max-h-[72vh] overflow-y-auto rounded-xl border border-border">
-          {listQuery.isLoading ? (
-            <p className="p-4 text-sm text-muted-foreground">Loading…</p>
-          ) : filtered.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">No contacts match.</p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {filtered.map((c) => (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveId(c.id);
-                      setNotes(c.notes ?? "");
-                    }}
-                    className={`w-full px-4 py-3 text-left hover:bg-accent ${c.id === activeId ? "bg-accent" : ""}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium">{c.full_name}</span>
-                      <Badge variant="outline">{c.lead_status}</Badge>
-                    </div>
-                    <p className="mt-1 truncate text-xs text-muted-foreground">
-                      {[c.email, c.phone, c.county].filter(Boolean).join(" · ") || "No contact details"}
-                    </p>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+        <aside className="rounded-xl border border-border">
+          <div className="max-h-[64vh] overflow-y-auto">
+            {listQuery.isLoading ? (
+              <p className="p-4 text-sm text-muted-foreground">Loading…</p>
+            ) : contacts.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">No contacts match.</p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {contacts.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveId(c.id);
+                        setNotes(c.notes ?? "");
+                      }}
+                      className={`w-full px-4 py-3 text-left hover:bg-accent ${c.id === activeId ? "bg-accent" : ""}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-medium">{c.full_name}</span>
+                        <Badge variant="outline">{c.lead_status}</Badge>
+                      </div>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {[c.email, c.phone, c.county].filter(Boolean).join(" · ") || "No contact details"}
+                      </p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="border-t border-border px-3 pb-3">
+            <Pager
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={total}
+              onPage={setPage}
+              noun="contacts"
+              busy={listQuery.isFetching}
+            />
+          </div>
         </aside>
 
         <section className="rounded-xl border border-border p-4">
