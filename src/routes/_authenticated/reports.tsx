@@ -233,7 +233,7 @@ function ReportsPage() {
       </div>
 
       <nav className="mb-4 flex flex-wrap gap-1 border-b border-border pb-2">
-        {TABS.map((t) => (
+        {TABS.filter((t) => !options.data?.sections || options.data.sections.includes(t.id)).map((t) => (
           <button
             key={t.id}
             type="button"
@@ -246,6 +246,7 @@ function ReportsPage() {
           </button>
         ))}
       </nav>
+
 
       {tab === "overview" ? <OverviewTab filters={filters} /> : null}
       {tab === "departments" ? <DepartmentsTab filters={filters} /> : null}
