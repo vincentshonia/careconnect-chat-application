@@ -20,8 +20,9 @@ export const Route = createFileRoute("/_authenticated/reports")({
       {
         name: "description",
         content:
-          "Operational reporting for conversations, departments, staff performance, transfers, SLA, AI deflection, and intake requests.",
+          "Operational reporting for conversations, departments, staff performance, transfers, SLA, AI assistant outcomes, and intake requests.",
       },
+
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -57,6 +58,20 @@ const TYPES = [
   { value: "escalated", label: "Escalated" },
 ];
 
+/** Conversation statuses a report may be narrowed to. */
+const STATUSES = [
+  "new",
+  "waiting",
+  "assigned",
+  "active",
+  "pending_visitor",
+  "pending_internal",
+  "follow_up",
+  "escalated",
+  "resolved",
+  "closed",
+] as const;
+
 const TRANSFERS = [
   { value: "all", label: "Any transfers" },
   { value: "never", label: "Never transferred" },
@@ -83,6 +98,7 @@ function ReportsPage() {
   const [type, setType] = useState("all");
   const [transfer, setTransfer] = useState("all");
   const [priority, setPriority] = useState("");
+  const [status, setStatus] = useState("");
   const [sla, setSla] = useState(15);
 
   const session = useSessionContext();
@@ -104,13 +120,15 @@ function ReportsPage() {
       departmentId: departmentId || null,
       staffId: staffId || null,
       websiteId: websiteId || null,
+      statuses: status ? [status] : null,
       type: type as "all",
       transfer: transfer as "all",
       priority: (priority || null) as null,
       sla,
     }),
-    [range, departmentId, staffId, websiteId, type, transfer, priority, sla],
+    [range, departmentId, staffId, websiteId, status, type, transfer, priority, sla],
   );
+
 
   const filterSummary = `${formatInZone(range.from, timeZone)} – ${formatInZone(range.to, timeZone)}`;
 
@@ -126,6 +144,7 @@ function ReportsPage() {
     setType("all");
     setTransfer("all");
     setPriority("");
+    setStatus("");
     setCustomFrom("");
     setCustomTo("");
     setDays(30);
@@ -210,6 +229,13 @@ function ReportsPage() {
             {TRANSFERS.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
+              </option>
+            ))}
+          </Select>
+          <Select value={status} onChange={setStatus} label="Any status">
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s.replace(/_/g, " ")}
               </option>
             ))}
           </Select>
@@ -304,6 +330,7 @@ function useFiltersType() {
     departmentId: string | null;
     staffId: string | null;
     websiteId: string | null;
+    statuses: string[] | null;
     type: "all";
     transfer: "all";
     priority: null;
@@ -806,16 +833,52 @@ function AiTab({ filters }: { filters: Filters }) {
 
   return (
     <div className="space-y-4">
+      {/*
+        These figures deliberately avoid the word "deflection": a conversation
+        the assistant answered and nobody escalated is not proof the visitor
+        was helped. AI-only means no human was ever requested or assigned.
+      */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="AI answers" value={fmtNum(d['ai_answers'])} hint={`${fmtNum(d['conversations'])} conversations`} />
-        <Stat label="Deflection" value={fmtNum(d['deflection_rate'], "%")} hint={`${fmtNum(d['deflected'])} resolved without an agent`} />
-        <Stat label="Escalation rate" value={fmtNum(d['escalation_rate'], "%")} hint={`${fmtNum(d['escalated'])} escalated`} />
+        <Stat
+          label="AI answers"
+          value={fmtNum(d['ai_answers'])}
+          hint={`${fmtNum(d['answered_conversations'])} of ${fmtNum(d['conversations'])} conversations answered`}
+        />
+        <Stat
+          label="AI only"
+          value={fmtNum(d['ai_only_rate'], "%")}
+          hint={`${fmtNum(d['ai_only'])} never involved a human`}
+        />
+        <Stat
+          label="Escalated"
+          value={fmtNum(d['escalation_rate'], "%")}
+          hint={`${fmtNum(d['escalated'])} asked for an agent`}
+          tone={Number(d['escalation_rate'] ?? 0) > 50 ? "warn" : "default"}
+        />
+        <Stat
+          label="Helpful rate"
+          value={fmtNum(d['helpful_rate'], "%")}
+          hint={`${fmtNum(d['rated'])} answers rated by visitors`}
+          tone={Number(d['rated'] ?? 0) > 0 && Number(d['helpful_rate'] ?? 0) < 60 ? "warn" : "default"}
+        />
         <Stat
           label="Avg confidence"
-          value={fmtNum(Number(d['avg_confidence'] ?? 0) * 100, "%")}
+          value={d['avg_confidence'] == null ? "—" : fmtNum(Number(d['avg_confidence']) * 100, "%")}
           hint={`${fmtNum(d['low_confidence'])} low-confidence answers`}
-          tone={Number(d['avg_confidence'] ?? 0) < 0.5 ? "warn" : "default"}
+          tone={Number(d['avg_confidence'] ?? 1) < 0.5 ? "warn" : "default"}
         />
+        <Stat
+          label="Not helpful"
+          value={fmtNum(d['unhelpful_rate'], "%")}
+          hint={`${fmtNum(d['not_helpful'])} answers marked unhelpful`}
+        />
+        <Stat
+          label="Left without an outcome"
+          value={fmtNum(d['abandoned'])}
+          hint="Answered, never escalated, never resolved"
+          tone={Number(d['abandoned'] ?? 0) > 0 ? "warn" : "good"}
+        />
+        <Stat label="Conversations in scope" value={fmtNum(d['conversations'])} hint="Matching the filters above" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -849,6 +912,7 @@ function AiTab({ filters }: { filters: Filters }) {
     </div>
   );
 }
+
 
 function IntakeTab({ filters }: { filters: Filters }) {
   // The request list is paged in SQL; the tiles above it are SQL aggregates.

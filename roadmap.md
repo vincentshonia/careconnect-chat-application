@@ -31,6 +31,16 @@ Executed in phases. Each phase ends with typecheck + build + tests.
 - [x] Server-side chunked CSV exports respecting RBAC + filters
 - [x] Search indexes (pg_trgm) and pagination indexes
 
+### Phase 3 correction & verification pass (complete)
+- [x] `report_ai` contract corrected: UI now reads `ai_only` / `ai_only_rate` / `escalation_rate` / `helpful_rate` / `unhelpful_rate` / `abandoned` — the dead `deflection_rate` tiles are gone, and no screen says "deflection"
+- [x] `report_ai` department/website scoping: AI answers, confidence, top questions and ratings are joined through the conversations in view, so a department filter can no longer show another team's answers
+- [x] Conversation status filter wired into the reports filter bar and sent to SQL (`statuses`)
+- [x] CSV cells beginning `=`, `+`, `-`, `@` are neutralised against spreadsheet formula injection
+- [x] Timezone/DST regression tests (`tests/org-time.test.ts`): spring-forward 23h day, fall-back 25h day, local midnight vs UTC midnight, inclusive picked ranges, equal-length comparison windows
+- [x] CSV serialisation tests (`tests/csv.test.ts`)
+- [x] Remaining `.limit(...)` calls audited: only three left — pending invitations (100), the SLA cron batch (500), widget message poll (100). All are bounded background/widget reads, not paginated UI lists.
+- [x] Release gate: 149 tests pass, typecheck clean, production build OK
+
 
 ## Phase 4 — Widget & visitor workflows
 - [ ] Visitor first-name personalization persistence
