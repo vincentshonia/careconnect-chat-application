@@ -247,15 +247,16 @@ function ReportsPage() {
         ))}
       </nav>
 
+      {/* A tab outside the caller's scope is never rendered. */}
+      {allowed("overview") ? <OverviewTab filters={filters} /> : null}
+      {allowed("departments") ? <DepartmentsTab filters={filters} /> : null}
+      {allowed("staff") ? <StaffTab filters={filters} /> : null}
+      {allowed("tickets") ? <TicketsTab filters={filters} /> : null}
+      {allowed("transfers") ? <TransfersTab filters={filters} /> : null}
+      {allowed("sla") ? <SlaTab filters={filters} /> : null}
+      {allowed("ai") ? <AiTab filters={filters} /> : null}
+      {allowed("intake") ? <IntakeTab filters={filters} /> : null}
 
-      {tab === "overview" ? <OverviewTab filters={filters} /> : null}
-      {tab === "departments" ? <DepartmentsTab filters={filters} /> : null}
-      {tab === "staff" ? <StaffTab filters={filters} /> : null}
-      {tab === "tickets" ? <TicketsTab filters={filters} /> : null}
-      {tab === "transfers" ? <TransfersTab filters={filters} /> : null}
-      {tab === "sla" ? <SlaTab filters={filters} /> : null}
-      {tab === "ai" ? <AiTab filters={filters} /> : null}
-      {tab === "intake" ? <IntakeTab filters={filters} /> : null}
     </AdminShell>
   );
 }
