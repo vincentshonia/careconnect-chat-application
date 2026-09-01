@@ -2506,6 +2506,7 @@ export type Database = {
         Args: { _user?: string }
         Returns: Database["public"]["Enums"]["platform_role"]
       }
+      quality_summary: { Args: { _org: string }; Returns: Json }
       reassignment_candidates: {
         Args: { _conversation: string; _org: string }
         Returns: {
