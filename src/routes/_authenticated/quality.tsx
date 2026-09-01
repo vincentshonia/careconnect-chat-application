@@ -137,7 +137,7 @@ function QualityPage() {
     mutationFn: async () => {
       const orgId = session.data?.organizationId;
       if (!orgId || !selected) throw new Error("Pick a conversation to review first.");
-      const conversation = (conversations.data ?? []).find((c) => c.id === selected);
+      const conversation = (conversations.data?.rows ?? []).find((c) => c.id === selected);
       const { error } = await supabase.from("qa_reviews").insert({
         organization_id: orgId,
         conversation_id: selected,
