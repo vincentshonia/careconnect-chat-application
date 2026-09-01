@@ -349,8 +349,7 @@ function OverviewTab({ filters }: { filters: Filters }) {
     "volume",
     filters,
   );
-  const loading = <Loading query={q} />;
-  if (loading) return loading;
+  if (q.isLoading || q.error) return <Loading query={q} />;
   const k = q.data?.kpis ?? {};
   const f = q.data?.funnel ?? {};
   const s = q.data?.snapshot ?? {};
@@ -430,8 +429,7 @@ function OverviewTab({ filters }: { filters: Filters }) {
 function DepartmentsTab({ filters }: { filters: Filters }) {
   const q = useReport<Row[]>("departments", filters);
   const backlog = useReport<Row[]>("backlog", filters);
-  const loading = <Loading query={q} />;
-  if (loading) return loading;
+  if (q.isLoading || q.error) return <Loading query={q} />;
   const rows = q.data ?? [];
 
   return (
@@ -487,8 +485,7 @@ function DepartmentsTab({ filters }: { filters: Filters }) {
 function StaffTab({ filters }: { filters: Filters }) {
   const q = useReport<Row[]>("staff", filters);
   const workload = useReport<Row[]>("workload", filters);
-  const loading = <Loading query={q} />;
-  if (loading) return loading;
+  if (q.isLoading || q.error) return <Loading query={q} />;
   const rows = q.data ?? [];
 
   return (
@@ -560,7 +557,7 @@ function TicketsTab({ filters }: { filters: Filters }) {
     limit,
     offset: page * limit,
   });
-  const loading = <Loading query={q} />;
+  const busy = q.isLoading || Boolean(q.error);
   const rows = q.data?.rows ?? [];
   const total = q.data?.total ?? 0;
 
@@ -594,7 +591,9 @@ function TicketsTab({ filters }: { filters: Filters }) {
         </div>
       }
     >
-      {loading ?? (
+      {busy ? (
+        <Loading query={q} />
+      ) : (
         <>
           <DataTable
             rows={rows}
@@ -650,8 +649,7 @@ function TicketsTab({ filters }: { filters: Filters }) {
 
 function TransfersTab({ filters }: { filters: Filters }) {
   const q = useReport<{ overview: Row; matrix: Row[]; rows: Row[]; repeat_conversations: Row[] }>("transfers", filters);
-  const loading = <Loading query={q} />;
-  if (loading) return loading;
+  if (q.isLoading || q.error) return <Loading query={q} />;
   const o = q.data?.overview ?? {};
 
   return (
@@ -717,8 +715,7 @@ function SlaTab({ filters }: { filters: Filters }) {
     oldest_waiting_at: string | null;
     oldest_active_at: string | null;
   }>("sla", filters);
-  const loading = <Loading query={q} />;
-  if (loading) return loading;
+  if (q.isLoading || q.error) return <Loading query={q} />;
   const m = q.data?.metrics ?? {};
   const eligible = Number(m['sla_eligible'] ?? 0);
   const met = Number(m['sla_met'] ?? 0);
@@ -778,8 +775,7 @@ function SlaTab({ filters }: { filters: Filters }) {
 
 function AiTab({ filters }: { filters: Filters }) {
   const q = useReport<Row>("ai", filters);
-  const loading = <Loading query={q} />;
-  if (loading) return loading;
+  if (q.isLoading || q.error) return <Loading query={q} />;
   const d = q.data ?? {};
 
   return (
@@ -830,8 +826,7 @@ function AiTab({ filters }: { filters: Filters }) {
 
 function IntakeTab({ filters }: { filters: Filters }) {
   const q = useReport<Row>("intake", filters);
-  const loading = <Loading query={q} />;
-  if (loading) return loading;
+  if (q.isLoading || q.error) return <Loading query={q} />;
   const d = q.data ?? {};
   const byType = (d['by_type'] as Row[]) ?? [];
 
