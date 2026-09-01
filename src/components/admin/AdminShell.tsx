@@ -51,6 +51,8 @@ const navGroups = [
       { to: "/intake", label: "Intake", icon: ClipboardList, perms: ["workflow.view_assigned"] },
       { to: "/contacts", label: "Contacts", icon: Contact, perms: ["contact.view_related"] },
       { to: "/notifications", label: "Notifications", icon: Bell, perms: undefined },
+      { to: "/profile", label: "My settings", icon: UserCog, perms: undefined },
+
     ],
   },
   {

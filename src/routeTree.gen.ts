@@ -24,6 +24,7 @@ import { Route as AuthenticatedSecurityRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedRoutingRouteImport } from './routes/_authenticated/routing'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedQualityRouteImport } from './routes/_authenticated/quality'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOrganizationsRouteImport } from './routes/_authenticated/organizations'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
@@ -120,6 +121,11 @@ const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
 const AuthenticatedQualityRoute = AuthenticatedQualityRouteImport.update({
   id: '/quality',
   path: '/quality',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedOrganizationsRoute =
@@ -261,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/organizations': typeof AuthenticatedOrganizationsRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/quality': typeof AuthenticatedQualityRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/routing': typeof AuthenticatedRoutingRoute
@@ -300,6 +307,7 @@ export interface FileRoutesByTo {
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/organizations': typeof AuthenticatedOrganizationsRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/quality': typeof AuthenticatedQualityRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/routing': typeof AuthenticatedRoutingRoute
@@ -341,6 +349,7 @@ export interface FileRoutesById {
   '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/organizations': typeof AuthenticatedOrganizationsRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/quality': typeof AuthenticatedQualityRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/routing': typeof AuthenticatedRoutingRoute
@@ -382,6 +391,7 @@ export interface FileRouteTypes {
     | '/knowledge'
     | '/notifications'
     | '/organizations'
+    | '/profile'
     | '/quality'
     | '/reports'
     | '/routing'
@@ -421,6 +431,7 @@ export interface FileRouteTypes {
     | '/knowledge'
     | '/notifications'
     | '/organizations'
+    | '/profile'
     | '/quality'
     | '/reports'
     | '/routing'
@@ -461,6 +472,7 @@ export interface FileRouteTypes {
     | '/_authenticated/knowledge'
     | '/_authenticated/notifications'
     | '/_authenticated/organizations'
+    | '/_authenticated/profile'
     | '/_authenticated/quality'
     | '/_authenticated/reports'
     | '/_authenticated/routing'
@@ -612,6 +624,13 @@ declare module '@tanstack/react-router' {
       path: '/quality'
       fullPath: '/quality'
       preLoaderRoute: typeof AuthenticatedQualityRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/organizations': {
@@ -789,6 +808,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedOrganizationsRoute: typeof AuthenticatedOrganizationsRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedQualityRoute: typeof AuthenticatedQualityRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedRoutingRoute: typeof AuthenticatedRoutingRoute
@@ -809,6 +829,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedOrganizationsRoute: AuthenticatedOrganizationsRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedQualityRoute: AuthenticatedQualityRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedRoutingRoute: AuthenticatedRoutingRoute,
