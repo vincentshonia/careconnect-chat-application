@@ -794,7 +794,7 @@ function WidgetPage() {
 
       </div>
 
-      {(view === "chat" || view === "menu" || view === "waiting") && (
+      {(view === "chat" || view === "waiting") && (
         <form
           className="border-t border-border/70 bg-card px-3 pb-3 pt-2.5"
           onSubmit={(e) => {
