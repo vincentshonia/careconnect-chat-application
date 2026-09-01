@@ -152,7 +152,11 @@ export const runReportFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const actor = await resolveActor(context.supabase, context.userId);
     const scope = reportScope(actor);
+    if (!SECTIONS_BY_LEVEL[scope.level].includes(data.section)) {
+      throw new ForbiddenError("That report is outside your reporting scope");
+    }
     const { from, to } = parseRange(data.filters);
+
     const dept = clampDepartments(scope, data.filters.departmentId ?? null);
     const staff = clampStaff(scope, data.filters.staffId ?? null);
     const sla = data.filters.sla ?? 15;
