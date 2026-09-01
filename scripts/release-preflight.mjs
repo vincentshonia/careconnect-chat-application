@@ -189,7 +189,16 @@ try {
 
 try {
   const { chromium } = await import("@playwright/test");
-  const browser = await chromium.launch({ headless: true });
+  // Match the browser resolution used by playwright.config.ts so a sandbox
+  // that ships a pinned Chromium build is not reported as a false failure.
+  const root = "/opt/ms-playwright";
+  let executablePath;
+  if (existsSync(root)) {
+    const build = readdirSync(root).filter((e) => /^chromium-\d+$/.test(e)).sort().pop();
+    const candidate = build ? path.join(root, build, "chrome-linux", "chrome") : null;
+    if (candidate && existsSync(candidate)) executablePath = candidate;
+  }
+  const browser = await chromium.launch({ headless: true, ...(executablePath ? { executablePath } : {}) });
   const version = browser.version();
   await browser.close();
   record("browser:chromium launches", true, version);
