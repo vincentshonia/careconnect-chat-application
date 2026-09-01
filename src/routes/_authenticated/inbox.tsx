@@ -121,6 +121,7 @@ function InboxPage() {
 
 
   const userId = session.data?.userId ?? null;
+  const organizationId = session.data?.organizationId ?? null;
   const can = (p: string) => session.data?.permissions.has(p) ?? false;
   const isSupervisor = can("conversation.reassign") || can("conversation.view_all");
   const departmentIds = session.data?.departmentIds ?? [];
