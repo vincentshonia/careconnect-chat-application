@@ -11,7 +11,10 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "preview:e2e": "rm -f .wrangler/deploy/config.json && wrangler dev -c dist/server/wrangler.json --ip 127.0.0.1",
+    "e2e": "bun run build && playwright test",
+    "e2e:smoke": "bun run build && playwright test tests/e2e/smoke.spec.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
