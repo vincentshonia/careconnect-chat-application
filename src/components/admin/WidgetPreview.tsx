@@ -1,5 +1,6 @@
 import { useState } from "react";
 import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
+import { resolveWidgetTabs, tabIconPath, type WidgetTabConfig } from "@/lib/widget-tabs";
 
 export type WidgetPreviewConfig = {
   chatbotName?: string | null;
@@ -24,6 +25,7 @@ export type WidgetPreviewConfig = {
   showServicesTab?: boolean | null;
   showRequestsTab?: boolean | null;
   topics?: string[];
+  tabs?: WidgetTabConfig[];
 };
 
 const TABS = [
@@ -59,13 +61,16 @@ export function WidgetPreview({ config }: { config: WidgetPreviewConfig }) {
   const logo = config.logoUrl?.trim() || brandLogoAsset.url;
   const topics = (config.topics ?? []).slice(0, 4);
 
-  const visible = TABS.filter((t) => {
-    if (t.key === "home") return config.showHomeTab !== false;
-    if (t.key === "help") return config.showHelpTab !== false;
-    if (t.key === "services") return config.showServicesTab !== false;
-    if (t.key === "requests") return config.showRequestsTab !== false;
-    return true;
-  });
+  const visible = resolveWidgetTabs(config.tabs)
+    .filter((t) => {
+      if (!t.enabled) return false;
+      if (t.key === "home") return config.showHomeTab !== false;
+      if (t.key === "help") return config.showHelpTab !== false;
+      if (t.key === "services") return config.showServicesTab !== false;
+      if (t.key === "requests") return config.showRequestsTab !== false;
+      return true;
+    })
+    .map((t) => ({ ...t, icon: tabIconPath(t.icon) }));
   const activeTab = visible.some((t) => t.key === tab) ? tab : (visible[0]?.key ?? "chat");
 
   return (
