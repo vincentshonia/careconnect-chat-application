@@ -48,6 +48,17 @@ type Config = {
     privacyDisclaimer: string;
     consentLanguage: string;
     menuButtons: Array<{ key: string; label: string; icon?: string }>;
+    homeGreeting?: string;
+    homeHeadline?: string;
+    homeSubtitle?: string;
+    homeCtaTitle?: string;
+    homeCtaSubtitle?: string;
+    helpTitle?: string;
+    privacyFooterText?: string;
+    showHomeTab?: boolean;
+    showHelpTab?: boolean;
+    showServicesTab?: boolean;
+    showRequestsTab?: boolean;
   };
   organization: {
     name: string;
