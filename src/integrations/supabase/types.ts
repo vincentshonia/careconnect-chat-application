@@ -1666,6 +1666,7 @@ export type Database = {
           organization_id: string | null
           phone: string | null
           presence: string
+          show_in_widget_team: boolean
           status: Database["public"]["Enums"]["entity_status"]
           theme_preference: string
           timezone: string | null
@@ -1687,6 +1688,7 @@ export type Database = {
           organization_id?: string | null
           phone?: string | null
           presence?: string
+          show_in_widget_team?: boolean
           status?: Database["public"]["Enums"]["entity_status"]
           theme_preference?: string
           timezone?: string | null
@@ -1708,6 +1710,7 @@ export type Database = {
           organization_id?: string | null
           phone?: string | null
           presence?: string
+          show_in_widget_team?: boolean
           status?: Database["public"]["Enums"]["entity_status"]
           theme_preference?: string
           timezone?: string | null
