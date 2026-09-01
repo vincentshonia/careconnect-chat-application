@@ -45,6 +45,8 @@ function PersonalSettingsPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  // Public visibility of name + photo in the widget. Opt-in, never assumed.
+  const [showInWidget, setShowInWidget] = useState(false);
   const [form, setForm] = useState({
     full_name: "",
     display_name: "",
@@ -78,6 +80,7 @@ function PersonalSettingsPage() {
       presence: p.presence ?? "available",
     });
     setAvatarUrl(p.avatar_url ?? null);
+    setShowInWidget(p.show_in_widget_team === true);
   }, [profile.data]);
 
   // Reflect the saved appearance choice once the profile loads.
@@ -99,6 +102,7 @@ function PersonalSettingsPage() {
           phone: form.phone || null,
           timezone: form.timezone || null,
           presence: form.presence,
+          show_in_widget_team: showInWidget,
           languages: form.languages
             .split(",")
             .map((l) => l.trim())
