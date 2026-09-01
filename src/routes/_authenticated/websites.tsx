@@ -180,17 +180,18 @@ function WebsitesPage() {
                   />
                 </Field>
                 <Field label="Primary color">
-                  <Input
-                    value={form.primary_color ?? ""}
-                    onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+                  <ColorInput
+                    value={form.primary_color ?? "#1d4ed8"}
+                    onChange={(v) => setForm({ ...form, primary_color: v })}
                   />
                 </Field>
                 <Field label="Accent color">
-                  <Input
-                    value={form.accent_color ?? ""}
-                    onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
+                  <ColorInput
+                    value={form.accent_color ?? "#0891b2"}
+                    onChange={(v) => setForm({ ...form, accent_color: v })}
                   />
                 </Field>
+
                 <Field label="Widget position">
                   <select
                     className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
