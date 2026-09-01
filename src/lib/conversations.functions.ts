@@ -240,6 +240,60 @@ export const replyToConversationFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export type ReassignmentCandidate = {
+  user_id: string;
+  full_name: string;
+  role: string;
+  presence: string;
+  department_names: string[];
+  in_department: boolean;
+  active_chats: number;
+  capacity: number;
+  eligible: boolean;
+  reason: string | null;
+};
+
+/** Eligible transfer targets, resolved in SQL — never "every active profile". */
+async function loadCandidates(organizationId: string, conversationId: string) {
+  const { admin } = await import("@/lib/public-chat.server");
+  const db = admin() as unknown as {
+    rpc: (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: { message: string } | null }>;
+  };
+  const { data, error } = await db.rpc("reassignment_candidates", {
+    _org: organizationId,
+    _conversation: conversationId,
+  });
+  if (error) {
+    console.error("[transfer] candidate lookup failed", error.message);
+    throw new Error("Could not load transfer targets");
+  }
+  return (data ?? []) as ReassignmentCandidate[];
+}
+
+/**
+ * Who may receive this conversation, with the context a supervisor needs to
+ * choose: department, presence, current workload and capacity.
+ */
+export const reassignmentCandidatesFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => idInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    if (!isSupervisor(actor)) {
+      throw new ForbiddenError("Only team leads and above can transfer conversations");
+    }
+    const conversation = await loadConversation(data.conversationId);
+    if (!canView(actor, conversation)) throw new ForbiddenError("Conversation not found");
+    const candidates = await loadCandidates(conversation.organization_id, conversation.id);
+    return {
+      canOverride: actor.permissions.has("staff.edit"),
+      candidates,
+    };
+  });
+
 /** Reassign ownership. Supervisory action, always audited. */
 export const reassignConversationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -248,6 +302,9 @@ export const reassignConversationFn = createServerFn({ method: "POST" })
       .object({
         conversationId: z.string().uuid(),
         userId: z.string().uuid().nullable(),
+        /** Explicit supervisory override of availability/capacity. */
+        override: z.boolean().optional(),
+        overrideReason: z.string().max(300).optional(),
       })
       .parse(input),
   )
@@ -262,15 +319,36 @@ export const reassignConversationFn = createServerFn({ method: "POST" })
     const { admin } = await import("@/lib/public-chat.server");
     const db = admin();
 
+    let overrideUsed = false;
+    let overrideReason: string | null = null;
+
     if (data.userId) {
-      const { data: target } = await db
-        .from("organization_memberships")
-        .select("user_id")
-        .eq("user_id", data.userId)
-        .eq("organization_id", conversation.organization_id)
-        .eq("status", "active")
-        .maybeSingle();
-      if (!target) throw new ForbiddenError("That teammate is not part of this organization");
+      const candidates = await loadCandidates(conversation.organization_id, conversation.id);
+      const target = candidates.find((c) => c.user_id === data.userId);
+      if (!target) {
+        throw new ForbiddenError(
+          "That teammate cannot receive this conversation — they are not an active member of this organization with a role that takes chats",
+        );
+      }
+      if (!target.eligible) {
+        // Availability and capacity may be overridden, but only explicitly, by
+        // an administrator, and never silently.
+        if (!data.override) {
+          throw new ForbiddenError(
+            `${target.full_name} is not available for this transfer (${target.reason ?? "not eligible"})`,
+          );
+        }
+        if (!actor.permissions.has("staff.edit")) {
+          throw new ForbiddenError("Only administrators can override transfer eligibility");
+        }
+        if (target.reason === "Not in this department" || target.reason === "Account is not active") {
+          throw new ForbiddenError(
+            `${target.full_name} cannot receive this conversation: ${target.reason.toLowerCase()}`,
+          );
+        }
+        overrideUsed = true;
+        overrideReason = data.overrideReason?.trim() || target.reason || "eligibility override";
+      }
     }
 
     await db
@@ -315,10 +393,28 @@ export const reassignConversationFn = createServerFn({ method: "POST" })
       recordType: "conversations",
       recordId: conversation.id,
       previousValue: { assigned_to: conversation.assigned_to },
-      newValue: { assigned_to: data.userId },
+      newValue: { assigned_to: data.userId, override: overrideUsed, override_reason: overrideReason },
     });
 
-    return { ok: true, assignedName: newName };
+    if (overrideUsed) {
+      await writeAudit(db as never, {
+        actor,
+        organizationId: conversation.organization_id,
+        action: "conversation.transfer_override",
+        recordType: "conversations",
+        recordId: conversation.id,
+        newValue: { assigned_to: data.userId, reason: overrideReason },
+      });
+      await db.from("conversation_events").insert({
+        conversation_id: conversation.id,
+        organization_id: conversation.organization_id,
+        actor_id: actor.userId,
+        event_type: "eligibility_override",
+        detail: `Availability/capacity override: ${overrideReason}`,
+      });
+    }
+
+    return { ok: true, assignedName: newName, override: overrideUsed };
   });
 
 /** Close a conversation. Owner or supervisor only. */

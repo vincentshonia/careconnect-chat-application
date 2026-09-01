@@ -10,6 +10,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveActor, requireOrganization, ForbiddenError } from "@/lib/authz.server";
+import {
+  dashboardScopeFor,
+  scopeDashboardMetrics,
+  type DashboardScope,
+} from "@/lib/report-scope";
 
 export const DASHBOARD_PERIODS = ["today", "week", "last7", "month", "last30"] as const;
 export type DashboardPeriod = (typeof DASHBOARD_PERIODS)[number];
@@ -54,30 +59,6 @@ function windows(period: DashboardPeriod) {
   };
 }
 
-export type DashboardScope = "self" | "team" | "organization";
-
-/**
- * Strip figures the caller's scope does not cover. Organization-wide counters
- * never reach a team- or self-level dashboard, and a self-level agent sees
- * only their own numbers.
- */
-function scopeMetrics(raw: unknown, scope: DashboardScope): Record<string, unknown> {
-  const payload = (raw ?? {}) as Record<string, unknown>;
-  if (scope === "organization") return payload;
-  const current = { ...((payload["current"] ?? {}) as Record<string, unknown>) };
-  for (const key of Object.keys(current)) {
-    if (key.startsWith("org_")) delete current[key];
-    if (scope === "self" && key.startsWith("dept_")) delete current[key];
-  }
-  const out: Record<string, unknown> = { ...payload, current };
-  if (scope === "self") {
-    delete out["departments"];
-    delete out["staff"];
-    delete out["queue"];
-  }
-  return out;
-}
-
 export const getDashboardMetricsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => inputSchema.parse(input))
@@ -86,15 +67,16 @@ export const getDashboardMetricsFn = createServerFn({ method: "POST" })
     const organizationId = requireOrganization(actor);
 
     // Scope is derived from permissions, never from the request.
-    const scope: DashboardScope = actor.permissions.has("reports.organization")
-      ? "organization"
-      : actor.permissions.has("reports.team")
-        ? "team"
-        : actor.permissions.has("reports.self")
-          ? "self"
-          : (() => {
-              throw new ForbiddenError("You don't have access to the dashboard");
-            })();
+    const scope: DashboardScope =
+      dashboardScopeFor({
+        userId: actor.userId,
+        organizationId,
+        departmentIds: actor.departmentIds,
+        permissions: actor.permissions,
+      }) ??
+      (() => {
+        throw new ForbiddenError("You don't have access to the dashboard");
+      })();
 
     const NO_DEPARTMENT = "00000000-0000-0000-0000-000000000000";
     const deptScope = actor.departmentIds.length ? actor.departmentIds : [NO_DEPARTMENT];
@@ -133,7 +115,7 @@ export const getDashboardMetricsFn = createServerFn({ method: "POST" })
       canViewStaff: actor.permissions.has("staff.view"),
       slaMinutes: 15,
       // Dynamic jsonb: serialized so the RPC boundary keeps a stable type.
-      json: JSON.stringify(scopeMetrics(result, scope)),
+      json: JSON.stringify(scopeDashboardMetrics(result, scope)),
     };
   });
 
