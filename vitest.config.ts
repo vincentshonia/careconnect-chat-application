@@ -14,6 +14,15 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: "node",
       include: ["tests/**/*.test.ts"],
+      /**
+       * Integration suites talk to the same database. Running the files in
+       * parallel exhausts the connection pooler, so they run one at a time and
+       * are given room for genuinely slow, high-volume queries.
+       */
+      fileParallelism: false,
+      testTimeout: 60_000,
+      hookTimeout: 300_000,
+
       env: {
         WIDGET_SESSION_SECRET: env.WIDGET_SESSION_SECRET ?? "test-widget-secret-for-unit-tests",
         SUPABASE_URL: process.env['SUPABASE_URL'] ?? env.SUPABASE_URL ?? env.VITE_SUPABASE_URL ?? "",

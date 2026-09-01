@@ -11,6 +11,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveActor, ForbiddenError, requireOrganization, type Actor } from "@/lib/authz.server";
+import { toCsv } from "@/lib/csv";
 import {
   NO_DEPARTMENT,
   REPORT_SECTIONS as SHARED_SECTIONS,
@@ -53,6 +54,7 @@ const inputSchema = z.object({
 });
 
 export type ReportFilters = z.infer<typeof filterSchema>;
+type ReportOptions = NonNullable<z.infer<typeof optionsSchema>>;
 
 /** Resolve what this caller is permitted to report on. Never trusts input. */
 function reportScope(actor: Actor): Scope {
@@ -102,6 +104,123 @@ function parseRange(filters: ReportFilters) {
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
+/**
+ * Translate a requested section into the RPC to call. All scope clamping
+ * happens here, so both the interactive report and the CSV export are
+ * guaranteed to run exactly the same authorized query.
+ */
+function buildCall(scope: Scope, section: string, filters: ReportFilters, options: ReportOptions) {
+  const { from, to } = parseRange(filters);
+  const dept = clampDepartments(scope, filters.departmentId ?? null);
+  const staff = clampStaff(scope, filters.staffId ?? null);
+  const sla = filters.sla ?? 15;
+  const statuses = filters.statuses?.length ? filters.statuses : null;
+  const website = filters.websiteId ?? null;
+  const type = filters.type ?? "all";
+  const transfer = filters.transfer ?? "all";
+  const priority = filters.priority ?? null;
+  const opts = options;
+
+  const common = {
+    _org: scope.organizationId,
+    _from: from,
+    _to: to,
+    _dept: dept,
+    _staff: staff,
+    _statuses: statuses,
+    _website: website,
+    _type: type,
+    _transfer: transfer,
+    _priority: priority,
+  };
+
+  switch (section) {
+    case "overview":
+      return { fn: "report_overview", args: { ...common, _sla: sla } };
+    case "departments":
+      return { fn: "report_departments", args: { ...common, _sla: sla } };
+    case "backlog":
+      return { fn: "report_department_backlog", args: { _org: scope.organizationId, _dept: dept, _sla: sla } };
+    case "staff":
+      return { fn: "report_staff", args: { ...common, _sla: sla } };
+    case "workload":
+      return { fn: "report_staff_workload", args: { _org: scope.organizationId, _dept: dept } };
+    case "tickets":
+      return {
+        fn: "report_tickets",
+        args: {
+          ...common,
+          _sla: sla,
+          _flag: opts.flag ?? "all",
+          _sort: opts.sort ?? "created_at",
+          _dir: opts.dir ?? "desc",
+          _limit: opts.limit ?? 50,
+          _offset: opts.offset ?? 0,
+        },
+      };
+    case "transfers":
+      return {
+        fn: "report_transfers",
+        args: {
+          _org: scope.organizationId,
+          _from: from,
+          _to: to,
+          _dept: dept,
+          _limit: opts.limit ?? 50,
+          _offset: opts.offset ?? 0,
+        },
+      };
+    case "sla":
+      return { fn: "report_sla", args: { ...common, _sla: sla } };
+    case "volume":
+      return { fn: "report_volume", args: common };
+    case "ai":
+      return {
+        fn: "report_ai",
+        args: { _org: scope.organizationId, _from: from, _to: to, _dept: dept, _website: website },
+      };
+    case "intake":
+      return {
+        fn: "report_intake",
+        args: {
+          _org: scope.organizationId,
+          _from: from,
+          _to: to,
+          _dept: dept,
+          _staff: staff,
+          _limit: opts.limit ?? 50,
+          _offset: opts.offset ?? 0,
+        },
+      };
+    case "staff_detail": {
+      const target = opts.staffId;
+      if (!target) throw new ForbiddenError("Choose a staff member");
+      const allowed = clampStaff(scope, target);
+      if (allowed && !allowed.includes(target)) {
+        throw new ForbiddenError("That teammate is outside your reporting scope");
+      }
+      return { fn: "report_staff", args: { ...common, _staff: [target], _sla: sla } };
+    }
+    default:
+      throw new ForbiddenError("Unknown report");
+  }
+}
+
+type Rpc = {
+  rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+};
+
+async function callRpc(fn: string, args: Record<string, unknown>) {
+  const { admin } = await import("@/lib/public-chat.server");
+  const db = admin() as unknown as Rpc;
+  const { data, error } = await db.rpc(fn, args);
+  if (error) {
+    console.error("[reports] rpc failed", fn, error.message);
+    throw new Error("Could not build that report");
+  }
+  return data;
+}
+
 /** Run a report. Scope is enforced here; the SQL layer is service-role only. */
 export const runReportFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -112,133 +231,133 @@ export const runReportFn = createServerFn({ method: "POST" })
     if (!canRunSection(scope, data.section)) {
       throw new ForbiddenError("That report is outside your reporting scope");
     }
-    const { from, to } = parseRange(data.filters);
-
-    const dept = clampDepartments(scope, data.filters.departmentId ?? null);
-    const staff = clampStaff(scope, data.filters.staffId ?? null);
-    const sla = data.filters.sla ?? 15;
-    const statuses = data.filters.statuses?.length ? data.filters.statuses : null;
-    const website = data.filters.websiteId ?? null;
-    const type = data.filters.type ?? "all";
-    const transfer = data.filters.transfer ?? "all";
-    const priority = data.filters.priority ?? null;
-    const opts = data.options ?? {};
-
-    const { admin } = await import("@/lib/public-chat.server");
-    const db = admin() as unknown as {
-      rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
-    };
-
-    const common = {
-      _org: scope.organizationId,
-      _from: from,
-      _to: to,
-      _dept: dept,
-      _staff: staff,
-      _statuses: statuses,
-      _website: website,
-      _type: type,
-      _transfer: transfer,
-      _priority: priority,
-    };
-
-    let fn: string;
-    let args: Record<string, unknown>;
-
-    switch (data.section) {
-      case "overview":
-        fn = "report_overview";
-        args = { ...common, _sla: sla };
-        break;
-      case "departments":
-        fn = "report_departments";
-        args = { ...common, _sla: sla };
-        break;
-      case "backlog":
-        fn = "report_department_backlog";
-        args = { _org: scope.organizationId, _dept: dept, _sla: sla };
-        break;
-      case "staff":
-        fn = "report_staff";
-        args = { ...common, _sla: sla };
-        break;
-      case "workload":
-        fn = "report_staff_workload";
-        args = { _org: scope.organizationId, _dept: dept };
-        break;
-      case "tickets":
-        fn = "report_tickets";
-        args = {
-          ...common,
-          _sla: sla,
-          _flag: opts.flag ?? "all",
-          _sort: opts.sort ?? "created_at",
-          _dir: opts.dir ?? "desc",
-          _limit: opts.limit ?? 50,
-          _offset: opts.offset ?? 0,
-        };
-        break;
-      case "transfers":
-        fn = "report_transfers";
-        args = {
-          _org: scope.organizationId,
-          _from: from,
-          _to: to,
-          _dept: dept,
-          _limit: opts.limit ?? 50,
-          _offset: opts.offset ?? 0,
-        };
-        break;
-      case "sla":
-        fn = "report_sla";
-        args = { ...common, _sla: sla };
-        break;
-      case "volume":
-        fn = "report_volume";
-        args = common;
-        break;
-      case "ai":
-        fn = "report_ai";
-        args = { _org: scope.organizationId, _from: from, _to: to, _dept: dept, _website: website };
-        break;
-      case "intake":
-        fn = "report_intake";
-        args = {
-          _org: scope.organizationId,
-          _from: from,
-          _to: to,
-          _dept: dept,
-          _staff: staff,
-          _limit: opts.limit ?? 50,
-          _offset: opts.offset ?? 0,
-        };
-        break;
-      case "staff_detail": {
-        const target = opts.staffId;
-        if (!target) throw new ForbiddenError("Choose a staff member");
-        const allowed = clampStaff(scope, target);
-        if (allowed && !allowed.includes(target)) {
-          throw new ForbiddenError("That teammate is outside your reporting scope");
-        }
-        fn = "report_staff";
-        args = { ...common, _staff: [target], _sla: sla };
-        break;
-      }
-      default:
-        throw new ForbiddenError("Unknown report");
-    }
-
-    const { data: result, error } = await db.rpc(fn, args);
-    if (error) {
-      console.error("[reports] rpc failed", fn, error.message);
-      throw new Error("Could not build that report");
-    }
+    const { fn, args } = buildCall(scope, data.section, data.filters, data.options ?? {});
+    const result = await callRpc(fn, args);
     // Serialized as JSON: report payloads are dynamic jsonb, which the RPC
     // boundary's structural serializer cannot type.
     return {
       section: data.section as string,
       scope: scope.level as string,
       json: JSON.stringify(result ?? null),
+    };
+  });
+
+/* ------------------------------- CSV exports ------------------------------- */
+
+/** Rows fetched per round trip, and the hard ceiling for one report export. */
+const EXPORT_PAGE = 500;
+export const REPORT_EXPORT_ROW_CAP = 25_000;
+
+/**
+ * What each downloadable dataset is: the report it runs, where the rows live
+ * inside that report's payload, and whether the underlying RPC pages.
+ */
+const DATASETS = {
+  tickets: { section: "tickets", path: "rows", paged: true, file: "tickets" },
+  transfers: { section: "transfers", path: "rows", paged: true, file: "transfer-log" },
+  transfer_matrix: { section: "transfers", path: "matrix", paged: false, file: "transfer-matrix" },
+  intake: { section: "intake", path: "rows", paged: true, file: "requests" },
+  intake_by_type: { section: "intake", path: "by_type", paged: false, file: "requests-by-type" },
+  staff: { section: "staff", path: "", paged: false, file: "staff-performance" },
+  departments: { section: "departments", path: "", paged: false, file: "department-performance" },
+  backlog: { section: "backlog", path: "", paged: false, file: "department-backlog" },
+  sla_departments: { section: "sla", path: "by_department", paged: false, file: "sla-departments" },
+  sla_staff: { section: "sla", path: "by_staff", paged: false, file: "sla-staff" },
+  ai_questions: { section: "ai", path: "top_questions", paged: false, file: "ai-top-questions" },
+  ai_low_confidence: { section: "ai", path: "low_confidence_questions", paged: false, file: "ai-knowledge-gaps" },
+} as const;
+
+export const REPORT_EXPORTS = Object.keys(DATASETS) as (keyof typeof DATASETS)[];
+export type ReportExport = keyof typeof DATASETS;
+
+const exportSchema = z.object({
+  dataset: z.enum(REPORT_EXPORTS as [ReportExport, ...ReportExport[]]),
+  filters: filterSchema,
+  options: optionsSchema,
+});
+
+function pluck(payload: unknown, path: string): Record<string, unknown>[] {
+  const value = path ? (payload as Record<string, unknown> | null)?.[path] : payload;
+  return Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
+}
+
+/**
+ * Export a report as CSV.
+ *
+ * The export runs the *same* authorized query as the report on screen — same
+ * organization, RBAC scope, departments, staff, dates, status, priority,
+ * website, conversation type and transfer state — and walks it page by page
+ * server-side, so the file contains the whole authorized result rather than
+ * whichever page the browser happens to be showing.
+ */
+export const exportReportFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => exportSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    const scope = reportScope(actor);
+    const spec = DATASETS[data.dataset];
+    if (!canRunSection(scope, spec.section)) {
+      throw new ForbiddenError("That report is outside your reporting scope");
+    }
+
+    const baseOptions = data.options ?? {};
+    const rows: Record<string, unknown>[] = [];
+    let truncated = false;
+
+    if (!spec.paged) {
+      const { fn, args } = buildCall(scope, spec.section, data.filters, baseOptions);
+      rows.push(...pluck(await callRpc(fn, args), spec.path));
+    } else {
+      for (let offset = 0; offset < REPORT_EXPORT_ROW_CAP; offset += EXPORT_PAGE) {
+        const { fn, args } = buildCall(scope, spec.section, data.filters, {
+          ...baseOptions,
+          limit: EXPORT_PAGE,
+          offset,
+        });
+        const batch = pluck(await callRpc(fn, args), spec.path);
+        rows.push(...batch);
+        if (batch.length < EXPORT_PAGE) break;
+        if (rows.length >= REPORT_EXPORT_ROW_CAP) {
+          truncated = true;
+          break;
+        }
+      }
+    }
+
+    // The audit trail records *what was exported and under which filters* —
+    // never the exported rows, which can contain personal health information.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("audit_logs").insert({
+      organization_id: scope.organizationId,
+      actor_id: actor.userId,
+      actor_name: actor.fullName,
+      action: "report.exported",
+      record_type: data.dataset,
+      new_value: {
+        rows: rows.length,
+        truncated,
+        scope: scope.level,
+        from: data.filters.from,
+        to: data.filters.to,
+        department_id: data.filters.departmentId ?? null,
+        staff_id: data.filters.staffId ?? null,
+        website_id: data.filters.websiteId ?? null,
+        statuses: data.filters.statuses ?? null,
+        priority: data.filters.priority ?? null,
+        type: data.filters.type ?? "all",
+        transfer: data.filters.transfer ?? "all",
+        flag: baseOptions.flag ?? null,
+      },
+    });
+
+    return {
+      dataset: data.dataset as string,
+      filename: spec.file as string,
+      rows: rows.length,
+      truncated,
+      cap: REPORT_EXPORT_ROW_CAP,
+      csv: toCsv(rows),
     };
   });
 

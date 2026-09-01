@@ -171,7 +171,100 @@ export function periodWindow(period: Period, timeZone: string, now: Date = new D
   };
 }
 
+export function startOfQuarterInZone(date: Date, timeZone: string): Date {
+  const p = zonedParts(date, timeZone);
+  const month = Math.floor((p.month - 1) / 3) * 3 + 1;
+  return zonedTimeToUtc({ year: p.year, month, day: 1 }, timeZone);
+}
+
+export function startOfYearInZone(date: Date, timeZone: string): Date {
+  const p = zonedParts(date, timeZone);
+  return zonedTimeToUtc({ year: p.year, month: 1, day: 1 }, timeZone);
+}
+
+/** Shift by whole calendar months in the zone, landing on the 1st. */
+function addMonthsToStart(date: Date, months: number, timeZone: string): Date {
+  const p = zonedParts(date, timeZone);
+  return zonedTimeToUtc({ year: p.year, month: p.month + months, day: 1 }, timeZone);
+}
+
+/**
+ * Named reporting ranges, all resolved in the organization's own timezone.
+ *
+ * Every range is half-open: `from` is inclusive, `to` is exclusive, and the
+ * upper bound is the start of tomorrow so "today" always includes activity
+ * that has not happened yet today.
+ */
+export const DATE_PRESETS = [
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "this_week", label: "This week" },
+  { value: "last_week", label: "Last week" },
+  { value: "last7", label: "Last 7 days" },
+  { value: "this_month", label: "This month" },
+  { value: "last_month", label: "Last month" },
+  { value: "last30", label: "Last 30 days" },
+  { value: "last90", label: "Last 90 days" },
+  { value: "this_quarter", label: "This quarter" },
+  { value: "last_quarter", label: "Last quarter" },
+  { value: "ytd", label: "Year to date" },
+  { value: "custom", label: "Custom" },
+] as const;
+
+export type DatePreset = (typeof DATE_PRESETS)[number]["value"];
+
+export function isDatePreset(value: unknown): value is DatePreset {
+  return typeof value === "string" && DATE_PRESETS.some((p) => p.value === value);
+}
+
+export function presetRange(
+  preset: DatePreset,
+  timeZone: string,
+  now: Date = new Date(),
+): { from: string; to: string } {
+  const tz = safeTimeZone(timeZone);
+  const today = startOfDayInZone(now, tz);
+  const tomorrow = addDaysInZone(today, 1, tz);
+  const iso = (a: Date, b: Date) => ({ from: a.toISOString(), to: b.toISOString() });
+
+  switch (preset) {
+    case "yesterday":
+      return iso(addDaysInZone(today, -1, tz), today);
+    case "this_week":
+      return iso(startOfWeekInZone(now, tz), tomorrow);
+    case "last_week": {
+      const thisWeek = startOfWeekInZone(now, tz);
+      return iso(addDaysInZone(thisWeek, -7, tz), thisWeek);
+    }
+    case "last7":
+      return iso(addDaysInZone(today, -6, tz), tomorrow);
+    case "this_month":
+      return iso(startOfMonthInZone(now, tz), tomorrow);
+    case "last_month": {
+      const thisMonth = startOfMonthInZone(now, tz);
+      return iso(addMonthsToStart(thisMonth, -1, tz), thisMonth);
+    }
+    case "last30":
+      return iso(addDaysInZone(today, -29, tz), tomorrow);
+    case "last90":
+      return iso(addDaysInZone(today, -89, tz), tomorrow);
+    case "this_quarter":
+      return iso(startOfQuarterInZone(now, tz), tomorrow);
+    case "last_quarter": {
+      const thisQuarter = startOfQuarterInZone(now, tz);
+      return iso(addMonthsToStart(thisQuarter, -3, tz), thisQuarter);
+    }
+    case "ytd":
+      return iso(startOfYearInZone(now, tz), tomorrow);
+    case "today":
+    case "custom":
+    default:
+      return iso(today, tomorrow);
+  }
+}
+
 /** Rolling "last N days" window anchored on the org's midnight boundary. */
+
 export function lastDaysWindow(days: number, timeZone: string, now: Date = new Date()): { from: string; to: string } {
   const tz = safeTimeZone(timeZone);
   const to = now;
