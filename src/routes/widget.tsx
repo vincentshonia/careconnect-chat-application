@@ -898,62 +898,180 @@ function WidgetPage() {
   );
 }
 
-function MenuView({
+/**
+ * Home = discovery. A large branded hero, one primary "send us a message"
+ * card and a help-discovery card. No menu list, no composer.
+ */
+function HomeView({
   config,
   brand,
-  onSelect,
-  onLiveAgent,
+  logoUrl,
+  visitorName,
+  topics,
+  onClose,
+  onStartChat,
+  onOpenHelp,
+  onTopic,
 }: {
   config: Config;
   brand: string;
-  onSelect: (key: string) => void;
-  onLiveAgent: () => void;
+  logoUrl: string;
+  visitorName: string | null;
+  topics: Array<{ id: string; label: string; kind: "service" | "faq" }>;
+  onClose: () => void;
+  onStartChat: () => void;
+  onOpenHelp: () => void;
+  onTopic: (topic: { id: string; label: string; kind: "service" | "faq" }) => void;
 }) {
+  const team = (config.team ?? []).slice(0, 3);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+
   return (
-    <div className="space-y-4">
-      <p className="text-[15px] leading-relaxed text-foreground">{config.website.welcomeMessage}</p>
-      <div className="grid gap-2">
-        {config.website.menuButtons.map((b) => (
-          <button
-            key={b.key}
-            onClick={() => onSelect(b.key)}
-            className="group flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 text-left text-sm font-medium text-card-foreground shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-transparent hover:shadow-panel"
-          >
-            <span
-              className="h-8 w-1 shrink-0 rounded-full transition-all duration-200 group-hover:h-9"
-              style={{ background: brand }}
-              aria-hidden="true"
-            />
-            <span className="flex-1">{b.label}</span>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              className="shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5"
-            >
-              <path d="M9 6l6 6-6 6" />
-            </svg>
-          </button>
-        ))}
-      </div>
-      <button
-        onClick={onLiveAgent}
-        className="w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-white shadow-panel transition duration-200 hover:-translate-y-0.5 hover:brightness-110"
-        style={{ background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 70%, black))` }}
+    <div className="flex h-full flex-col">
+      {/* ---------------------------- hero ---------------------------- */}
+      <div
+        className="relative shrink-0 overflow-hidden px-5 pb-10 pt-5 text-white"
+        style={{
+          background: `linear-gradient(150deg, color-mix(in oklab, ${brand} 82%, black) 0%, ${brand} 52%, color-mix(in oklab, ${brand} 62%, white) 100%)`,
+        }}
       >
-        Speak with a Live Representative
-      </button>
-      <p className="text-[11px] leading-tight text-muted-foreground">{config.website.privacyDisclaimer}</p>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-white/15 blur-3xl"
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-24 -left-10 h-48 w-48 rounded-full bg-white/10 blur-3xl"
+        />
+
+        <div className="relative flex items-start justify-between gap-3">
+          <img
+            src={logoUrl}
+            alt={config.organization.name || "Pacific Health Group"}
+            className="h-9 w-auto max-w-[170px] object-contain object-left drop-shadow-sm"
+          />
+          <div className="flex items-center gap-2">
+            {team.length > 0 && (
+              <div className="flex -space-x-2" aria-label="Our team">
+                {team.map((m) => (
+                  <img
+                    key={m.id}
+                    src={m.avatarUrl}
+                    alt={m.name}
+                    title={m.name}
+                    className="h-7 w-7 rounded-full object-cover ring-2 ring-white/70"
+                  />
+                ))}
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              aria-label="Close chat"
+              className="grid h-8 w-8 place-items-center rounded-full text-base leading-none transition hover:bg-white/20"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div className="relative mt-7">
+          <h1 className="text-[26px] font-semibold leading-tight tracking-tight text-white/95">
+            {visitorName ? `Hi, ${visitorName}.` : "Hi there."}
+          </h1>
+          <h2 className="text-[26px] font-semibold leading-tight tracking-tight text-white">
+            How can we help?
+          </h2>
+          <p className="mt-2.5 text-[13px] text-white/85">
+            {config.agentsAvailable
+              ? "Our team is here to help."
+              : "CareConnect AI is available anytime."}
+          </p>
+        </div>
+      </div>
+
+      {/* --------------------------- content --------------------------- */}
+      <div className="-mt-6 flex-1 space-y-3 rounded-t-3xl bg-background px-4 pb-5 pt-4">
+        <button
+          onClick={onStartChat}
+          className="group flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card p-4 text-left shadow-panel transition duration-200 hover:-translate-y-0.5"
+        >
+          <span
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white"
+            style={{ background: brand }}
+            aria-hidden="true"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" />
+            </svg>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-card-foreground">Send us a message</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {config.agentsAvailable
+                ? "Typical reply time is a few minutes"
+                : "CareConnect AI can help now, or leave a message"}
+            </span>
+          </span>
+          <svg
+            width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+            className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+          >
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </button>
+
+        <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+          <button
+            onClick={onOpenHelp}
+            className="flex w-full items-center gap-2.5 text-left"
+            aria-label="Search for help"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-muted-foreground">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M21 21l-4.2-4.2" />
+            </svg>
+            <span className="text-[15px] font-semibold text-card-foreground">Search for help</span>
+          </button>
+
+          {topics.length > 0 && (
+            <div className="mt-3 divide-y divide-border/60 border-t border-border/60">
+              {topics.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => onTopic(t)}
+                  className="flex w-full items-center gap-2 py-2.5 text-left transition hover:opacity-80"
+                >
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-card-foreground">{t.label}</span>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-muted-foreground">
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowPrivacy((v) => !v)}
+          className="flex w-full items-center justify-center gap-1.5 pt-1 text-[11px] text-muted-foreground hover:underline"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          Your privacy matters to us.
+        </button>
+        {showPrivacy && (
+          <p className="rounded-xl bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
+            {config.organization.privacyNotice || config.website.privacyDisclaimer}
+          </p>
+        )}
+      </div>
     </div>
   );
-
 }
+
 
 function MessageBubble({
   bubble,
