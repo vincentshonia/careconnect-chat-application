@@ -232,7 +232,11 @@ export const runReportFn = createServerFn({ method: "POST" })
       console.error("[reports] rpc failed", fn, error.message);
       throw new Error("Could not build that report");
     }
-    return { section: data.section, scope: scope.level, data: result };
+    return {
+      section: data.section as string,
+      scope: scope.level as string,
+      data: (result ?? null) as Record<string, unknown> | Record<string, unknown>[] | null,
+    };
   });
 
 /** Filter options (departments, staff, websites) limited to the caller's scope. */
