@@ -1554,6 +1554,63 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_targets: {
+        Row: {
+          completion_percent: number | null
+          created_at: string
+          csat_target: number | null
+          department_id: string | null
+          first_response_minutes: number | null
+          followup_max: number | null
+          id: string
+          organization_id: string
+          role: Database["public"]["Enums"]["app_role"] | null
+          sla_percent: number | null
+          updated_at: string
+        }
+        Insert: {
+          completion_percent?: number | null
+          created_at?: string
+          csat_target?: number | null
+          department_id?: string | null
+          first_response_minutes?: number | null
+          followup_max?: number | null
+          id?: string
+          organization_id: string
+          role?: Database["public"]["Enums"]["app_role"] | null
+          sla_percent?: number | null
+          updated_at?: string
+        }
+        Update: {
+          completion_percent?: number | null
+          created_at?: string
+          csat_target?: number | null
+          department_id?: string | null
+          first_response_minutes?: number | null
+          followup_max?: number | null
+          id?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["app_role"] | null
+          sla_percent?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_targets_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_targets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_admins: {
         Row: {
           created_at: string
@@ -2303,6 +2360,30 @@ export type Database = {
       }
       current_org_id: { Args: never; Returns: string }
       current_rank: { Args: never; Returns: number }
+      dashboard_metrics: {
+        Args: {
+          _dept: string[]
+          _from: string
+          _org: string
+          _prev_from: string
+          _prev_to: string
+          _scope: string
+          _sla?: number
+          _to: string
+          _user: string
+        }
+        Returns: Json
+      }
+      dashboard_staff_performance: {
+        Args: {
+          _from: string
+          _org: string
+          _sla?: number
+          _to: string
+          _user: string
+        }
+        Returns: Json
+      }
       has_perm: {
         Args: { _org: string; _perm: string; _user?: string }
         Returns: boolean
