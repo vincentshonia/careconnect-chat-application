@@ -1,33 +1,28 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { RequirePermission } from "@/components/admin/RequirePermission";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { downloadCsv } from "@/lib/csv";
-import { runReportFn, reportFilterOptionsFn } from "@/lib/reports.functions";
+import { saveCsv } from "@/lib/csv";
+import { runReportFn, reportFilterOptionsFn, exportReportFn, type ReportExport } from "@/lib/reports.functions";
 import { BarList, ColumnChart, DataTable, Panel, Stat, fmtDate, fmtMin, fmtNum } from "@/components/reports/primitives";
 import { Pager } from "@/components/admin/Pager";
 import { useSessionContext } from "@/hooks/use-session-context";
-import { dateRangeInZone, lastDaysWindow, formatInZone } from "@/lib/org-time";
-
-export const Route = createFileRoute("/_authenticated/reports")({
-  head: () => ({
-    meta: [
-      { title: "Reporting & Analytics — Pacific Health Group Support Console" },
-      {
-        name: "description",
-        content:
-          "Operational reporting for conversations, departments, staff performance, transfers, SLA, AI assistant outcomes, and intake requests.",
-      },
-
-      { name: "robots", content: "noindex" },
-    ],
-  }),
-  component: ReportsRoute,
-});
+import { CONVERSATION_STATUSES, statusLabel } from "@/lib/conversation-status";
+import {
+  DATE_PRESETS,
+  dateRangeInZone,
+  formatInZone,
+  isDatePreset,
+  presetRange,
+  safeTimeZone,
+  zonedParts,
+  type DatePreset,
+} from "@/lib/org-time";
 
 type Row = Record<string, unknown>;
 
@@ -44,13 +39,6 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-const RANGES = [
-  { label: "Today", days: 1 },
-  { label: "7 days", days: 7 },
-  { label: "30 days", days: 30 },
-  { label: "90 days", days: 90 },
-];
-
 const TYPES = [
   { value: "all", label: "All conversations" },
   { value: "ai_only", label: "AI only" },
@@ -58,26 +46,117 @@ const TYPES = [
   { value: "escalated", label: "Escalated" },
 ];
 
-/** Conversation statuses a report may be narrowed to. */
-const STATUSES = [
-  "new",
-  "waiting",
-  "assigned",
-  "active",
-  "pending_visitor",
-  "pending_internal",
-  "follow_up",
-  "escalated",
-  "resolved",
-  "closed",
-] as const;
-
 const TRANSFERS = [
   { value: "all", label: "Any transfers" },
   { value: "never", label: "Never transferred" },
   { value: "once", label: "Transferred once" },
   { value: "multi", label: "Transferred 2+" },
 ];
+
+const PRIORITIES = ["low", "normal", "high", "urgent"] as const;
+
+const TICKET_FLAGS = [
+  { value: "all", label: "All" },
+  { value: "open", label: "Open" },
+  { value: "waiting", label: "Waiting" },
+  { value: "unassigned", label: "Unassigned" },
+  { value: "breach", label: "SLA breach" },
+  { value: "no_response", label: "No agent reply" },
+  { value: "stale", label: "Stale 4h+" },
+  { value: "aged", label: "Aged 24h+" },
+  { value: "transferred", label: "Transferred" },
+  { value: "multi_transfer", label: "Transferred 2+" },
+  { value: "reopened", label: "Reopened" },
+  { value: "escalated", label: "Escalated" },
+  { value: "completed", label: "Completed" },
+  { value: "resolved", label: "Resolved" },
+  { value: "closed", label: "Closed" },
+  { value: "ai_only_completed", label: "AI-only completed" },
+  { value: "ai_unresolved", label: "AI unresolved" },
+];
+
+/**
+ * Report state lives in the URL so a configuration can be bookmarked, shared
+ * with a colleague, or reopened after a refresh. Only identifiers and
+ * vocabulary values are stored — never a visitor name, message, email, phone
+ * number or any other personal detail. Identifiers are not trusted either: the
+ * server clamps every one of them to the caller's own reporting scope.
+ */
+type Search = {
+  tab: TabId;
+  preset: DatePreset;
+  from?: string;
+  to?: string;
+  dept?: string;
+  staff?: string;
+  website?: string;
+  type: string;
+  transfer: string;
+  priority?: string;
+  status?: string;
+  sla: number;
+  flag: string;
+  sort: string;
+  dir: "asc" | "desc";
+  page: number;
+};
+
+const DEFAULTS: Search = {
+  tab: "overview",
+  preset: "last30",
+  type: "all",
+  transfer: "all",
+  sla: 15,
+  flag: "all",
+  sort: "created_at",
+  dir: "desc",
+  page: 0,
+};
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback?: T): T | undefined {
+  return typeof value === "string" && (allowed as readonly string[]).includes(value) ? (value as T) : fallback;
+}
+
+function uuidOrUndefined(value: unknown): string | undefined {
+  return typeof value === "string" && UUID.test(value) ? value : undefined;
+}
+
+export const Route = createFileRoute("/_authenticated/reports")({
+  validateSearch: (raw: Record<string, unknown>): Search => ({
+    tab: oneOf(raw['tab'], TABS.map((t) => t.id), DEFAULTS.tab)!,
+    preset: isDatePreset(raw['preset']) ? raw['preset'] : DEFAULTS.preset,
+    from: typeof raw['from'] === "string" && DATE.test(raw['from']) ? raw['from'] : undefined,
+    to: typeof raw['to'] === "string" && DATE.test(raw['to']) ? raw['to'] : undefined,
+    dept: uuidOrUndefined(raw['dept']),
+    staff: uuidOrUndefined(raw['staff']),
+    website: uuidOrUndefined(raw['website']),
+    type: oneOf(raw['type'], TYPES.map((t) => t.value), DEFAULTS.type)!,
+    transfer: oneOf(raw['transfer'], TRANSFERS.map((t) => t.value), DEFAULTS.transfer)!,
+    priority: oneOf(raw['priority'], PRIORITIES),
+    status: oneOf(raw['status'], CONVERSATION_STATUSES),
+    sla: Math.min(1440, Math.max(1, Number(raw['sla']) || DEFAULTS.sla)),
+    flag: oneOf(raw['flag'], TICKET_FLAGS.map((f) => f.value), DEFAULTS.flag)!,
+    sort: typeof raw['sort'] === "string" ? raw['sort'].slice(0, 30) : DEFAULTS.sort,
+    dir: raw['dir'] === "asc" ? "asc" : "desc",
+    page: Math.max(0, Math.min(2000, Number(raw['page']) || 0)),
+  }),
+  head: () => ({
+    meta: [
+      { title: "Reporting & Analytics — Pacific Health Group Support Console" },
+      {
+        name: "description",
+        content:
+          "Operational reporting for conversations, departments, staff performance, transfers, SLA, AI assistant outcomes, and intake requests.",
+      },
+
+      { name: "robots", content: "noindex" },
+    ],
+  }),
+  component: ReportsRoute,
+});
 
 function ReportsRoute() {
   return (
@@ -88,67 +167,97 @@ function ReportsRoute() {
 }
 
 function ReportsPage() {
-  const [tab, setTab] = useState<TabId>("overview");
-  const [days, setDays] = useState(30);
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
-  const [departmentId, setDepartmentId] = useState("");
-  const [staffId, setStaffId] = useState("");
-  const [websiteId, setWebsiteId] = useState("");
-  const [type, setType] = useState("all");
-  const [transfer, setTransfer] = useState("all");
-  const [priority, setPriority] = useState("");
-  const [status, setStatus] = useState("");
-  const [sla, setSla] = useState(15);
-
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
   const session = useSessionContext();
   const optionsFn = useServerFn(reportFilterOptionsFn);
   const options = useQuery({ queryKey: ["report-options"], queryFn: () => optionsFn({}) });
 
+  /**
+   * Any change to a global filter resets paging. Without this a manager on
+   * page 6 who narrows to a department with two pages of data would sit on an
+   * empty page and read it as "no results".
+   */
+  const update = (patch: Partial<Search>, keepPage = false) =>
+    navigate({
+      search: (prev: Search) => ({ ...prev, ...patch, ...(keepPage ? {} : { page: 0 }) }),
+      replace: true,
+    });
+
   // Reporting days start and end in the organization's own timezone, so a
   // report reads the same for a viewer in another zone, DST included.
-  const timeZone = session.data?.timezone ?? "America/Los_Angeles";
+  const timeZone = safeTimeZone(session.data?.timezone);
   const range = useMemo(() => {
-    if (customFrom && customTo) return dateRangeInZone(customFrom, customTo, timeZone);
-    return lastDaysWindow(days, timeZone);
-  }, [customFrom, customTo, days, timeZone]);
+    if (search.preset === "custom" && search.from && search.to) {
+      return dateRangeInZone(search.from, search.to, timeZone);
+    }
+    return presetRange(search.preset, timeZone);
+  }, [search.preset, search.from, search.to, timeZone]);
 
   const filters = useMemo(
     () => ({
       from: range.from,
       to: range.to,
-      departmentId: departmentId || null,
-      staffId: staffId || null,
-      websiteId: websiteId || null,
-      statuses: status ? [status] : null,
-      type: type as "all",
-      transfer: transfer as "all",
-      priority: (priority || null) as null,
-      sla,
+      departmentId: search.dept ?? null,
+      staffId: search.staff ?? null,
+      websiteId: search.website ?? null,
+      statuses: search.status ? [search.status] : null,
+      type: search.type as "all",
+      transfer: search.transfer as "all",
+      priority: (search.priority ?? null) as null,
+      sla: search.sla,
     }),
-    [range, departmentId, staffId, websiteId, status, type, transfer, priority, sla],
+    [range, search.dept, search.staff, search.website, search.status, search.type, search.transfer, search.priority, search.sla],
   );
 
+  // An identifier that is not in the caller's own option lists is dropped
+  // rather than sent: a hand-edited URL can never widen the reporting scope.
+  const opts = options.data;
+  useEffect(() => {
+    if (!opts) return;
+    const patch: Partial<Search> = {};
+    if (search.dept && !opts.departments.some((d) => d.id === search.dept)) patch.dept = undefined;
+    if (search.staff && !opts.staff.some((s) => s.id === search.staff)) patch.staff = undefined;
+    if (search.website && !opts.websites.some((w) => w.id === search.website)) patch.website = undefined;
+    if (search.tab !== "overview" && opts.sections && !opts.sections.includes(search.tab)) patch.tab = "overview";
+    if (Object.keys(patch).length) update(patch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opts, search.dept, search.staff, search.website, search.tab]);
 
-  const filterSummary = `${formatInZone(range.from, timeZone)} – ${formatInZone(range.to, timeZone)}`;
+  const filterSummary = `${formatInZone(range.from, timeZone)} – ${formatInZone(range.to, timeZone)} · Times shown in ${timeZone}`;
 
-  // Sections the server says this caller may run; a hidden tab renders nothing.
-  const sections = options.data?.sections as readonly string[] | undefined;
-  const allowed = (id: TabId) => tab === id && (!sections || sections.includes(id));
+  const sections = opts?.sections as readonly string[] | undefined;
+  const allowed = (id: TabId) => search.tab === id && (!sections || sections.includes(id));
 
+  /** Open the exact rows behind a period KPI, keeping every current filter. */
+  const drill = (flag: string) => update({ tab: "tickets", flag });
 
-  const resetFilters = () => {
-    setDepartmentId("");
-    setStaffId("");
-    setWebsiteId("");
-    setType("all");
-    setTransfer("all");
-    setPriority("");
-    setStatus("");
-    setCustomFrom("");
-    setCustomTo("");
-    setDays(30);
+  /**
+   * Live snapshot tiles ("open now", "waiting now") count everything on the
+   * floor regardless of when it started, so their drill-down widens the date
+   * range and clears the conversation-shape filters the snapshot ignores.
+   * Department and staff scope are kept, because the snapshot honours those.
+   */
+  const drillLive = (flag: string) => {
+    const p = zonedParts(new Date(), timeZone);
+    update({
+      tab: "tickets",
+      flag,
+      preset: "custom",
+      from: "2000-01-01",
+      to: `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`,
+      status: undefined,
+      website: undefined,
+      priority: undefined,
+      type: "all",
+      transfer: "all",
+    });
   };
+
+  const resetFilters = () =>
+    navigate({ search: { ...DEFAULTS, tab: search.tab }, replace: true });
+
+  const tabProps = { filters, search, update, drill, drillLive };
 
   return (
     <AdminShell
@@ -156,91 +265,97 @@ function ReportsPage() {
       description="Operational performance across conversations, departments, people, transfers, response times, AI, and requests."
       actions={
         <Badge variant="outline" className="text-[11px]">
-          Scope: {options.data?.scope ?? "…"}
+          Scope: {opts?.scope ?? "…"}
         </Badge>
       }
     >
       {/* Global filter bar — every tab reads the same filters. */}
       <div className="sticky top-0 z-10 -mx-1 mb-4 rounded-xl border border-border bg-card/95 p-3 backdrop-blur">
         <div className="flex flex-wrap items-center gap-2">
-          {RANGES.map((r) => (
-            <button
-              key={r.days}
-              type="button"
-              onClick={() => {
-                setDays(r.days);
-                setCustomFrom("");
-                setCustomTo("");
-              }}
-              className={`rounded-md border px-3 py-1.5 text-xs ${
-                !customFrom && days === r.days
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
-          <input
-            type="date"
-            value={customFrom}
-            onChange={(e) => setCustomFrom(e.target.value)}
+          <select
+            value={search.preset}
+            onChange={(e) => update({ preset: e.target.value as DatePreset })}
+            aria-label="Date range"
             className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
-            aria-label="From date"
-          />
-          <span className="text-xs text-muted-foreground">→</span>
-          <input
-            type="date"
-            value={customTo}
-            onChange={(e) => setCustomTo(e.target.value)}
-            className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
-            aria-label="To date"
-          />
+          >
+            {DATE_PRESETS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+          {search.preset === "custom" ? (
+            <>
+              <input
+                type="date"
+                value={search.from ?? ""}
+                onChange={(e) => update({ from: e.target.value || undefined })}
+                className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
+                aria-label="From date"
+              />
+              <span className="text-xs text-muted-foreground">→</span>
+              <input
+                type="date"
+                value={search.to ?? ""}
+                onChange={(e) => update({ to: e.target.value || undefined })}
+                className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
+                aria-label="To date"
+              />
+            </>
+          ) : null}
 
-          <Select value={departmentId} onChange={setDepartmentId} label="All departments">
-            {(options.data?.departments ?? []).map((d) => (
+          <Select value={search.dept ?? ""} onChange={(v) => update({ dept: v || undefined })} label="All departments">
+            {(opts?.departments ?? []).map((d) => (
               <option key={d.id} value={d.id}>
                 {d.name}
               </option>
             ))}
           </Select>
-          <Select value={staffId} onChange={setStaffId} label="All staff">
-            {(options.data?.staff ?? []).map((s) => (
+          <Select value={search.staff ?? ""} onChange={(v) => update({ staff: v || undefined })} label="All staff">
+            {(opts?.staff ?? []).map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>
             ))}
           </Select>
-          <Select value={websiteId} onChange={setWebsiteId} label="All websites">
-            {(options.data?.websites ?? []).map((w) => (
+          <Select
+            value={search.website ?? ""}
+            onChange={(v) => update({ website: v || undefined })}
+            label="All websites"
+          >
+            {(opts?.websites ?? []).map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}
               </option>
             ))}
           </Select>
-          <Select value={type} onChange={setType} label="All conversations" hideBlank>
+          <Select value={search.type} onChange={(v) => update({ type: v })} label="All conversations" hideBlank>
             {TYPES.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
               </option>
             ))}
           </Select>
-          <Select value={transfer} onChange={setTransfer} label="Any transfers" hideBlank>
+          <Select value={search.transfer} onChange={(v) => update({ transfer: v })} label="Any transfers" hideBlank>
             {TRANSFERS.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
               </option>
             ))}
           </Select>
-          <Select value={status} onChange={setStatus} label="Any status">
-            {STATUSES.map((s) => (
+          <Select value={search.status ?? ""} onChange={(v) => update({ status: v || undefined })} label="Any status">
+            {CONVERSATION_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s.replace(/_/g, " ")}
+                {statusLabel(s)}
               </option>
             ))}
           </Select>
-          <Select value={priority} onChange={setPriority} label="Any priority">
-            {["low", "normal", "high", "urgent"].map((p) => (
+          <Select
+            value={search.priority ?? ""}
+            onChange={(v) => update({ priority: v || undefined })}
+            label="Any priority"
+          >
+            {PRIORITIES.map((p) => (
               <option key={p} value={p}>
                 {p}
               </option>
@@ -252,8 +367,8 @@ function ReportsPage() {
               type="number"
               min={1}
               max={1440}
-              value={sla}
-              onChange={(e) => setSla(Math.max(1, Number(e.target.value) || 15))}
+              value={search.sla}
+              onChange={(e) => update({ sla: Math.max(1, Number(e.target.value) || 15) })}
               className="w-16 rounded-md border border-border bg-background px-2 py-1.5 text-xs"
             />
             min
@@ -266,13 +381,13 @@ function ReportsPage() {
       </div>
 
       <nav className="mb-4 flex flex-wrap gap-1 border-b border-border pb-2">
-        {TABS.filter((t) => !options.data?.sections || options.data.sections.includes(t.id)).map((t) => (
+        {TABS.filter((t) => !sections || sections.includes(t.id)).map((t) => (
           <button
             key={t.id}
             type="button"
-            onClick={() => setTab(t.id)}
+            onClick={() => update({ tab: t.id })}
             className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-              tab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              search.tab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
             }`}
           >
             {t.label}
@@ -281,15 +396,14 @@ function ReportsPage() {
       </nav>
 
       {/* A tab outside the caller's scope is never rendered. */}
-      {allowed("overview") ? <OverviewTab filters={filters} /> : null}
-      {allowed("departments") ? <DepartmentsTab filters={filters} /> : null}
-      {allowed("staff") ? <StaffTab filters={filters} /> : null}
-      {allowed("tickets") ? <TicketsTab filters={filters} /> : null}
-      {allowed("transfers") ? <TransfersTab filters={filters} /> : null}
-      {allowed("sla") ? <SlaTab filters={filters} /> : null}
-      {allowed("ai") ? <AiTab filters={filters} /> : null}
-      {allowed("intake") ? <IntakeTab filters={filters} /> : null}
-
+      {allowed("overview") ? <OverviewTab {...tabProps} /> : null}
+      {allowed("departments") ? <DepartmentsTab {...tabProps} /> : null}
+      {allowed("staff") ? <StaffTab {...tabProps} /> : null}
+      {allowed("tickets") ? <TicketsTab {...tabProps} /> : null}
+      {allowed("transfers") ? <TransfersTab {...tabProps} /> : null}
+      {allowed("sla") ? <SlaTab {...tabProps} /> : null}
+      {allowed("ai") ? <AiTab {...tabProps} /> : null}
+      {allowed("intake") ? <IntakeTab {...tabProps} /> : null}
     </AdminShell>
   );
 }
@@ -322,21 +436,26 @@ function Select({
 
 /* ------------------------------- data hook -------------------------------- */
 
-type Filters = ReturnType<typeof useFiltersType>;
-function useFiltersType() {
-  return {} as {
-    from: string;
-    to: string;
-    departmentId: string | null;
-    staffId: string | null;
-    websiteId: string | null;
-    statuses: string[] | null;
-    type: "all";
-    transfer: "all";
-    priority: null;
-    sla: number;
-  };
-}
+type Filters = {
+  from: string;
+  to: string;
+  departmentId: string | null;
+  staffId: string | null;
+  websiteId: string | null;
+  statuses: string[] | null;
+  type: "all";
+  transfer: "all";
+  priority: null;
+  sla: number;
+};
+
+type TabProps = {
+  filters: Filters;
+  search: Search;
+  update: (patch: Partial<Search>, keepPage?: boolean) => void;
+  drill: (flag: string) => void;
+  drillLive: (flag: string) => void;
+};
 
 function useReport<T>(section: string, filters: Filters, options?: Record<string, unknown>) {
   const run = useServerFn(runReportFn);
@@ -362,17 +481,62 @@ function Loading({ query }: { query: { isLoading: boolean; error: unknown } }) {
   return null;
 }
 
-function exportBtn(name: string, rows: Row[]) {
+/**
+ * Exports run on the server against the same authorized, filtered query as the
+ * report on screen — the file holds the whole result, not the page in view.
+ */
+function ExportButton({
+  dataset,
+  filters,
+  options,
+}: {
+  dataset: ReportExport;
+  filters: Filters;
+  options?: Record<string, unknown>;
+}) {
+  const run = useServerFn(exportReportFn);
+  const [busy, setBusy] = useState(false);
   return (
-    <Button variant="outline" size="sm" className="text-xs" onClick={() => downloadCsv(name, rows)}>
-      Export CSV
+    <Button
+      variant="outline"
+      size="sm"
+      className="text-xs"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          const res = (await run({ data: { dataset, filters, options } })) as {
+            filename: string;
+            csv: string;
+            rows: number;
+            truncated: boolean;
+            cap: number;
+          };
+          if (!res.rows) {
+            toast.info("Nothing to export for these filters.");
+            return;
+          }
+          saveCsv(res.filename, res.csv);
+          toast.success(
+            res.truncated
+              ? `Exported the first ${res.cap.toLocaleString()} rows — narrow the filters for the rest.`
+              : `Exported ${res.rows.toLocaleString()} rows.`,
+          );
+        } catch (error) {
+          toast.error((error as Error).message || "Could not build that export.");
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      {busy ? "Exporting…" : "Export CSV"}
     </Button>
   );
 }
 
 /* --------------------------------- tabs ----------------------------------- */
 
-function OverviewTab({ filters }: { filters: Filters }) {
+function OverviewTab({ filters, drill, drillLive }: TabProps) {
   const q = useReport<{
     kpis: Row;
     funnel: Row;
@@ -396,22 +560,53 @@ function OverviewTab({ filters }: { filters: Filters }) {
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Conversations" value={fmtNum(k['total'])} hint={`${fmtNum(k['escalated'])} asked for a human`} />
-        <Stat label="AI handled end-to-end" value={pct(f['ai_handled'])} hint={`${fmtNum(f['ai_handled'])} never reached an agent`} />
+        {/*
+          Deliberately *not* called "AI handled end-to-end": this only says a
+          human was never requested. The defensible completion measure lives on
+          the AI assistant tab, where the outcome is also checked.
+        */}
+        <Stat
+          label="Never asked for a human"
+          value={pct(f['ai_handled'])}
+          hint={`${fmtNum(f['ai_handled'])} of ${fmtNum(total)} conversations`}
+        />
         <Stat
           label="Avg. first response"
           value={fmtMin(k['avg_first_response'])}
           hint={`${fmtNum(k['sla_met'])}/${fmtNum(k['sla_eligible'])} within SLA`}
           tone={Number(k['sla_eligible'] ?? 0) && !Number(k['sla_met'] ?? 0) ? "warn" : "default"}
+          onDrill={() => drill("breach")}
+          drillLabel="SLA breaches"
         />
-        <Stat label="Avg. resolution" value={fmtMin(k['avg_resolution'])} hint={`${fmtNum(k['completed'])} completed`} />
-        <Stat label="Open now" value={fmtNum(s['open_now'])} hint={`${fmtNum(s['unassigned_now'])} unassigned`} />
+        <Stat
+          label="Avg. resolution"
+          value={fmtMin(k['avg_resolution'])}
+          hint={`${fmtNum(k['completed'])} completed`}
+          onDrill={() => drill("completed")}
+          drillLabel="completed tickets"
+        />
+        <Stat
+          label="Open now"
+          value={fmtNum(s['open_now'])}
+          hint={`${fmtNum(s['unassigned_now'])} unassigned`}
+          onDrill={() => drillLive("open")}
+          drillLabel="open tickets"
+        />
         <Stat
           label="Waiting for a human"
           value={fmtNum(s['waiting_now'])}
           tone={Number(s['waiting_now'] ?? 0) > 0 ? "warn" : "good"}
           hint={s['oldest_waiting'] ? `Oldest since ${fmtDate(s['oldest_waiting'])}` : "Queue is clear"}
+          onDrill={() => drillLive("waiting")}
+          drillLabel="waiting tickets"
         />
-        <Stat label="Breaching SLA now" value={fmtNum(s['breaching_now'])} tone={Number(s['breaching_now'] ?? 0) > 0 ? "warn" : "good"} />
+        <Stat
+          label="Breaching SLA now"
+          value={fmtNum(s['breaching_now'])}
+          tone={Number(s['breaching_now'] ?? 0) > 0 ? "warn" : "good"}
+          onDrill={() => drillLive("breach")}
+          drillLabel="breaching tickets"
+        />
         <Stat
           label="CSAT"
           value={q.data?.csat ? `${q.data.csat}/5` : "—"}
@@ -424,7 +619,7 @@ function OverviewTab({ filters }: { filters: Filters }) {
           <BarList
             rows={[
               { label: "Created", value: Number(f['created'] ?? 0) },
-              { label: "Handled by AI only", value: Number(f['ai_handled'] ?? 0) },
+              { label: "Never asked for a human", value: Number(f['ai_handled'] ?? 0) },
               { label: "Asked for a human", value: Number(f['human_requested'] ?? 0) },
               { label: "Claimed by an agent", value: Number(f['claimed'] ?? 0) },
               { label: "Agent responded", value: Number(f['responded'] ?? 0) },
@@ -446,7 +641,7 @@ function OverviewTab({ filters }: { filters: Filters }) {
         <Panel title="Busiest hours" description="Conversations started, by hour of day.">
           {volume.data ? <ColumnChart data={volume.data.by_hour} labelKey="hour" valueKey="conversations" height={120} /> : null}
         </Panel>
-        <Panel title="Workload health">
+        <Panel title="Workload health" description="Click a row's number on the Tickets tab to see the conversations.">
           <BarList
             rows={[
               { label: "Abandoned (no agent reply)", value: Number(k['abandoned'] ?? 0) },
@@ -456,13 +651,27 @@ function OverviewTab({ filters }: { filters: Filters }) {
               { label: "Transferred 2+ times", value: Number(k['multi_transferred'] ?? 0) },
             ]}
           />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" className="text-xs" onClick={() => drill("no_response")}>
+              No agent reply
+            </Button>
+            <Button variant="outline" size="sm" className="text-xs" onClick={() => drill("reopened")}>
+              Reopened
+            </Button>
+            <Button variant="outline" size="sm" className="text-xs" onClick={() => drill("transferred")}>
+              Transferred
+            </Button>
+            <Button variant="outline" size="sm" className="text-xs" onClick={() => drill("multi_transfer")}>
+              Transferred 2+
+            </Button>
+          </div>
         </Panel>
       </div>
     </div>
   );
 }
 
-function DepartmentsTab({ filters }: { filters: Filters }) {
+function DepartmentsTab({ filters }: TabProps) {
   const q = useReport<Row[]>("departments", filters);
   const backlog = useReport<Row[]>("backlog", filters);
   if (q.isLoading || q.error) return <Loading query={q} />;
@@ -473,7 +682,7 @@ function DepartmentsTab({ filters }: { filters: Filters }) {
       <Panel
         title="Department performance"
         description="Volume, speed, and outcomes per department for the selected period."
-        actions={exportBtn("department-performance", rows)}
+        actions={<ExportButton dataset="departments" filters={filters} />}
       >
         <DataTable
           rows={rows}
@@ -497,7 +706,7 @@ function DepartmentsTab({ filters }: { filters: Filters }) {
       <Panel
         title="Live backlog"
         description="Current state, ignoring the date filter — this is what is on the floor right now."
-        actions={exportBtn("department-backlog", backlog.data ?? [])}
+        actions={<ExportButton dataset="backlog" filters={filters} />}
       >
         <DataTable
           rows={backlog.data ?? []}
@@ -518,7 +727,7 @@ function DepartmentsTab({ filters }: { filters: Filters }) {
   );
 }
 
-function StaffTab({ filters }: { filters: Filters }) {
+function StaffTab({ filters, update }: TabProps) {
   const q = useReport<Row[]>("staff", filters);
   const workload = useReport<Row[]>("workload", filters);
   if (q.isLoading || q.error) return <Loading query={q} />;
@@ -528,11 +737,14 @@ function StaffTab({ filters }: { filters: Filters }) {
     <div className="space-y-4">
       <Panel
         title="Agent performance"
-        description="Credited by who claimed, replied, and resolved — not merely who is assigned now."
-        actions={exportBtn("staff-performance", rows)}
+        description="Credited by who claimed, replied, and resolved — not merely who is assigned now. Click a row to see that person's tickets."
+        actions={<ExportButton dataset="staff" filters={filters} />}
       >
         <DataTable
           rows={rows}
+          onRowClick={(r) =>
+            r['user_id'] ? update({ tab: "tickets", staff: String(r['user_id']), flag: "all" }) : undefined
+          }
           columns={[
             { key: "full_name", label: "Agent", render: (r) => String(r['full_name'] ?? "—") },
             { key: "departments", label: "Departments", render: (r) => String(r['departments'] ?? "—") },
@@ -564,43 +776,24 @@ function StaffTab({ filters }: { filters: Filters }) {
   );
 }
 
-const TICKET_FLAGS = [
-  { value: "all", label: "All" },
-  { value: "open", label: "Open" },
-  { value: "waiting", label: "Waiting" },
-  { value: "unassigned", label: "Unassigned" },
-  { value: "breach", label: "SLA breach" },
-  { value: "no_response", label: "No agent reply" },
-  { value: "stale", label: "Stale 4h+" },
-  { value: "aged", label: "Aged 24h+" },
-  { value: "multi_transfer", label: "Transferred 2+" },
-  { value: "escalated", label: "Escalated" },
-  { value: "resolved", label: "Resolved" },
-  { value: "closed", label: "Closed" },
-];
-
-function TicketsTab({ filters }: { filters: Filters }) {
+function TicketsTab({ filters, search, update }: TabProps) {
   const navigate = useNavigate();
-  const [flag, setFlag] = useState("all");
-  const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" }>({ key: "created_at", dir: "desc" });
-  const [page, setPage] = useState(0);
   const limit = 50;
-
-  const q = useReport<{ total: number; rows: Row[] }>("tickets", filters, {
-    flag,
-    sort: sort.key,
-    dir: sort.dir,
+  const options = {
+    flag: search.flag,
+    sort: search.sort,
+    dir: search.dir,
     limit,
-    offset: page * limit,
-  });
+    offset: search.page * limit,
+  };
+
+  const q = useReport<{ total: number; rows: Row[] }>("tickets", filters, options);
   const busy = q.isLoading || Boolean(q.error);
   const rows = q.data?.rows ?? [];
   const total = q.data?.total ?? 0;
 
-  const toggleSort = (key: string) => {
-    setPage(0);
-    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" }));
-  };
+  const toggleSort = (key: string) =>
+    update({ sort: key, dir: search.sort === key && search.dir === "desc" ? "asc" : "desc" });
 
   return (
     <Panel
@@ -609,11 +802,8 @@ function TicketsTab({ filters }: { filters: Filters }) {
       actions={
         <div className="flex flex-wrap items-center gap-2">
           <select
-            value={flag}
-            onChange={(e) => {
-              setFlag(e.target.value);
-              setPage(0);
-            }}
+            value={search.flag}
+            onChange={(e) => update({ flag: e.target.value })}
             className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
             aria-label="Ticket filter"
           >
@@ -623,7 +813,7 @@ function TicketsTab({ filters }: { filters: Filters }) {
               </option>
             ))}
           </select>
-          {exportBtn("tickets", rows)}
+          <ExportButton dataset="tickets" filters={filters} options={{ flag: search.flag, sort: search.sort, dir: search.dir }} />
         </div>
       }
     >
@@ -633,7 +823,7 @@ function TicketsTab({ filters }: { filters: Filters }) {
         <>
           <DataTable
             rows={rows}
-            sort={sort}
+            sort={{ key: search.sort, dir: search.dir }}
             onSort={toggleSort}
             onRowClick={(r) => navigate({ to: "/inbox", search: { c: String(r['id']) } })}
             columns={[
@@ -648,7 +838,7 @@ function TicketsTab({ filters }: { filters: Filters }) {
                 sortable: true,
                 render: (r) => (
                   <Badge variant={r['sla_breached'] ? "destructive" : "outline"} className="capitalize">
-                    {String(r['status']).replace(/_/g, " ")}
+                    {statusLabel(String(r['status']))}
                   </Badge>
                 ),
               },
@@ -659,33 +849,22 @@ function TicketsTab({ filters }: { filters: Filters }) {
               { key: "csat", label: "CSAT", align: "right", sortable: true, render: (r) => fmtNum(r['csat']) },
             ]}
           />
-          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              {total ? `${page * limit + 1}–${Math.min((page + 1) * limit, total)} of ${total}` : "No tickets"}
-            </span>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={(page + 1) * limit >= total}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <Pager
+            page={search.page}
+            pageSize={limit}
+            total={total}
+            onPage={(p) => update({ page: p }, true)}
+            noun="tickets"
+            busy={q.isFetching}
+          />
         </>
       )}
     </Panel>
   );
 }
 
-function TransfersTab({ filters }: { filters: Filters }) {
+function TransfersTab({ filters, search, update }: TabProps) {
   // The transfer log is paged in SQL — the browser only ever holds one page.
-  const [page, setPage] = useState(0);
   const limit = 50;
   const q = useReport<{
     overview: Row;
@@ -693,25 +872,37 @@ function TransfersTab({ filters }: { filters: Filters }) {
     rows: Row[];
     rows_total: number;
     repeat_conversations: Row[];
-  }>("transfers", filters, { limit, offset: page * limit });
+  }>("transfers", filters, { limit, offset: search.page * limit });
   if (q.isLoading || q.error) return <Loading query={q} />;
   const o = q.data?.overview ?? {};
 
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Transfer events" value={fmtNum(o['transfer_events'])} />
-        <Stat label="Conversations transferred" value={fmtNum(o['transferred_conversations'])} hint={`${fmtNum(o['transfer_rate'], "%")} of volume`} />
+        <Stat label="Transfer events" value={fmtNum(o['transfer_events'])} hint="Individual hand-offs, not tickets" />
+        <Stat
+          label="Conversations transferred"
+          value={fmtNum(o['transferred_conversations'])}
+          hint={`${fmtNum(o['transfer_rate'], "%")} of volume`}
+          onDrill={() => update({ tab: "tickets", flag: "transferred" })}
+          drillLabel="transferred tickets"
+        />
         <Stat
           label="Transferred more than once"
           value={fmtNum(o['multi_transfer_conversations'])}
           hint={`${fmtNum(o['multi_transfer_rate'], "%")} of transferred`}
           tone={Number(o['multi_transfer_rate'] ?? 0) > 25 ? "warn" : "default"}
+          onDrill={() => update({ tab: "tickets", flag: "multi_transfer" })}
+          drillLabel="tickets transferred 2+ times"
         />
         <Stat label="Avg transfers per ticket" value={fmtNum(o['avg_transfers_per_conversation'])} />
       </div>
 
-      <Panel title="Routing matrix" description="Where work moves from and to." actions={exportBtn("transfer-matrix", q.data?.matrix ?? [])}>
+      <Panel
+        title="Routing matrix"
+        description="Where work moves from and to."
+        actions={<ExportButton dataset="transfer_matrix" filters={filters} />}
+      >
         <DataTable
           rows={q.data?.matrix ?? []}
           columns={[
@@ -734,7 +925,7 @@ function TransfersTab({ filters }: { filters: Filters }) {
         />
       </Panel>
 
-      <Panel title="Transfer log" actions={exportBtn("transfer-log", q.data?.rows ?? [])}>
+      <Panel title="Transfer log" actions={<ExportButton dataset="transfers" filters={filters} />}>
         <DataTable
           rows={q.data?.rows ?? []}
           columns={[
@@ -743,14 +934,14 @@ function TransfersTab({ filters }: { filters: Filters }) {
             { key: "from_department", label: "From", render: (r) => String(r['from_department']) },
             { key: "to_department", label: "To", render: (r) => String(r['to_department']) },
             { key: "transferred_by", label: "By", render: (r) => String(r['transferred_by'] ?? "System") },
-            { key: "status_after", label: "Now", render: (r) => String(r['status_after']).replace(/_/g, " ") },
+            { key: "status_after", label: "Now", render: (r) => statusLabel(String(r['status_after'])) },
           ]}
         />
         <Pager
-          page={page}
+          page={search.page}
           pageSize={limit}
           total={Number(q.data?.rows_total ?? 0)}
-          onPage={setPage}
+          onPage={(p) => update({ page: p }, true)}
           noun="transfers"
           busy={q.isFetching}
         />
@@ -759,7 +950,7 @@ function TransfersTab({ filters }: { filters: Filters }) {
   );
 }
 
-function SlaTab({ filters }: { filters: Filters }) {
+function SlaTab({ filters, drill }: TabProps) {
   const q = useReport<{
     metrics: Row;
     by_department: Row[];
@@ -781,8 +972,16 @@ function SlaTab({ filters }: { filters: Filters }) {
           value={eligible ? `${Math.round((met / eligible) * 100)}%` : "—"}
           hint={`${met} of ${eligible} escalations`}
           tone={eligible && met / eligible < 0.8 ? "warn" : "good"}
+          onDrill={() => drill("escalated")}
+          drillLabel="escalations"
         />
-        <Stat label="Breaches" value={fmtNum(m['breaches'])} tone={Number(m['breaches'] ?? 0) > 0 ? "warn" : "good"} />
+        <Stat
+          label="Breaches"
+          value={fmtNum(m['breaches'])}
+          tone={Number(m['breaches'] ?? 0) > 0 ? "warn" : "good"}
+          onDrill={() => drill("breach")}
+          drillLabel="breached tickets"
+        />
         <Stat label="Median response" value={fmtMin(m['median_response'])} hint={`Avg ${fmtMin(m['avg_response'])}`} />
         <Stat label="p90 / p95" value={`${fmtMin(m['p90'])} / ${fmtMin(m['p95'])}`} hint={`${fmtNum(m['sample'])} samples`} />
         <Stat label="Median claim time" value={fmtMin(m['median_claim'])} hint={`Avg ${fmtMin(m['avg_claim'])}`} />
@@ -797,7 +996,7 @@ function SlaTab({ filters }: { filters: Filters }) {
       </Panel>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="By department" actions={exportBtn("sla-departments", q.data?.by_department ?? [])}>
+        <Panel title="By department" actions={<ExportButton dataset="sla_departments" filters={filters} />}>
           <DataTable
             rows={q.data?.by_department ?? []}
             columns={[
@@ -809,7 +1008,7 @@ function SlaTab({ filters }: { filters: Filters }) {
             ]}
           />
         </Panel>
-        <Panel title="By agent" actions={exportBtn("sla-staff", q.data?.by_staff ?? [])}>
+        <Panel title="By agent" actions={<ExportButton dataset="sla_staff" filters={filters} />}>
           <DataTable
             rows={q.data?.by_staff ?? []}
             columns={[
@@ -826,17 +1025,22 @@ function SlaTab({ filters }: { filters: Filters }) {
   );
 }
 
-function AiTab({ filters }: { filters: Filters }) {
+function AiTab({ filters, drill }: TabProps) {
   const q = useReport<Row>("ai", filters);
   if (q.isLoading || q.error) return <Loading query={q} />;
   const d = q.data ?? {};
+  const eligible = Number(d['eligible'] ?? 0);
 
   return (
     <div className="space-y-4">
       {/*
-        These figures deliberately avoid the word "deflection": a conversation
-        the assistant answered and nobody escalated is not proof the visitor
-        was helped. AI-only means no human was ever requested or assigned.
+        "AI-only completion" is deliberately strict. A conversation counts only
+        when the assistant answered it, it reached a resolved or closed outcome,
+        and no human was ever involved anywhere in its history — no agent reply,
+        claim, assignment, transfer, escalation or request for a person. Spam
+        and archived traffic is excluded entirely. Anything the assistant
+        answered but never finished is reported separately as unresolved, never
+        as a success.
       */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
@@ -845,21 +1049,44 @@ function AiTab({ filters }: { filters: Filters }) {
           hint={`${fmtNum(d['answered_conversations'])} of ${fmtNum(d['conversations'])} conversations answered`}
         />
         <Stat
-          label="AI only"
-          value={fmtNum(d['ai_only_rate'], "%")}
-          hint={`${fmtNum(d['ai_only'])} never involved a human`}
+          label="Eligible AI conversations"
+          value={fmtNum(eligible)}
+          hint={`Answered by the assistant, excluding ${fmtNum(d['excluded'])} spam/archived`}
         />
         <Stat
-          label="Escalated"
-          value={fmtNum(d['escalation_rate'], "%")}
-          hint={`${fmtNum(d['escalated'])} asked for an agent`}
+          label="AI-only completion rate"
+          value={d['ai_only_completion_rate'] == null ? "—" : fmtNum(d['ai_only_completion_rate'], "%")}
+          hint={`${fmtNum(d['ai_only_completed'])} completed with no human involved`}
+          tone={eligible === 0 ? "default" : Number(d['ai_only_completion_rate'] ?? 0) < 40 ? "warn" : "good"}
+          onDrill={eligible ? () => drill("ai_only_completed") : undefined}
+          drillLabel="AI-only completed tickets"
+        />
+        <Stat
+          label="Escalated to a human"
+          value={d['escalation_rate'] == null ? "—" : fmtNum(d['escalation_rate'], "%")}
+          hint={`${fmtNum(d['escalated'])} involved a person`}
           tone={Number(d['escalation_rate'] ?? 0) > 50 ? "warn" : "default"}
+          onDrill={eligible ? () => drill("escalated") : undefined}
+          drillLabel="escalated tickets"
+        />
+        <Stat
+          label="Unresolved / abandoned"
+          value={fmtNum(d['ai_unresolved'])}
+          hint="Answered by AI, never reached an outcome"
+          tone={Number(d['ai_unresolved'] ?? 0) > 0 ? "warn" : "good"}
+          onDrill={eligible ? () => drill("ai_unresolved") : undefined}
+          drillLabel="unresolved AI tickets"
         />
         <Stat
           label="Helpful rate"
-          value={fmtNum(d['helpful_rate'], "%")}
+          value={d['helpful_rate'] == null ? "—" : fmtNum(d['helpful_rate'], "%")}
           hint={`${fmtNum(d['rated'])} answers rated by visitors`}
           tone={Number(d['rated'] ?? 0) > 0 && Number(d['helpful_rate'] ?? 0) < 60 ? "warn" : "default"}
+        />
+        <Stat
+          label="Not helpful"
+          value={d['unhelpful_rate'] == null ? "—" : fmtNum(d['unhelpful_rate'], "%")}
+          hint={`${fmtNum(d['not_helpful'])} answers marked unhelpful`}
         />
         <Stat
           label="Avg confidence"
@@ -867,22 +1094,14 @@ function AiTab({ filters }: { filters: Filters }) {
           hint={`${fmtNum(d['low_confidence'])} low-confidence answers`}
           tone={Number(d['avg_confidence'] ?? 1) < 0.5 ? "warn" : "default"}
         />
-        <Stat
-          label="Not helpful"
-          value={fmtNum(d['unhelpful_rate'], "%")}
-          hint={`${fmtNum(d['not_helpful'])} answers marked unhelpful`}
-        />
-        <Stat
-          label="Left without an outcome"
-          value={fmtNum(d['abandoned'])}
-          hint="Answered, never escalated, never resolved"
-          tone={Number(d['abandoned'] ?? 0) > 0 ? "warn" : "good"}
-        />
-        <Stat label="Conversations in scope" value={fmtNum(d['conversations'])} hint="Matching the filters above" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Top questions" description="What visitors ask most.">
+        <Panel
+          title="Top questions"
+          description="What visitors ask most."
+          actions={<ExportButton dataset="ai_questions" filters={filters} />}
+        >
           <BarList
             rows={((d['top_questions'] as Row[]) ?? []).map((r) => ({
               label: String(r['question']),
@@ -890,7 +1109,11 @@ function AiTab({ filters }: { filters: Filters }) {
             }))}
           />
         </Panel>
-        <Panel title="Knowledge gaps" description="Low-confidence answers — good candidates for new knowledge articles.">
+        <Panel
+          title="Knowledge gaps"
+          description="Low-confidence answers — good candidates for new knowledge articles."
+          actions={<ExportButton dataset="ai_low_confidence" filters={filters} />}
+        >
           <BarList
             rows={((d['low_confidence_questions'] as Row[]) ?? []).map((r) => ({
               label: String(r['question']),
@@ -914,18 +1137,21 @@ function AiTab({ filters }: { filters: Filters }) {
 }
 
 
-function IntakeTab({ filters }: { filters: Filters }) {
+function IntakeTab({ filters, search, update }: TabProps) {
   // The request list is paged in SQL; the tiles above it are SQL aggregates.
-  const [page, setPage] = useState(0);
   const limit = 50;
-  const q = useReport<Row>("intake", filters, { limit, offset: page * limit });
+  const q = useReport<Row>("intake", filters, { limit, offset: search.page * limit });
   if (q.isLoading || q.error) return <Loading query={q} />;
   const d = q.data ?? {};
   const byType = (d['by_type'] as Row[]) ?? [];
 
   return (
     <div className="space-y-4">
-      <Panel title="Requests by type" description="Referrals, enrollments, callbacks, and general requests." actions={exportBtn("requests-by-type", byType)}>
+      <Panel
+        title="Requests by type"
+        description="Referrals, enrollments, callbacks, and general requests."
+        actions={<ExportButton dataset="intake_by_type" filters={filters} />}
+      >
         <DataTable
           rows={byType}
           columns={[
@@ -954,7 +1180,7 @@ function IntakeTab({ filters }: { filters: Filters }) {
         </Panel>
       </div>
 
-      <Panel title="Recent requests" actions={exportBtn("requests", (d['rows'] as Row[]) ?? [])}>
+      <Panel title="Recent requests" actions={<ExportButton dataset="intake" filters={filters} />}>
         <DataTable
           rows={(d['rows'] as Row[]) ?? []}
           columns={[
@@ -969,10 +1195,10 @@ function IntakeTab({ filters }: { filters: Filters }) {
           ]}
         />
         <Pager
-          page={page}
+          page={search.page}
           pageSize={limit}
           total={Number(d['rows_total'] ?? 0)}
-          onPage={setPage}
+          onPage={(p) => update({ page: p }, true)}
           noun="requests"
           busy={q.isFetching}
         />

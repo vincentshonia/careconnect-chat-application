@@ -32,22 +32,41 @@ export function Stat({
   value,
   hint,
   tone = "default",
+  onDrill,
+  drillLabel,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   tone?: "default" | "warn" | "good";
+  /** Opens the exact rows behind this number. */
+  onDrill?: () => void;
+  drillLabel?: string;
 }) {
   const toneClass =
     tone === "warn" ? "text-destructive" : tone === "good" ? "text-primary" : "text-foreground";
-  return (
-    <div className="rounded-xl border border-border bg-card p-4">
+  const body = (
+    <>
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={`mt-2 text-2xl font-semibold ${toneClass}`}>{value}</p>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
+    </>
+  );
+
+  if (!onDrill) return <div className="rounded-xl border border-border bg-card p-4">{body}</div>;
+  return (
+    <button
+      type="button"
+      onClick={onDrill}
+      title={drillLabel ?? `Show the ${label.toLowerCase()} behind this number`}
+      className="rounded-xl border border-border bg-card p-4 text-left transition hover:border-primary hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {body}
+      <span className="mt-2 block text-[11px] font-medium text-primary">View the {drillLabel ?? "records"} →</span>
+    </button>
   );
 }
+
 
 export function Panel({
   title,

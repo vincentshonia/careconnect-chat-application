@@ -2410,6 +2410,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["conversation_status"][]
       }
+      conversation_human_touched: { Args: { _id: string }; Returns: boolean }
       current_org_id: { Args: never; Returns: string }
       current_rank: { Args: never; Returns: number }
       dashboard_metrics: {
