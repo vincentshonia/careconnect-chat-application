@@ -234,7 +234,23 @@ function PersonalSettingsPage() {
               )}
             </div>
           </div>
+          <label className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-[hsl(var(--primary))]"
+              checked={showInWidget}
+              onChange={(e) => setShowInWidget(e.target.checked)}
+            />
+            <span>
+              <span className="font-medium">Show my name and photo to website visitors</span>
+              <span className="block text-xs text-muted-foreground">
+                Off by default. When on, your photo can appear on the chat widget and while you
+                are chatting with a visitor.
+              </span>
+            </span>
+          </label>
         </section>
+
 
         {/* Personal details */}
         <form
