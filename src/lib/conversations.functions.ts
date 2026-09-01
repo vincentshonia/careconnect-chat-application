@@ -147,18 +147,10 @@ export const claimConversationFn = createServerFn({ method: "POST" })
       body: `${name} joined the conversation.`,
     });
 
-    const { notifyStaff } = await import("@/lib/notifications.server");
-    await notifyStaff({
-      organizationId: conversation.organization_id,
-      departmentId: conversation.department_id,
-      type: "escalation",
-      severity: "info",
-      title: `Claimed by ${name}`,
-      body: conversation.reference ? `Conversation ${conversation.reference}` : null,
-      link: "/inbox",
-      recordType: "conversations",
-      recordId: conversation.id,
-    });
+    // No fan-out on claim: the queue badge and realtime inbox already reflect
+    // ownership, and a department-wide notification per claim does not scale.
+
+
 
     await writeAudit(db as never, {
       actor,
