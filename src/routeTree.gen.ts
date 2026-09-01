@@ -24,6 +24,7 @@ import { Route as AuthenticatedSecurityRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedRoutingRouteImport } from './routes/_authenticated/routing'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedQualityRouteImport } from './routes/_authenticated/quality'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedOrganizationsRouteImport } from './routes/_authenticated/organizations'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
@@ -36,6 +37,7 @@ import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAiConsoleRouteImport } from './routes/_authenticated/ai-console'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
+import { Route as ApiPublicStaffAvatarSplatRouteImport } from './routes/api/public/staff-avatar/$'
 import { Route as ApiPublicHooksSlaCheckRouteImport } from './routes/api/public/hooks/sla-check'
 import { Route as ApiPublicChatUploadRouteImport } from './routes/api/public/chat/upload'
 import { Route as ApiPublicChatSessionRouteImport } from './routes/api/public/chat/session'
@@ -121,6 +123,11 @@ const AuthenticatedQualityRoute = AuthenticatedQualityRouteImport.update({
   path: '/quality',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedOrganizationsRoute =
   AuthenticatedOrganizationsRouteImport.update({
     id: '/organizations',
@@ -183,6 +190,12 @@ const LovableEmailTransactionalPreviewRoute =
   LovableEmailTransactionalPreviewRouteImport.update({
     id: '/lovable/email/transactional/preview',
     path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicStaffAvatarSplatRoute =
+  ApiPublicStaffAvatarSplatRouteImport.update({
+    id: '/api/public/staff-avatar/$',
+    path: '/api/public/staff-avatar/$',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksSlaCheckRoute = ApiPublicHooksSlaCheckRouteImport.update({
@@ -254,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/organizations': typeof AuthenticatedOrganizationsRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/quality': typeof AuthenticatedQualityRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/routing': typeof AuthenticatedRoutingRoute
@@ -272,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/chat/upload': typeof ApiPublicChatUploadRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
+  '/api/public/staff-avatar/$': typeof ApiPublicStaffAvatarSplatRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
@@ -292,6 +307,7 @@ export interface FileRoutesByTo {
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/organizations': typeof AuthenticatedOrganizationsRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/quality': typeof AuthenticatedQualityRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/routing': typeof AuthenticatedRoutingRoute
@@ -310,6 +326,7 @@ export interface FileRoutesByTo {
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/chat/upload': typeof ApiPublicChatUploadRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
+  '/api/public/staff-avatar/$': typeof ApiPublicStaffAvatarSplatRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
@@ -332,6 +349,7 @@ export interface FileRoutesById {
   '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/organizations': typeof AuthenticatedOrganizationsRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/quality': typeof AuthenticatedQualityRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/routing': typeof AuthenticatedRoutingRoute
@@ -350,6 +368,7 @@ export interface FileRoutesById {
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/chat/upload': typeof ApiPublicChatUploadRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
+  '/api/public/staff-avatar/$': typeof ApiPublicStaffAvatarSplatRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
@@ -372,6 +391,7 @@ export interface FileRouteTypes {
     | '/knowledge'
     | '/notifications'
     | '/organizations'
+    | '/profile'
     | '/quality'
     | '/reports'
     | '/routing'
@@ -390,6 +410,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/session'
     | '/api/public/chat/upload'
     | '/api/public/hooks/sla-check'
+    | '/api/public/staff-avatar/$'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -410,6 +431,7 @@ export interface FileRouteTypes {
     | '/knowledge'
     | '/notifications'
     | '/organizations'
+    | '/profile'
     | '/quality'
     | '/reports'
     | '/routing'
@@ -428,6 +450,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/session'
     | '/api/public/chat/upload'
     | '/api/public/hooks/sla-check'
+    | '/api/public/staff-avatar/$'
     | '/lovable/email/transactional/preview'
   id:
     | '__root__'
@@ -449,6 +472,7 @@ export interface FileRouteTypes {
     | '/_authenticated/knowledge'
     | '/_authenticated/notifications'
     | '/_authenticated/organizations'
+    | '/_authenticated/profile'
     | '/_authenticated/quality'
     | '/_authenticated/reports'
     | '/_authenticated/routing'
@@ -467,6 +491,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/session'
     | '/api/public/chat/upload'
     | '/api/public/hooks/sla-check'
+    | '/api/public/staff-avatar/$'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
@@ -490,6 +515,7 @@ export interface RootRouteChildren {
   ApiPublicChatSessionRoute: typeof ApiPublicChatSessionRoute
   ApiPublicChatUploadRoute: typeof ApiPublicChatUploadRoute
   ApiPublicHooksSlaCheckRoute: typeof ApiPublicHooksSlaCheckRoute
+  ApiPublicStaffAvatarSplatRoute: typeof ApiPublicStaffAvatarSplatRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
@@ -600,6 +626,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedQualityRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/organizations': {
       id: '/_authenticated/organizations'
       path: '/organizations'
@@ -682,6 +715,13 @@ declare module '@tanstack/react-router' {
       path: '/lovable/email/transactional/preview'
       fullPath: '/lovable/email/transactional/preview'
       preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/staff-avatar/$': {
+      id: '/api/public/staff-avatar/$'
+      path: '/api/public/staff-avatar/$'
+      fullPath: '/api/public/staff-avatar/$'
+      preLoaderRoute: typeof ApiPublicStaffAvatarSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/sla-check': {
@@ -768,6 +808,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedOrganizationsRoute: typeof AuthenticatedOrganizationsRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedQualityRoute: typeof AuthenticatedQualityRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedRoutingRoute: typeof AuthenticatedRoutingRoute
@@ -788,6 +829,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedOrganizationsRoute: AuthenticatedOrganizationsRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedQualityRoute: AuthenticatedQualityRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedRoutingRoute: AuthenticatedRoutingRoute,
@@ -820,6 +862,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicChatSessionRoute: ApiPublicChatSessionRoute,
   ApiPublicChatUploadRoute: ApiPublicChatUploadRoute,
   ApiPublicHooksSlaCheckRoute: ApiPublicHooksSlaCheckRoute,
+  ApiPublicStaffAvatarSplatRoute: ApiPublicStaffAvatarSplatRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
 export const routeTree = rootRouteImport

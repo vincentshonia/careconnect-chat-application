@@ -79,7 +79,41 @@ type Bubble = {
   attachment?: { name: string; url: string | null; type: string };
 };
 
-type View = "menu" | "chat" | "services" | "faq" | "contact" | "form" | "waiting";
+type View = "menu" | "chat" | "services" | "faq" | "contact" | "form" | "waiting" | "requests";
+
+type Tab = "home" | "chat" | "help" | "services" | "requests";
+
+const TABS: { key: Tab; label: string; view: View; icon: string }[] = [
+  { key: "home", label: "Home", view: "menu", icon: "M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" },
+  {
+    key: "chat",
+    label: "Chat",
+    view: "chat",
+    icon: "M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z",
+  },
+  {
+    key: "help",
+    label: "Help",
+    view: "faq",
+    icon: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4M12 17h0",
+  },
+  { key: "services", label: "Services", view: "services", icon: "M4 6h16M4 12h16M4 18h10" },
+  {
+    key: "requests",
+    label: "Requests",
+    view: "requests",
+    icon: "M9 4h6a2 2 0 0 1 2 2v14l-5-3-5 3V6a2 2 0 0 1 2-2z",
+  },
+];
+
+function tabForView(view: View): Tab {
+  if (view === "chat" || view === "waiting") return "chat";
+  if (view === "faq") return "help";
+  if (view === "services") return "services";
+  if (view === "requests" || view === "form" || view === "contact") return "requests";
+  return "home";
+}
+
 
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -110,6 +144,7 @@ function WidgetPage() {
   const [formKind, setFormKind] = useState<"live_agent" | "contact" | "referral" | "enrollment" | "message">("live_agent");
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [agentName, setAgentName] = useState<string | null>(null);
+  const [agentAvatar, setAgentAvatar] = useState<string | null>(null);
   const [faqQuery, setFaqQuery] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
   const lastSeen = useRef<string | null>(null);
@@ -245,6 +280,7 @@ function WidgetPage() {
       const data = await res.json();
       if (data.connected && data.agentName) {
         setAgentName(data.agentName);
+        setAgentAvatar(data.agentAvatarUrl ?? null);
         setLiveStatus("Representative connected");
       }
       const incoming = (data.messages ?? []).filter(
@@ -451,7 +487,13 @@ function WidgetPage() {
           aria-hidden="true"
         />
         <div className="relative shrink-0">
-          {config.website.logoUrl ? (
+          {agentAvatar ? (
+            <img
+              src={agentAvatar}
+              alt={agentName ?? "Representative"}
+              className="h-9 w-9 rounded-full object-cover ring-2 ring-white/30"
+            />
+          ) : config.website.logoUrl ? (
             <img src={config.website.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover ring-2 ring-white/30" />
           ) : (
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-sm font-bold ring-2 ring-white/25">
@@ -460,26 +502,24 @@ function WidgetPage() {
           )}
           <span
             className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white/80 ${
-              config.agentsAvailable ? "bg-emerald-400" : "bg-amber-300"
+              agentName || config.agentsAvailable ? "bg-emerald-400" : "bg-amber-300"
             }`}
             aria-hidden="true"
           />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold tracking-tight">{config.website.chatbotName}</p>
+          <p className="truncate text-sm font-semibold tracking-tight">
+            {agentName ?? config.website.chatbotName}
+          </p>
           <p className="truncate text-[11px] text-white/80">
-            {config.agentsAvailable ? "Live representatives are available" : "AI assistant · leave a message anytime"}
+            {agentName
+              ? `${config.organization.name} · live representative`
+              : config.agentsAvailable
+                ? "Live representatives are available"
+                : "AI assistant · leave a message anytime"}
           </p>
         </div>
-        {view !== "menu" && (
-          <button
-            onClick={() => setView("menu")}
-            className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium transition hover:bg-white/20"
-            aria-label="Back to menu"
-          >
-            Menu
-          </button>
-        )}
+
         <button
           onClick={closeWidget}
           aria-label="Close chat"
@@ -589,7 +629,58 @@ function WidgetPage() {
           </div>
         )}
 
+        {view === "requests" && (
+          <div className="space-y-3">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">How can we help?</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Choose a request and a representative will follow up.
+              </p>
+            </div>
+            {[
+              {
+                key: "live_agent",
+                title: "Speak with a representative",
+                sub: config.agentsAvailable ? "Someone is available now" : "We will reply as soon as we are back",
+              },
+              { key: "referral", title: "Submit a referral", sub: "Refer a patient or member" },
+              { key: "enrollment", title: "Enrollment assistance", sub: "Get help choosing or joining a plan" },
+              { key: "message", title: "Leave a message", sub: "We will get back to you" },
+            ].map((option) => (
+              <button
+                key={option.key}
+                onClick={() => {
+                  setFormKind(
+                    option.key === "live_agent" && !config.agentsAvailable
+                      ? "message"
+                      : (option.key as typeof formKind),
+                  );
+                  setView("form");
+                }}
+                className="flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-panel"
+              >
+                <span
+                  className="h-8 w-1 shrink-0 rounded-full"
+                  style={{ background: brand }}
+                  aria-hidden="true"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-card-foreground">{option.title}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">{option.sub}</span>
+                </span>
+              </button>
+            ))}
+            <button
+              onClick={() => setView("contact")}
+              className="w-full rounded-2xl border border-border px-4 py-2.5 text-xs font-semibold text-foreground"
+            >
+              View contact details
+            </button>
+          </div>
+        )}
+
         {view === "contact" && (
+
           <div className="space-y-3 text-sm">
             <div className="rounded-xl border border-border bg-card p-3">
               <p className="font-semibold text-card-foreground">{config.organization.name}</p>
@@ -763,7 +854,45 @@ function WidgetPage() {
 
         </form>
       )}
+
+      <nav
+        aria-label="Chat sections"
+        className="grid grid-cols-5 border-t border-border/70 bg-card px-1 pb-1.5 pt-1"
+      >
+        {TABS.map((tab) => {
+          const active = tabForView(view) === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              aria-current={active ? "page" : undefined}
+              onClick={() => {
+                if (tab.key === "chat" && conversationId && liveStatus) setView("waiting");
+                else setView(tab.view);
+              }}
+              className="flex flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-medium transition"
+              style={active ? { color: brand } : { color: "hsl(var(--muted-foreground))" }}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d={tab.icon} />
+              </svg>
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </nav>
     </div>
+
   );
 }
 

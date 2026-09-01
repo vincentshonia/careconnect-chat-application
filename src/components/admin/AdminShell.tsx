@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Shuffle,
   Star,
+  UserCog,
   Users,
   Users2,
 } from "lucide-react";
@@ -51,6 +52,8 @@ const navGroups = [
       { to: "/intake", label: "Intake", icon: ClipboardList, perms: ["workflow.view_assigned"] },
       { to: "/contacts", label: "Contacts", icon: Contact, perms: ["contact.view_related"] },
       { to: "/notifications", label: "Notifications", icon: Bell, perms: undefined },
+      { to: "/profile", label: "My settings", icon: UserCog, perms: undefined },
+
     ],
   },
   {
@@ -80,7 +83,7 @@ const navGroups = [
         icon: Building2,
         perms: ["organization.manage", "platform.tenant_admin"],
       },
-      { to: "/settings", label: "Settings", icon: Settings, perms: ["settings.manage"] },
+      { to: "/settings", label: "Organization settings", icon: Settings, perms: ["settings.manage"] },
       { to: "/security", label: "Security", icon: ShieldCheck, perms: ["security.manage"] },
       { to: "/audit", label: "Audit log", icon: Activity, perms: ["audit.view"] },
     ],

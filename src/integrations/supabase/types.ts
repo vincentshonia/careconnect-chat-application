@@ -1572,49 +1572,64 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          chat_prefs: Json
           created_at: string
+          display_name: string | null
           email: string | null
           full_name: string
           id: string
           languages: string[]
           last_active_at: string | null
           max_concurrent_chats: number
+          notification_prefs: Json
           organization_id: string | null
           phone: string | null
           presence: string
           status: Database["public"]["Enums"]["entity_status"]
+          theme_preference: string
+          timezone: string | null
           title: string | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
+          chat_prefs?: Json
           created_at?: string
+          display_name?: string | null
           email?: string | null
           full_name?: string
           id: string
           languages?: string[]
           last_active_at?: string | null
           max_concurrent_chats?: number
+          notification_prefs?: Json
           organization_id?: string | null
           phone?: string | null
           presence?: string
           status?: Database["public"]["Enums"]["entity_status"]
+          theme_preference?: string
+          timezone?: string | null
           title?: string | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
+          chat_prefs?: Json
           created_at?: string
+          display_name?: string | null
           email?: string | null
           full_name?: string
           id?: string
           languages?: string[]
           last_active_at?: string | null
           max_concurrent_chats?: number
+          notification_prefs?: Json
           organization_id?: string | null
           phone?: string | null
           presence?: string
           status?: Database["public"]["Enums"]["entity_status"]
+          theme_preference?: string
+          timezone?: string | null
           title?: string | null
           updated_at?: string
         }
