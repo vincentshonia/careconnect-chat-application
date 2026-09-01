@@ -89,10 +89,12 @@ function statusTone(status: string) {
 function InboxPage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
-  const [tab, setTab] = useState<Tab>("waiting");
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const search = Route.useSearch();
+  const [tab, setTab] = useState<Tab>(search.c ? "all" : "waiting");
+  const [activeId, setActiveId] = useState<string | null>(search.c ?? null);
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+
 
   const userId = session.data?.userId ?? null;
   const can = (p: string) => session.data?.permissions.has(p) ?? false;
