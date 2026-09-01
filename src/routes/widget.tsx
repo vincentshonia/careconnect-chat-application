@@ -59,6 +59,7 @@ type Config = {
     showHelpTab?: boolean;
     showServicesTab?: boolean;
     showRequestsTab?: boolean;
+    tabs?: unknown;
   };
   organization: {
     name: string;
