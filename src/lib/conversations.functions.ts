@@ -26,7 +26,6 @@ type ConversationRow = {
 
 const CLOSED_STATUSES = ["closed", "resolved", "archived", "spam"];
 
-const CLAIMABLE_STATUSES = ["new", "waiting", "escalated", "follow_up"];
 
 /** Can this actor see the conversation at all? Mirrors the RLS predicate. */
 function canView(actor: Actor, conversation: ConversationRow) {
