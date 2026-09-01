@@ -792,12 +792,25 @@ describe.runIf(configured)("claim & routing concurrency", () => {
         false,
       );
 
-      // Department mismatch is never overridable either.
+      // Department mismatch is never overridable: SQL never returns someone
+      // outside the conversation's department, so no override can reach them.
       const outsiderRow = (await candidates()).find((c) => c.user_id === outsider);
-      expect(outsiderRow?.eligible).toBe(false);
-      expect(outsiderRow?.reason).toBe("Not in this department");
+      expect(outsiderRow).toBeUndefined();
       expect(
         decideTransfer({ target: outsiderRow, override: true, actorCanOverride: true }).allowed,
+      ).toBe(false);
+      // Defence in depth: even if such a row were produced, it stays blocked.
+      expect(
+        decideTransfer({
+          target: {
+            user_id: outsider,
+            full_name: "Outsider",
+            eligible: false,
+            reason: "Not in this department",
+          },
+          override: true,
+          actorCanOverride: true,
+        }).allowed,
       ).toBe(false);
     }, 240_000);
   });
