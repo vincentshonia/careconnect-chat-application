@@ -288,6 +288,18 @@ function InboxPage() {
     onError: (e) => fail(e, "Could not close this conversation"),
   });
 
+  // Resolving credits the outcome to this agent for reporting; closing does not.
+  const resolveConversation = useMutation({
+    mutationFn: async () => resolveFn({ data: { conversationId: active!.id } }),
+    onSuccess: () => {
+      toast.success("Conversation resolved");
+      invalidate();
+    },
+    onError: (e) => fail(e, "Could not resolve this conversation"),
+  });
+
+
+
   const reassign = useMutation({
     mutationFn: async (targetUserId: string | null) =>
       reassignFn({ data: { conversationId: active!.id, userId: targetUserId } }),
