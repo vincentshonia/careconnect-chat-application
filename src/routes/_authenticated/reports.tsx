@@ -902,6 +902,14 @@ function IntakeTab({ filters }: { filters: Filters }) {
             { key: "assigned_name", label: "Owner", render: (r) => String(r['assigned_name'] ?? "Unassigned") },
           ]}
         />
+        <Pager
+          page={page}
+          pageSize={limit}
+          total={Number(d['rows_total'] ?? 0)}
+          onPage={setPage}
+          noun="requests"
+          busy={q.isFetching}
+        />
       </Panel>
     </div>
   );
