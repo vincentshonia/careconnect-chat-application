@@ -112,6 +112,11 @@ function ReportsPage() {
 
   const filterSummary = `${new Date(range.from).toLocaleDateString()} – ${new Date(range.to).toLocaleDateString()}`;
 
+  // Sections the server says this caller may run; a hidden tab renders nothing.
+  const sections = options.data?.sections as readonly string[] | undefined;
+  const allowed = (id: TabId) => tab === id && (!sections || sections.includes(id));
+
+
   const resetFilters = () => {
     setDepartmentId("");
     setStaffId("");
