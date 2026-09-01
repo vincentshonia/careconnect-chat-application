@@ -26,13 +26,15 @@ export const Route = createFileRoute("/api/public/chat/poll")({
           const { data: messages } = await query;
 
           let agentName: string | null = null;
+          let agentAvatarUrl: string | null = null;
           if (conversation.assigned_to) {
             const { data: agent } = await db
               .from("profiles")
-              .select("full_name")
+              .select("full_name, display_name, avatar_url")
               .eq("id", conversation.assigned_to)
               .maybeSingle();
-            agentName = agent?.full_name ?? null;
+            agentName = agent?.display_name ?? agent?.full_name ?? null;
+            agentAvatarUrl = agent?.avatar_url ?? null;
           }
 
           return Response.json(
@@ -40,10 +42,12 @@ export const Route = createFileRoute("/api/public/chat/poll")({
               status: conversation.status,
               connected: Boolean(conversation.assigned_to),
               agentName,
+              agentAvatarUrl,
               messages: messages ?? [],
             },
             { headers: { "Cache-Control": "no-store" } },
           );
+
         } catch (error) {
           const status = error instanceof mod.PublicChatError ? error.status : 500;
           return Response.json(
