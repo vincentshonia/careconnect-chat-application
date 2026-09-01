@@ -21,8 +21,16 @@ import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   // `?c=<id>` lets report drill-downs open a specific conversation.
-  validateSearch: (search: Record<string, unknown>): { c?: string } =>
-    typeof search['c'] === "string" ? { c: search['c'] as string } : {},
+  // `?c=<id>` opens a conversation; `?tab=` / `?status=` let dashboard and
+  // report drill-downs land on a pre-filtered queue.
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { c?: string; tab?: string; status?: string } => ({
+    ...(typeof search['c'] === "string" ? { c: search['c'] } : {}),
+    ...(typeof search['tab'] === "string" ? { tab: search['tab'] } : {}),
+    ...(typeof search['status'] === "string" ? { status: search['status'] } : {}),
+  }),
+
 
   head: () => ({
     meta: [
