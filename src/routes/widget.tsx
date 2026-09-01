@@ -520,15 +520,6 @@ function WidgetPage() {
           </p>
         </div>
 
-        {view !== "menu" && (
-          <button
-            onClick={() => setView("menu")}
-            className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium transition hover:bg-white/20"
-            aria-label="Back to menu"
-          >
-            Menu
-          </button>
-        )}
         <button
           onClick={closeWidget}
           aria-label="Close chat"
