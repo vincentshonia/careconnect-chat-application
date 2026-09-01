@@ -58,5 +58,6 @@ Executed in phases. Each phase ends with typecheck + build + tests.
 - [x] Agent identity snapshot on historical messages (`messages.sender_name` written at send time)
 - [x] `show_in_widget_team` staff flag for public avatars — default false; gates the widget team list, the in-chat agent photo, and `/api/public/staff-avatar/*`
 - [x] Regression pass over website/widget config + visitor flows (widget-session, tenant-isolation, rbac suites green)
-- [ ] End-to-end browser flow tests (visitor → AI → escalation → agent reply → resolution)
+- [x] E2E golden path (visitor → AI → escalation → agent claim → reply → resolution) on a disposable `__e2e_` tenant
+- [ ] Remaining E2E coverage: transfer, claim exclusivity, authorization, CSAT/reporting, visitor persistence
 
