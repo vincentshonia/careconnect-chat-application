@@ -926,14 +926,22 @@ function WidgetPage() {
         aria-label="Chat sections"
         className="flex shrink-0 items-stretch gap-0.5 border-t border-border/60 bg-card px-1.5 pb-2 pt-1.5 [&>button]:flex-1"
       >
-        {TABS.filter((tab) => {
-          const w = config.website;
-          if (tab.key === "home") return w.showHomeTab !== false;
-          if (tab.key === "help") return w.showHelpTab !== false;
-          if (tab.key === "services") return w.showServicesTab !== false;
-          if (tab.key === "requests") return w.showRequestsTab !== false;
-          return true;
-        }).map((tab) => {
+        {resolveWidgetTabs(config.website.tabs)
+          .filter((t) => {
+            const w = config.website;
+            if (!t.enabled) return false;
+            if (t.key === "home") return w.showHomeTab !== false;
+            if (t.key === "help") return w.showHelpTab !== false;
+            if (t.key === "services") return w.showServicesTab !== false;
+            if (t.key === "requests") return w.showRequestsTab !== false;
+            return true;
+          })
+          .map((t) => ({
+            ...t,
+            view: TABS.find((d) => d.key === t.key)!.view,
+            icon: tabIconPath(t.icon),
+          }))
+          .map((tab) => {
           const active = tabForView(view) === tab.key;
           return (
             <button
