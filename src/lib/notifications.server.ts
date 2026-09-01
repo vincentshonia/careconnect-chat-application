@@ -23,7 +23,6 @@ const PREF_COLUMN: Record<NotifyInput["type"], string> = {
   low_rating: "inapp_low_rating",
 };
 
-
 /** Insert size cap per round-trip, so large teams do not produce one giant statement. */
 const INSERT_BATCH = 500;
 
@@ -43,9 +42,7 @@ export async function notifyStaff(input: NotifyInput) {
     let ids: string[];
     if (input.userIds?.length) {
       // Explicit recipients still have to be eligible.
-      const eligible = new Set(
-        await alertRecipients(input.organizationId, null, column),
-      );
+      const eligible = new Set(await alertRecipients(input.organizationId, null, column));
       ids = input.userIds.filter((id) => eligible.has(id));
     } else {
       ids = await alertRecipients(input.organizationId, input.departmentId ?? null, column);
@@ -75,4 +72,3 @@ export async function notifyStaff(input: NotifyInput) {
     console.warn("[notifications] fan-out failed", error);
   }
 }
-

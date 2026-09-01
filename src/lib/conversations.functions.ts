@@ -26,7 +26,6 @@ type ConversationRow = {
 
 const CLOSED_STATUSES = ["closed", "resolved", "archived", "spam"];
 
-
 /** Can this actor see the conversation at all? Mirrors the RLS predicate. */
 function canView(actor: Actor, conversation: ConversationRow) {
   if (actor.organizationId !== conversation.organization_id && !actor.isPlatformAdmin) return false;
@@ -47,8 +46,7 @@ function canView(actor: Actor, conversation: ConversationRow) {
 
 function isSupervisor(actor: Actor) {
   return (
-    actor.permissions.has("conversation.reassign") ||
-    actor.permissions.has("conversation.view_all")
+    actor.permissions.has("conversation.reassign") || actor.permissions.has("conversation.view_all")
   );
 }
 
@@ -65,7 +63,11 @@ async function loadConversation(id: string): Promise<ConversationRow> {
 
 async function agentName(userId: string) {
   const { admin } = await import("@/lib/public-chat.server");
-  const { data } = await admin().from("profiles").select("full_name").eq("id", userId).maybeSingle();
+  const { data } = await admin()
+    .from("profiles")
+    .select("full_name")
+    .eq("id", userId)
+    .maybeSingle();
   return (data?.full_name as string) || "A team member";
 }
 
@@ -126,7 +128,6 @@ export const claimConversationFn = createServerFn({ method: "POST" })
 
     const name = outcome.assigned_name || actor.fullName || "A team member";
 
-
     await db.from("conversation_events").insert({
       conversation_id: conversation.id,
       organization_id: conversation.organization_id,
@@ -148,8 +149,6 @@ export const claimConversationFn = createServerFn({ method: "POST" })
 
     // No fan-out on claim: the queue badge and realtime inbox already reflect
     // ownership, and a department-wide notification per claim does not scale.
-
-
 
     await writeAudit(db as never, {
       actor,
@@ -174,7 +173,9 @@ export const claimConversationFn = createServerFn({ method: "POST" })
 export const replyToConversationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ conversationId: z.string().uuid(), body: z.string().trim().min(1).max(4000) }).parse(input),
+    z
+      .object({ conversationId: z.string().uuid(), body: z.string().trim().min(1).max(4000) })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const actor = await resolveActor(context.supabase, context.userId);
@@ -342,7 +343,6 @@ export const closeConversationFn = createServerFn({ method: "POST" })
       .update({ status: "closed", closed_at: now, closed_by: actor.userId })
       .eq("id", conversation.id);
 
-
     await db.from("conversation_events").insert({
       conversation_id: conversation.id,
       organization_id: conversation.organization_id,
@@ -414,8 +414,6 @@ export const resolveConversationFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-
-
 /**
  * Mint a short-lived signed URL for a visitor attachment so the agent can
  * view or save it. Access mirrors conversation visibility.
@@ -423,9 +421,7 @@ export const resolveConversationFn = createServerFn({ method: "POST" })
 export const attachmentUrlFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z
-      .object({ conversationId: z.string().uuid(), path: z.string().min(1).max(500) })
-      .parse(input),
+    z.object({ conversationId: z.string().uuid(), path: z.string().min(1).max(500) }).parse(input),
   )
   .handler(async ({ data, context }) => {
     const actor = await resolveActor(context.supabase, context.userId);
