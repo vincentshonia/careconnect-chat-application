@@ -2453,6 +2453,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      intake_stage_counts: {
+        Args: { _dept?: string; _org: string; _search?: string; _type?: string }
+        Returns: Json
+      }
       is_org_admin: { Args: { _org: string }; Returns: boolean }
       is_org_member: {
         Args: { _org: string; _user?: string }
@@ -2609,6 +2613,8 @@ export type Database = {
         Args: {
           _dept?: string[]
           _from: string
+          _limit?: number
+          _offset?: number
           _org: string
           _staff?: string[]
           _to: string
@@ -2693,6 +2699,7 @@ export type Database = {
           _dept?: string[]
           _from: string
           _limit?: number
+          _offset?: number
           _org: string
           _to: string
         }
@@ -2724,6 +2731,20 @@ export type Database = {
           membership_id: string
           user_id: string
         }[]
+      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      staff_directory: {
+        Args: {
+          _dept?: string
+          _limit?: number
+          _offset?: number
+          _org: string
+          _role?: Database["public"]["Enums"]["app_role"]
+          _search?: string
+          _status?: string
+        }
+        Returns: Json
       }
     }
     Enums: {

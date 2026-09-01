@@ -8,6 +8,7 @@ import {
   type Permission,
   type PlatformRole,
 } from "@/lib/permissions";
+import { DEFAULT_TIMEZONE, safeTimeZone } from "@/lib/org-time";
 
 export type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -53,6 +54,17 @@ export function useSessionContext() {
         departmentIds = (depts ?? []).map((d) => d.department_id);
       }
 
+      // The tenant timezone drives every "today / this week" calculation.
+      let timezone = DEFAULT_TIMEZONE;
+      if (organizationId) {
+        const { data: org } = await supabase
+          .from("organizations")
+          .select("timezone")
+          .eq("id", organizationId)
+          .maybeSingle();
+        timezone = safeTimeZone(org?.timezone);
+      }
+
       const rank = role ? ROLE_RANK[role] : 0;
 
       return {
@@ -60,6 +72,7 @@ export function useSessionContext() {
         email: auth.user?.email ?? null,
         profile: profile ?? null,
         organizationId,
+        timezone,
         role,
         roles: role ? [role as AppRole] : [],
         platformRole,
