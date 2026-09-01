@@ -20,8 +20,9 @@ export const Route = createFileRoute("/_authenticated/reports")({
       {
         name: "description",
         content:
-          "Operational reporting for conversations, departments, staff performance, transfers, SLA, AI deflection, and intake requests.",
+          "Operational reporting for conversations, departments, staff performance, transfers, SLA, AI assistant outcomes, and intake requests.",
       },
+
       { name: "robots", content: "noindex" },
     ],
   }),
