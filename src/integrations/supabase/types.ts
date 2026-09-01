@@ -2502,6 +2502,21 @@ export type Database = {
         Args: { _user?: string }
         Returns: Database["public"]["Enums"]["platform_role"]
       }
+      reassignment_candidates: {
+        Args: { _conversation: string; _org: string }
+        Returns: {
+          active_chats: number
+          capacity: number
+          department_names: string[]
+          eligible: boolean
+          full_name: string
+          in_department: boolean
+          presence: string
+          reason: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }[]
+      }
       report_ai: {
         Args: {
           _dept?: string[]

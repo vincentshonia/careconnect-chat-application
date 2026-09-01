@@ -8,7 +8,6 @@ import {
   attachmentUrlFn,
   claimConversationFn,
   closeConversationFn,
-  reassignConversationFn,
   replyToConversationFn,
   resolveConversationFn,
 } from "@/lib/conversations.functions";
@@ -18,6 +17,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { ReassignDialog } from "@/components/admin/ReassignDialog";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   // `?c=<id>` lets report drill-downs open a specific conversation.
@@ -309,7 +309,6 @@ function InboxPage() {
   const replyFn = useServerFn(replyToConversationFn);
   const closeFn = useServerFn(closeConversationFn);
   const resolveFn = useServerFn(resolveConversationFn);
-  const reassignFn = useServerFn(reassignConversationFn);
   const transferFn = useServerFn(transferConversationFn);
 
   const claim = useMutation({
@@ -360,16 +359,6 @@ function InboxPage() {
   });
 
 
-
-  const reassign = useMutation({
-    mutationFn: async (targetUserId: string | null) =>
-      reassignFn({ data: { conversationId: active!.id, userId: targetUserId } }),
-    onSuccess: (r) => {
-      toast.success(r?.assignedName ? `Reassigned to ${r.assignedName}` : "Returned to the queue");
-      invalidate();
-    },
-    onError: (e) => fail(e, "Could not reassign this conversation"),
-  });
 
   const departmentsQuery = useQuery({
     queryKey: ["inbox-departments"],
@@ -549,20 +538,12 @@ function InboxPage() {
                   ) : null}
 
                   {isSupervisor && !isClosed ? (
-                    <select
-                      aria-label="Reassign conversation"
-                      value={active.assigned_to ?? ""}
-                      disabled={reassign.isPending}
-                      onChange={(e) => reassign.mutate(e.target.value || null)}
-                      className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                    >
-                      <option value="">Unassigned (queue)</option>
-                      {(staffQuery.data ?? []).map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.full_name}
-                        </option>
-                      ))}
-                    </select>
+                    <ReassignDialog
+                      key={active.id}
+                      conversationId={active.id}
+                      currentAssignee={active.assigned_to}
+                      onDone={invalidate}
+                    />
                   ) : null}
 
                   {canClaim ? (

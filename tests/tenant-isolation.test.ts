@@ -22,7 +22,7 @@ const PRIVATE_TABLES = [
   "organizations",
   "organization_memberships",
   "platform_admins",
-  "staff_profiles",
+  "profiles",
   "departments",
   "department_members",
   "conversations",
@@ -33,7 +33,7 @@ const PRIVATE_TABLES = [
   "knowledge_chunks",
   "audit_logs",
   "notifications",
-  "invitations",
+  "organization_invitations",
   "websites",
 ];
 
@@ -45,6 +45,9 @@ describe.runIf(configured)("anonymous access is denied to tenant data", () => {
   it.each(PRIVATE_TABLES)("anon cannot read %s", async (table) => {
     const { data, error } = await anon!.from(table).select("*").limit(5);
     const rows = data ?? [];
+    // A missing table must fail the test rather than pass by accident: the
+    // suite only proves isolation for tables that actually exist.
+    expect(error?.code, `${table} does not exist — the test list is stale`).not.toBe("42P01");
     expect(
       error !== null || rows.length === 0,
       `anon read of ${table} returned ${rows.length} row(s)`,

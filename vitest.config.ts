@@ -16,9 +16,12 @@ export default defineConfig(({ mode }) => {
       include: ["tests/**/*.test.ts"],
       env: {
         WIDGET_SESSION_SECRET: env.WIDGET_SESSION_SECRET ?? "test-widget-secret-for-unit-tests",
-        SUPABASE_URL: env.SUPABASE_URL ?? env.VITE_SUPABASE_URL ?? "",
+        SUPABASE_URL: process.env['SUPABASE_URL'] ?? env.SUPABASE_URL ?? env.VITE_SUPABASE_URL ?? "",
         SUPABASE_PUBLISHABLE_KEY:
           env.SUPABASE_PUBLISHABLE_KEY ?? env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
+        // Provisioned by the platform; only present for integration runs.
+        SUPABASE_SERVICE_ROLE_KEY:
+          process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? env.SUPABASE_SERVICE_ROLE_KEY ?? "",
       },
     },
   };

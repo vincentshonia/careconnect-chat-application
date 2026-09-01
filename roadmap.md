@@ -15,9 +15,9 @@ Executed in phases. Each phase ends with typecheck + build + tests.
 - [x] Reports role scoping (self level: section allowlist, own-data clamp, hidden tabs)
 - [x] Dashboard V2 role scoping (org-wide counters stripped below org scope; empty dept scope = zero)
 - [x] Waiting/Escalated filter vocabulary matches SQL (`claimable_conversation_statuses`)
-- [ ] Personal settings hardening (RLS: no self role/org/department/capacity edits, email locked)
-- [ ] Transfer/reassign eligibility (dept + active membership + presence/workload display, audited overrides)
-- [ ] RBAC + tenant isolation integration tests; repair obsolete test table names
+- [x] Personal settings hardening (RLS: no self role/org/department/capacity edits, email locked)
+- [x] Transfer/reassign eligibility (dept + active membership + presence/workload display, audited overrides)
+- [x] RBAC + tenant isolation integration tests; repair obsolete test table names
 
 ## Phase 3 — Data-volume scale
 - [x] Server-side pagination/search for the Inbox queues (25/page, DB-side tab filters)

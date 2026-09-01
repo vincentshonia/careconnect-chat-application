@@ -11,6 +11,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveActor, ForbiddenError, requireOrganization, type Actor } from "@/lib/authz.server";
+import {
+  NO_DEPARTMENT,
+  REPORT_SECTIONS as SHARED_SECTIONS,
+  SECTIONS_BY_LEVEL,
+  canRunSection,
+  reportScopeFor,
+  type Scope,
+} from "@/lib/report-scope";
 
 const filterSchema = z.object({
   from: z.string(),
@@ -36,20 +44,7 @@ const optionsSchema = z
   })
   .optional();
 
-export const REPORT_SECTIONS = [
-  "overview",
-  "departments",
-  "backlog",
-  "staff",
-  "workload",
-  "tickets",
-  "transfers",
-  "sla",
-  "volume",
-  "ai",
-  "intake",
-  "staff_detail",
-] as const;
+export const REPORT_SECTIONS = SHARED_SECTIONS;
 
 const inputSchema = z.object({
   section: z.enum(REPORT_SECTIONS),
@@ -59,63 +54,25 @@ const inputSchema = z.object({
 
 export type ReportFilters = z.infer<typeof filterSchema>;
 
-type Scope = {
-  organizationId: string;
-  /** null = every department, otherwise the only departments this caller may read. */
-  departmentIds: string[] | null;
-  /** null = every staff member, otherwise the only staff this caller may read. */
-  staffIds: string[] | null;
-  level: "self" | "team" | "organization" | "platform";
-};
-
-/**
- * Sections a given scope level may run.
- *
- * Organization-wide sections (backlog, workload, transfers, AI) have no staff
- * dimension in SQL, so a self-level caller can never run them: there is no way
- * to constrain them to that one person's data.
- */
-const SECTIONS_BY_LEVEL: Record<Scope["level"], readonly string[]> = {
-  platform: REPORT_SECTIONS,
-  organization: REPORT_SECTIONS,
-  team: REPORT_SECTIONS,
-  self: ["overview", "staff", "tickets", "sla", "volume", "intake", "staff_detail"],
-};
-
 /** Resolve what this caller is permitted to report on. Never trusts input. */
 function reportScope(actor: Actor): Scope {
   const organizationId = requireOrganization(actor);
-  if (actor.permissions.has("reports.platform") || actor.permissions.has("reports.organization")) {
-    return {
-      organizationId,
-      departmentIds: null,
-      staffIds: null,
-      level: actor.permissions.has("reports.platform") ? "platform" : "organization",
-    };
+  const scope = reportScopeFor({
+    userId: actor.userId,
+    organizationId,
+    departmentIds: actor.departmentIds,
+    permissions: actor.permissions,
+  });
+  if (
+    !actor.permissions.has("reports.platform") &&
+    !actor.permissions.has("reports.organization") &&
+    !actor.permissions.has("reports.team") &&
+    !actor.permissions.has("reports.self")
+  ) {
+    throw new ForbiddenError("You don't have access to reporting");
   }
-  if (actor.permissions.has("reports.team")) {
-    return {
-      organizationId,
-      departmentIds: actor.departmentIds.length ? actor.departmentIds : [],
-      staffIds: null,
-      level: "team",
-    };
-  }
-  if (actor.permissions.has("reports.self")) {
-    return {
-      organizationId,
-      // A self-level caller is also confined to their own departments, so any
-      // department-dimensioned report can never widen to the whole tenant.
-      departmentIds: actor.departmentIds.length ? actor.departmentIds : [],
-      staffIds: [actor.userId],
-      level: "self",
-    };
-  }
-  throw new ForbiddenError("You don't have access to reporting");
+  return scope;
 }
-
-/** A department id that matches nothing, so an empty scope returns zero rows. */
-const NO_DEPARTMENT = "00000000-0000-0000-0000-000000000000";
 
 /** Intersect a requested filter with the caller's scope. */
 function clampDepartments(scope: Scope, requested?: string | null): string[] | null {
@@ -152,7 +109,7 @@ export const runReportFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const actor = await resolveActor(context.supabase, context.userId);
     const scope = reportScope(actor);
-    if (!SECTIONS_BY_LEVEL[scope.level].includes(data.section)) {
+    if (!canRunSection(scope, data.section)) {
       throw new ForbiddenError("That report is outside your reporting scope");
     }
     const { from, to } = parseRange(data.filters);
