@@ -171,6 +171,18 @@ export async function loadWidgetConfig(websiteId: string, hostOrigin: string | n
       menuButtons: (website.menu_buttons as unknown[])?.length
         ? website.menu_buttons
         : DEFAULT_MENU,
+      homeGreeting: website.home_greeting ?? "Hi there.",
+      homeHeadline: website.home_headline ?? "How can we help?",
+      homeSubtitle: website.home_subtitle ?? "CareConnect AI is available anytime.",
+      homeCtaTitle: website.home_cta_title ?? "Send us a message",
+      homeCtaSubtitle:
+        website.home_cta_subtitle ?? "CareConnect AI can help now, or leave a message",
+      helpTitle: website.help_title ?? "Search for help",
+      privacyFooterText: website.privacy_footer_text ?? "Your privacy matters to us.",
+      showHomeTab: website.show_home_tab !== false,
+      showHelpTab: website.show_help_tab !== false,
+      showServicesTab: website.show_services_tab !== false,
+      showRequestsTab: website.show_requests_tab !== false,
     },
     organization: {
       name: org?.name ?? "",
