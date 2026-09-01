@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Pager } from "@/components/admin/Pager";
+import { useSessionContext } from "@/hooks/use-session-context";
 import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { reindexArticleFn } from "@/lib/admin.functions";
@@ -363,6 +365,14 @@ function Faqs() {
             </div>
           </article>
         ))}
+        <Pager
+          page={page}
+          pageSize={PAGE}
+          total={faqQuery.data?.total ?? 0}
+          onPage={setPage}
+          noun="FAQs"
+          busy={faqQuery.isFetching}
+        />
       </div>
 
       <form
