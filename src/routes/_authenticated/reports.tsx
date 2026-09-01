@@ -10,6 +10,8 @@ import { downloadCsv } from "@/lib/csv";
 import { runReportFn, reportFilterOptionsFn } from "@/lib/reports.functions";
 import { BarList, ColumnChart, DataTable, Panel, Stat, fmtDate, fmtMin, fmtNum } from "@/components/reports/primitives";
 import { Pager } from "@/components/admin/Pager";
+import { useSessionContext } from "@/hooks/use-session-context";
+import { dateRangeInZone, lastDaysWindow, formatInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
@@ -83,18 +85,17 @@ function ReportsPage() {
   const [priority, setPriority] = useState("");
   const [sla, setSla] = useState(15);
 
+  const session = useSessionContext();
   const optionsFn = useServerFn(reportFilterOptionsFn);
   const options = useQuery({ queryKey: ["report-options"], queryFn: () => optionsFn({}) });
 
+  // Reporting days start and end in the organization's own timezone, so a
+  // report reads the same for a viewer in another zone, DST included.
+  const timeZone = session.data?.timezone ?? "America/Los_Angeles";
   const range = useMemo(() => {
-    if (customFrom && customTo) {
-      return {
-        from: new Date(`${customFrom}T00:00:00`).toISOString(),
-        to: new Date(`${customTo}T23:59:59`).toISOString(),
-      };
-    }
-    return { from: new Date(Date.now() - days * 86_400_000).toISOString(), to: new Date().toISOString() };
-  }, [customFrom, customTo, days]);
+    if (customFrom && customTo) return dateRangeInZone(customFrom, customTo, timeZone);
+    return lastDaysWindow(days, timeZone);
+  }, [customFrom, customTo, days, timeZone]);
 
   const filters = useMemo(
     () => ({
@@ -111,7 +112,7 @@ function ReportsPage() {
     [range, departmentId, staffId, websiteId, type, transfer, priority, sla],
   );
 
-  const filterSummary = `${new Date(range.from).toLocaleDateString()} – ${new Date(range.to).toLocaleDateString()}`;
+  const filterSummary = `${formatInZone(range.from, timeZone)} – ${formatInZone(range.to, timeZone)}`;
 
   // Sections the server says this caller may run; a hidden tab renders nothing.
   const sections = options.data?.sections as readonly string[] | undefined;
