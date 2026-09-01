@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
+
+const BRAND_LOGO_URL = brandLogoAsset.url;
+
+
 
 export const Route = createFileRoute("/widget")({
   head: () => ({
