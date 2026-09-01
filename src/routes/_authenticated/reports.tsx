@@ -105,13 +105,15 @@ function ReportsPage() {
       departmentId: departmentId || null,
       staffId: staffId || null,
       websiteId: websiteId || null,
+      statuses: status ? [status] : null,
       type: type as "all",
       transfer: transfer as "all",
       priority: (priority || null) as null,
       sla,
     }),
-    [range, departmentId, staffId, websiteId, type, transfer, priority, sla],
+    [range, departmentId, staffId, websiteId, status, type, transfer, priority, sla],
   );
+
 
   const filterSummary = `${formatInZone(range.from, timeZone)} – ${formatInZone(range.to, timeZone)}`;
 
