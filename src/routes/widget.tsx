@@ -79,7 +79,41 @@ type Bubble = {
   attachment?: { name: string; url: string | null; type: string };
 };
 
-type View = "menu" | "chat" | "services" | "faq" | "contact" | "form" | "waiting";
+type View = "menu" | "chat" | "services" | "faq" | "contact" | "form" | "waiting" | "requests";
+
+type Tab = "home" | "chat" | "help" | "services" | "requests";
+
+const TABS: { key: Tab; label: string; view: View; icon: string }[] = [
+  { key: "home", label: "Home", view: "menu", icon: "M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" },
+  {
+    key: "chat",
+    label: "Chat",
+    view: "chat",
+    icon: "M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z",
+  },
+  {
+    key: "help",
+    label: "Help",
+    view: "faq",
+    icon: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4M12 17h0",
+  },
+  { key: "services", label: "Services", view: "services", icon: "M4 6h16M4 12h16M4 18h10" },
+  {
+    key: "requests",
+    label: "Requests",
+    view: "requests",
+    icon: "M9 4h6a2 2 0 0 1 2 2v14l-5-3-5 3V6a2 2 0 0 1 2-2z",
+  },
+];
+
+function tabForView(view: View): Tab {
+  if (view === "chat" || view === "waiting") return "chat";
+  if (view === "faq") return "help";
+  if (view === "services") return "services";
+  if (view === "requests" || view === "form" || view === "contact") return "requests";
+  return "home";
+}
+
 
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
