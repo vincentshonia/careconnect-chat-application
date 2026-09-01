@@ -655,7 +655,16 @@ function TicketsTab({ filters }: { filters: Filters }) {
 }
 
 function TransfersTab({ filters }: { filters: Filters }) {
-  const q = useReport<{ overview: Row; matrix: Row[]; rows: Row[]; repeat_conversations: Row[] }>("transfers", filters);
+  // The transfer log is paged in SQL — the browser only ever holds one page.
+  const [page, setPage] = useState(0);
+  const limit = 50;
+  const q = useReport<{
+    overview: Row;
+    matrix: Row[];
+    rows: Row[];
+    rows_total: number;
+    repeat_conversations: Row[];
+  }>("transfers", filters, { limit, offset: page * limit });
   if (q.isLoading || q.error) return <Loading query={q} />;
   const o = q.data?.overview ?? {};
 
@@ -707,6 +716,14 @@ function TransfersTab({ filters }: { filters: Filters }) {
             { key: "transferred_by", label: "By", render: (r) => String(r['transferred_by'] ?? "System") },
             { key: "status_after", label: "Now", render: (r) => String(r['status_after']).replace(/_/g, " ") },
           ]}
+        />
+        <Pager
+          page={page}
+          pageSize={limit}
+          total={Number(q.data?.rows_total ?? 0)}
+          onPage={setPage}
+          noun="transfers"
+          busy={q.isFetching}
         />
       </Panel>
     </div>

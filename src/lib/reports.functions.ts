@@ -180,7 +180,14 @@ export const runReportFn = createServerFn({ method: "POST" })
         break;
       case "transfers":
         fn = "report_transfers";
-        args = { _org: scope.organizationId, _from: from, _to: to, _dept: dept, _limit: opts.limit ?? 200 };
+        args = {
+          _org: scope.organizationId,
+          _from: from,
+          _to: to,
+          _dept: dept,
+          _limit: opts.limit ?? 50,
+          _offset: opts.offset ?? 0,
+        };
         break;
       case "sla":
         fn = "report_sla";
@@ -196,7 +203,15 @@ export const runReportFn = createServerFn({ method: "POST" })
         break;
       case "intake":
         fn = "report_intake";
-        args = { _org: scope.organizationId, _from: from, _to: to, _dept: dept, _staff: staff };
+        args = {
+          _org: scope.organizationId,
+          _from: from,
+          _to: to,
+          _dept: dept,
+          _staff: staff,
+          _limit: opts.limit ?? 50,
+          _offset: opts.offset ?? 0,
+        };
         break;
       case "staff_detail": {
         const target = opts.staffId;
