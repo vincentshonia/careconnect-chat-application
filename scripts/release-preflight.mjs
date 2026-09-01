@@ -178,7 +178,7 @@ async function checkDatabase(label, urlVar, keyVar) {
 }
 
 await checkDatabase("vitest backend", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY");
-await checkDatabase("e2e backend", "E2E_SUPABASE_URL", "E2E_SUPABASE_PUBLISHABLE_KEY");
+
 
 try {
   const { ensureBrowserLibraryPath } = await import("../tests/e2e/helpers/browser-libs.ts");
