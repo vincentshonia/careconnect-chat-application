@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { readFile } from "node:fs/promises";
 import { decideTransfer } from "@/lib/transfer-eligibility";
 
 /**
@@ -818,8 +819,8 @@ describe.runIf(configured)("claim & routing concurrency", () => {
   describe("19. claim and routing stay database-side", () => {
     it("neither path pulls the organization's conversations into memory", async () => {
       const [claimSource, assignmentSource] = await Promise.all([
-        Bun.file("src/lib/conversations.functions.ts").text(),
-        Bun.file("src/lib/assignment.server.ts").text(),
+        readFile("src/lib/conversations.functions.ts", "utf8"),
+        readFile("src/lib/assignment.server.ts", "utf8"),
       ]);
       expect(claimSource).toContain('rpc("claim_conversation"');
       expect(assignmentSource).toContain('rpc("assign_round_robin"');
