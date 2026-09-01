@@ -64,9 +64,11 @@ type Config = {
     learn_more_url: string | null;
   }>;
   faqs: Array<{ id: string; category: string; question: string; answer: string }>;
+  team?: Array<{ id: string; name: string; avatarUrl: string }>;
   businessOpen: boolean;
   agentsAvailable: boolean;
 };
+
 
 type Bubble = {
   id: string;
