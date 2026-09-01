@@ -48,30 +48,48 @@ export async function activeChatCount(userId: string): Promise<number> {
   return count ?? 0;
 }
 
-/** Staff who should be alerted: the department's members, or the whole org. */
+/**
+ * Staff eligible to be alerted, resolved entirely in PostgreSQL:
+ * active organization membership + active profile + (when given) membership of
+ * the department + the matching notification preference. Suspended, removed or
+ * disabled people are never returned.
+ */
 export async function alertRecipients(
   organizationId: string,
   departmentId: string | null,
+  preference: string | null = null,
 ): Promise<string[]> {
   const db = admin();
-  if (departmentId) {
-    const { data: members } = await db
-      .from("department_members")
-      .select("user_id")
-      .eq("department_id", departmentId);
-    const ids = (members ?? []).map((m: { user_id: string }) => m.user_id);
-    if (ids.length) return ids;
+  const { data, error } = await db.rpc("eligible_notification_recipients", {
+    _org: organizationId,
+    _department: departmentId,
+    _pref: preference,
+  });
+  if (error) {
+    console.error("[notifications] recipient lookup failed", error);
+    return [];
   }
-  const { data: staff } = await db
-    .from("profiles")
-    .select("id")
-    .eq("organization_id", organizationId)
-    .eq("status", "active");
-  return (staff ?? []).map((s: { id: string }) => s.id);
+  let ids = ((data ?? []) as Array<{ user_id: string }>).map((r) => r.user_id);
+
+  // A department with no eligible member should still reach the wider team for
+  // events that genuinely need attention — but only eligible staff.
+  if (ids.length === 0 && departmentId) {
+    const { data: fallback } = await db.rpc("eligible_notification_recipients", {
+      _org: organizationId,
+      _department: null,
+      _pref: preference,
+    });
+    ids = ((fallback ?? []) as Array<{ user_id: string }>).map((r) => r.user_id);
+  }
+  return ids;
 }
 
 /**
  * Pick the next eligible member of a department and assign the conversation.
+ *
+ * Candidate selection, capacity checks and the assignment happen in a single
+ * database call (`assign_round_robin`) using indexed aggregates, so routing
+ * cost does not grow with the number of open conversations or staff.
  * Returns null when nobody is available — the chat then waits in the queue.
  */
 export async function assignRoundRobin(input: {
@@ -80,65 +98,16 @@ export async function assignRoundRobin(input: {
   conversationId: string;
 }): Promise<AssignedAgent | null> {
   if (!input.departmentId) return null;
-  const db = admin();
 
-  const { data: members } = await db
-    .from("department_members")
-    .select("id, user_id, last_assigned_at")
-    .eq("department_id", input.departmentId)
-    .order("last_assigned_at", { ascending: true, nullsFirst: true });
-
-  const rows = (members ?? []) as Array<{
-    id: string;
-    user_id: string;
-    last_assigned_at: string | null;
-  }>;
-  if (!rows.length) return null;
-
-  const { data: profiles } = await db
-    .from("profiles")
-    .select("id, full_name, presence, status, max_concurrent_chats")
-    .in(
-      "id",
-      rows.map((r) => r.user_id),
-    );
-  const profileById = new Map(
-    ((profiles ?? []) as Array<Record<string, any>>).map((p) => [p.id as string, p]),
-  );
-
-  // Current live load per agent, so we never exceed their concurrent cap.
-  const { data: openConvs } = await db
-    .from("conversations")
-    .select("assigned_to")
-    .eq("organization_id", input.organizationId)
-    .in("status", BUSY_STATUSES)
-    .not("assigned_to", "is", null);
-  const load = new Map<string, number>();
-  for (const c of (openConvs ?? []) as Array<{ assigned_to: string }>) {
-    load.set(c.assigned_to, (load.get(c.assigned_to) ?? 0) + 1);
-  }
-
-  const candidate = rows.find((r) => {
-    const p = profileById.get(r.user_id);
-    if (!p) return false;
-    if (p.status !== "active" || p.presence !== "available") return false;
-    const cap = Number(p.max_concurrent_chats ?? 0);
-    return cap <= 0 ? true : (load.get(r.user_id) ?? 0) < cap;
+  const { data, error } = await admin().rpc("assign_round_robin", {
+    _conversation: input.conversationId,
+    _department: input.departmentId,
   });
-  if (!candidate) return null;
-
-  const { error } = await db
-    .from("conversations")
-    .update({ assigned_to: candidate.user_id, status: "assigned" })
-    .eq("id", input.conversationId)
-    .is("assigned_to", null); // never steal a chat someone already claimed
-  if (error) return null;
-
-  await db
-    .from("department_members")
-    .update({ last_assigned_at: new Date().toISOString() })
-    .eq("id", candidate.id);
-
-  const fullName = (profileById.get(candidate.user_id)?.full_name as string) || "Agent";
-  return { userId: candidate.user_id, fullName };
+  if (error) {
+    console.error("[routing] round-robin failed", error);
+    return null;
+  }
+  const result = (data ?? {}) as { ok?: boolean; user_id?: string; full_name?: string };
+  if (!result.ok || !result.user_id) return null;
+  return { userId: result.user_id, fullName: result.full_name || "Agent" };
 }

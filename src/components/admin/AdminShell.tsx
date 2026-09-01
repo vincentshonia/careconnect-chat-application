@@ -19,7 +19,6 @@ import {
   Menu,
   Moon,
   Sun,
-
   Settings,
   ShieldCheck,
   Shuffle,
@@ -53,7 +52,6 @@ const navGroups = [
       { to: "/contacts", label: "Contacts", icon: Contact, perms: ["contact.view_related"] },
       { to: "/notifications", label: "Notifications", icon: Bell, perms: undefined },
       { to: "/profile", label: "My settings", icon: UserCog, perms: undefined },
-
     ],
   },
   {
@@ -83,16 +81,25 @@ const navGroups = [
         icon: Building2,
         perms: ["organization.manage", "platform.tenant_admin"],
       },
-      { to: "/settings", label: "Organization settings", icon: Settings, perms: ["settings.manage"] },
+      {
+        to: "/settings",
+        label: "Organization settings",
+        icon: Settings,
+        perms: ["settings.manage"],
+      },
       { to: "/security", label: "Security", icon: ShieldCheck, perms: ["security.manage"] },
       { to: "/audit", label: "Audit log", icon: Activity, perms: ["audit.view"] },
     ],
   },
 ] as const satisfies readonly {
   label: string;
-  items: readonly { to: string; label: string; icon: typeof Inbox; perms?: readonly (Permission | PlatformPermission)[] }[];
+  items: readonly {
+    to: string;
+    label: string;
+    icon: typeof Inbox;
+    perms?: readonly (Permission | PlatformPermission)[];
+  }[];
 }[];
-
 
 export function AdminShell({
   title,
@@ -145,9 +152,6 @@ export function AdminShell({
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase())
     .join("");
-
-
-
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -210,37 +214,46 @@ export function AdminShell({
             )}
             <ul className="space-y-0.5">
               {group.items.map((item) => {
+                // Inbox counts conversations waiting for action; Notifications
+                // counts this person's unread alerts. They are different things.
                 const badge =
-                  item.to === "/notifications" || item.to === "/inbox" ? waitingCount : 0;
+                  item.to === "/inbox"
+                    ? waitingCount
+                    : item.to === "/notifications"
+                      ? unread.length
+                      : 0;
+                const badgeLabel =
+                  item.to === "/inbox"
+                    ? `${badge} conversations waiting for a response`
+                    : `${badge} unread notifications`;
                 return (
-                <li key={item.to}>
-                  <Link
-                    to={item.to}
-                    title={collapsed ? item.label : undefined}
-                    onClick={() => setMobileOpen(false)}
-                    className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
-                      collapsed ? "justify-center" : ""
-                    }`}
-                    activeProps={{
-                      className:
-                        "gradient-brand text-sidebar-primary-foreground font-semibold shadow-glow hover:text-sidebar-primary-foreground",
-                    }}
-
-                  >
-                    <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
-                    {!collapsed && <span className="truncate">{item.label}</span>}
-                    {badge > 0 && (
-                      <span
-                        aria-label={`${badge} conversations waiting for a response`}
-                        className={`grid h-5 min-w-5 place-items-center rounded-full bg-destructive px-1.5 text-[10px] font-semibold text-destructive-foreground ${
-                          collapsed ? "absolute -right-0.5 -top-0.5 h-4 min-w-4 px-1" : "ml-auto"
-                        }`}
-                      >
-                        {badge > 99 ? "99+" : badge}
-                      </span>
-                    )}
-                  </Link>
-                </li>
+                  <li key={item.to}>
+                    <Link
+                      to={item.to}
+                      title={collapsed ? item.label : undefined}
+                      onClick={() => setMobileOpen(false)}
+                      className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
+                        collapsed ? "justify-center" : ""
+                      }`}
+                      activeProps={{
+                        className:
+                          "gradient-brand text-sidebar-primary-foreground font-semibold shadow-glow hover:text-sidebar-primary-foreground",
+                      }}
+                    >
+                      <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                      {!collapsed && <span className="truncate">{item.label}</span>}
+                      {badge > 0 && (
+                        <span
+                          aria-label={badgeLabel}
+                          className={`grid h-5 min-w-5 place-items-center rounded-full bg-destructive px-1.5 text-[10px] font-semibold text-destructive-foreground ${
+                            collapsed ? "absolute -right-0.5 -top-0.5 h-4 min-w-4 px-1" : "ml-auto"
+                          }`}
+                        >
+                          {badge > 99 ? "99+" : badge}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
                 );
               })}
             </ul>
@@ -331,7 +344,9 @@ export function AdminShell({
             <div className="flex items-center gap-2">
               <Link
                 to="/notifications"
-                aria-label={unread.length ? `${unread.length} unread notifications` : "Notifications"}
+                aria-label={
+                  unread.length ? `${unread.length} unread notifications` : "Notifications"
+                }
                 className="relative grid h-9 w-9 place-items-center rounded-xl border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground"
               >
                 <Bell className="h-4 w-4" />
@@ -343,7 +358,6 @@ export function AdminShell({
               </Link>
               {actions}
             </div>
-
           </div>
         </header>
 

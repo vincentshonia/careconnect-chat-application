@@ -26,8 +26,6 @@ type ConversationRow = {
 
 const CLOSED_STATUSES = ["closed", "resolved", "archived", "spam"];
 
-const CLAIMABLE_STATUSES = ["new", "waiting", "escalated", "follow_up"];
-
 /** Can this actor see the conversation at all? Mirrors the RLS predicate. */
 function canView(actor: Actor, conversation: ConversationRow) {
   if (actor.organizationId !== conversation.organization_id && !actor.isPlatformAdmin) return false;
@@ -48,8 +46,7 @@ function canView(actor: Actor, conversation: ConversationRow) {
 
 function isSupervisor(actor: Actor) {
   return (
-    actor.permissions.has("conversation.reassign") ||
-    actor.permissions.has("conversation.view_all")
+    actor.permissions.has("conversation.reassign") || actor.permissions.has("conversation.view_all")
   );
 }
 
@@ -66,13 +63,23 @@ async function loadConversation(id: string): Promise<ConversationRow> {
 
 async function agentName(userId: string) {
   const { admin } = await import("@/lib/public-chat.server");
-  const { data } = await admin().from("profiles").select("full_name").eq("id", userId).maybeSingle();
+  const { data } = await admin()
+    .from("profiles")
+    .select("full_name")
+    .eq("id", userId)
+    .maybeSingle();
   return (data?.full_name as string) || "A team member";
 }
 
 /**
- * Take ownership of a waiting conversation. Race-safe: the update only lands
- * while `assigned_to` is still null, so a simultaneous claim loses cleanly.
+ * Take ownership of a waiting conversation.
+ *
+ * The entire eligibility check (active membership, active profile, presence,
+ * department access, claimable status, concurrent-chat capacity) and the
+ * assignment happen inside one PostgreSQL transaction via `claim_conversation`.
+ * Concurrent claims therefore cannot double-assign a conversation or push an
+ * agent past their capacity — exactly one caller wins, everyone else gets a
+ * clean message.
  */
 export const claimConversationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -83,51 +90,43 @@ export const claimConversationFn = createServerFn({ method: "POST" })
       throw new ForbiddenError("You are not allowed to claim conversations");
     }
 
-    const conversation = await loadConversation(data.conversationId);
-    if (!canView(actor, conversation)) {
-      throw new ForbiddenError("This conversation is not in one of your departments");
-    }
-    if (CLOSED_STATUSES.includes(conversation.status)) {
-      throw new ForbiddenError("This conversation is already closed");
-    }
-    if (conversation.assigned_to) {
-      const owner = await agentName(conversation.assigned_to);
-      throw new ForbiddenError(`This conversation was just claimed by ${owner}.`);
-    }
-    if (!CLAIMABLE_STATUSES.includes(conversation.status)) {
-      throw new ForbiddenError("This conversation cannot be claimed right now");
-    }
-
     const { admin } = await import("@/lib/public-chat.server");
     const db = admin();
 
-    // Profile eligibility: account must be active.
-    const { data: profile } = await db
-      .from("profiles")
-      .select("full_name, status")
-      .eq("id", actor.userId)
-      .maybeSingle();
-    if (!profile || profile.status !== "active") {
-      throw new ForbiddenError("Your account is not active");
+    const { data: result, error: rpcError } = await db.rpc("claim_conversation", {
+      _conversation: data.conversationId,
+      _user: actor.userId,
+    });
+    if (rpcError) {
+      console.error("[claim] rpc failed", rpcError);
+      throw new Error("Could not claim that conversation. Please try again.");
     }
 
-
-    const now = new Date().toISOString();
-    const { data: updated } = await db
-      .from("conversations")
-      .update({ assigned_to: actor.userId, status: "assigned", claimed_at: now })
-      .eq("id", conversation.id)
-      .is("assigned_to", null)
-      .in("status", CLAIMABLE_STATUSES)
-      .select("id");
-
-    if (!updated || updated.length === 0) {
-      const current = await loadConversation(conversation.id);
-      const owner = current.assigned_to ? await agentName(current.assigned_to) : "another team member";
-      throw new ForbiddenError(`This conversation was just claimed by ${owner}.`);
+    const outcome = (result ?? {}) as {
+      ok?: boolean;
+      message?: string;
+      assigned_name?: string;
+      organization_id?: string;
+      website_id?: string | null;
+      department_id?: string | null;
+      reference?: string | null;
+      previous_status?: string;
+    };
+    if (!outcome.ok) {
+      throw new ForbiddenError(outcome.message || "This conversation could not be claimed.");
     }
 
-    const name = (profile.full_name as string) || actor.fullName || "A team member";
+    const conversation = {
+      id: data.conversationId,
+      organization_id: outcome.organization_id as string,
+      website_id: outcome.website_id ?? null,
+      department_id: outcome.department_id ?? null,
+      reference: outcome.reference ?? null,
+      status: outcome.previous_status ?? "waiting",
+      assigned_to: null,
+    } satisfies ConversationRow;
+
+    const name = outcome.assigned_name || actor.fullName || "A team member";
 
     await db.from("conversation_events").insert({
       conversation_id: conversation.id,
@@ -148,18 +147,8 @@ export const claimConversationFn = createServerFn({ method: "POST" })
       body: `${name} joined the conversation.`,
     });
 
-    const { notifyStaff } = await import("@/lib/notifications.server");
-    await notifyStaff({
-      organizationId: conversation.organization_id,
-      departmentId: conversation.department_id,
-      type: "escalation",
-      severity: "info",
-      title: `Claimed by ${name}`,
-      body: conversation.reference ? `Conversation ${conversation.reference}` : null,
-      link: "/inbox",
-      recordType: "conversations",
-      recordId: conversation.id,
-    });
+    // No fan-out on claim: the queue badge and realtime inbox already reflect
+    // ownership, and a department-wide notification per claim does not scale.
 
     await writeAudit(db as never, {
       actor,
@@ -173,7 +162,7 @@ export const claimConversationFn = createServerFn({ method: "POST" })
         assigned_name: name,
         status: "assigned",
         department_id: conversation.department_id,
-        claimed_at: now,
+        claimed_at: new Date().toISOString(),
       },
     });
 
@@ -184,7 +173,9 @@ export const claimConversationFn = createServerFn({ method: "POST" })
 export const replyToConversationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ conversationId: z.string().uuid(), body: z.string().trim().min(1).max(4000) }).parse(input),
+    z
+      .object({ conversationId: z.string().uuid(), body: z.string().trim().min(1).max(4000) })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const actor = await resolveActor(context.supabase, context.userId);
@@ -352,7 +343,6 @@ export const closeConversationFn = createServerFn({ method: "POST" })
       .update({ status: "closed", closed_at: now, closed_by: actor.userId })
       .eq("id", conversation.id);
 
-
     await db.from("conversation_events").insert({
       conversation_id: conversation.id,
       organization_id: conversation.organization_id,
@@ -424,8 +414,6 @@ export const resolveConversationFn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-
-
 /**
  * Mint a short-lived signed URL for a visitor attachment so the agent can
  * view or save it. Access mirrors conversation visibility.
@@ -433,9 +421,7 @@ export const resolveConversationFn = createServerFn({ method: "POST" })
 export const attachmentUrlFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z
-      .object({ conversationId: z.string().uuid(), path: z.string().min(1).max(500) })
-      .parse(input),
+    z.object({ conversationId: z.string().uuid(), path: z.string().min(1).max(500) }).parse(input),
   )
   .handler(async ({ data, context }) => {
     const actor = await resolveActor(context.supabase, context.userId);

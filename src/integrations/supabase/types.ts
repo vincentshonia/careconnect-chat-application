@@ -2365,6 +2365,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_round_robin: {
+        Args: { _conversation: string; _department: string }
+        Returns: Json
+      }
       bump_rate_limit: {
         Args: { _key: string; _limit: number; _window_seconds: number }
         Returns: boolean
@@ -2372,6 +2376,10 @@ export type Database = {
       bump_usage: {
         Args: { _amount?: number; _metric: string; _org: string }
         Returns: number
+      }
+      busy_conversation_statuses: {
+        Args: never
+        Returns: Database["public"]["Enums"]["conversation_status"][]
       }
       can_access_org: { Args: { _org: string }; Returns: boolean }
       can_reply_conversation: {
@@ -2393,6 +2401,14 @@ export type Database = {
       can_view_intake: {
         Args: { _assigned: string; _dept: string; _org: string }
         Returns: boolean
+      }
+      claim_conversation: {
+        Args: { _conversation: string; _user: string }
+        Returns: Json
+      }
+      claimable_conversation_statuses: {
+        Args: never
+        Returns: Database["public"]["Enums"]["conversation_status"][]
       }
       current_org_id: { Args: never; Returns: string }
       current_rank: { Args: never; Returns: number }
@@ -2419,6 +2435,12 @@ export type Database = {
           _user: string
         }
         Returns: Json
+      }
+      eligible_notification_recipients: {
+        Args: { _department: string; _org: string; _pref: string }
+        Returns: {
+          user_id: string
+        }[]
       }
       has_perm: {
         Args: { _org: string; _perm: string; _user?: string }
@@ -2459,6 +2481,14 @@ export type Database = {
         Returns: string[]
       }
       my_mfa_requirement: { Args: never; Returns: boolean }
+      next_round_robin_agent: {
+        Args: { _department: string }
+        Returns: {
+          full_name: string
+          membership_id: string
+          user_id: string
+        }[]
+      }
       org_role_of: {
         Args: { _org: string; _user?: string }
         Returns: Database["public"]["Enums"]["app_role"]
