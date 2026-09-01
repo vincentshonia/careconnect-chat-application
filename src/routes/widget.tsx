@@ -480,56 +480,59 @@ function WidgetPage() {
       className="flex h-screen w-full flex-col overflow-hidden bg-card shadow-float ring-1 ring-black/5"
       style={{ borderRadius: radius, fontFamily: config.website.fontFamily }}
     >
-      <header
-        className="relative flex items-center gap-3 px-4 py-3.5 text-white"
-        style={{ background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 68%, black))` }}
-      >
-        <span
-          className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-white/10 blur-2xl"
-          aria-hidden="true"
-        />
-        <div className="relative shrink-0">
-          {agentAvatar ? (
-            <img
-              src={agentAvatar}
-              alt={agentName ?? "Representative"}
-              className="h-9 w-9 rounded-full object-cover ring-2 ring-white/30"
-            />
-          ) : config.website.logoUrl ? (
-            <img src={config.website.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover ring-2 ring-white/30" />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-sm font-bold ring-2 ring-white/25">
-              {config.organization.name.slice(0, 1)}
-            </div>
-          )}
+      {view !== "menu" && (
+        <header
+          className="relative flex items-center gap-3 px-4 py-3.5 text-white"
+          style={{ background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 68%, black))` }}
+        >
           <span
-            className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white/80 ${
-              agentName || config.agentsAvailable ? "bg-emerald-400" : "bg-amber-300"
-            }`}
+            className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-white/10 blur-2xl"
             aria-hidden="true"
           />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold tracking-tight">
-            {agentName ?? config.website.chatbotName}
-          </p>
-          <p className="truncate text-[11px] text-white/80">
-            {agentName
-              ? `${config.organization.name} · live representative`
-              : config.agentsAvailable
-                ? "Live representatives are available"
-                : "AI assistant · leave a message anytime"}
-          </p>
-        </div>
+          <div className="relative shrink-0">
+            {agentAvatar ? (
+              <img
+                src={agentAvatar}
+                alt={agentName ?? "Representative"}
+                className="h-9 w-9 rounded-full object-cover ring-2 ring-white/30"
+              />
+            ) : (
+              <div className="grid h-9 w-9 place-items-center rounded-full bg-white/15 ring-2 ring-white/25">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" />
+                </svg>
+              </div>
+            )}
+            <span
+              className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white/80 ${
+                agentName || config.agentsAvailable ? "bg-emerald-400" : "bg-amber-300"
+              }`}
+              aria-hidden="true"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold tracking-tight">
+              {agentName ?? config.website.chatbotName}
+            </p>
+            <p className="truncate text-[11px] text-white/80">
+              {agentName
+                ? `${config.organization.name} · live representative`
+                : config.agentsAvailable
+                  ? "Live representatives are available"
+                  : "AI assistant · leave a message anytime"}
+            </p>
+          </div>
 
-        <button
-          onClick={closeWidget}
-          aria-label="Close chat"
-          className="grid h-8 w-8 place-items-center rounded-full text-base leading-none transition hover:bg-white/15"
-        >
-          ✕
-        </button>
-      </header>
+          <button
+            onClick={closeWidget}
+            aria-label="Close chat"
+            className="grid h-8 w-8 place-items-center rounded-full text-base leading-none transition hover:bg-white/15"
+          >
+            ✕
+          </button>
+        </header>
+      )}
+
 
 
       <div
