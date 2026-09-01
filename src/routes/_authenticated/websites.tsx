@@ -330,14 +330,90 @@ function WebsitesPage() {
                 Copy snippet
               </Button>
             </div>
+
+            <div className="rounded-xl border border-destructive/30 p-4">
+              <h2 className="text-sm font-semibold">Website status</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Suspending stops the widget from loading on {active.domain} but keeps all
+                conversations and history. Deleting is permanent and only possible when no
+                conversations are linked.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {active.status === "active" ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={setStatus.isPending}
+                    onClick={() => setStatus.mutate("suspended")}
+                  >
+                    Suspend website
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={setStatus.isPending}
+                    onClick={() => setStatus.mutate("active")}
+                  >
+                    Reactivate website
+                  </Button>
+                )}
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={remove.isPending}
+                  onClick={() => {
+                    if (window.confirm(`Delete "${active.name}"? This cannot be undone.`)) {
+                      setNotice(null);
+                      remove.mutate();
+                    }
+                  }}
+                >
+                  Delete website
+                </Button>
+              </div>
+              {notice ? <p className="mt-2 text-sm text-muted-foreground">{notice}</p> : null}
+            </div>
           </section>
         ) : (
           <p className="text-sm text-muted-foreground">No websites configured.</p>
         )}
       </div>
+
+      {active ? (
+        <WidgetPreview
+          config={{
+            chatbotName: form.chatbot_name,
+            organizationName: form.name,
+            welcomeMessage: form.welcome_message,
+            triggerMessage: form.trigger_message,
+            privacyDisclaimer: form.privacy_disclaimer,
+            primaryColor: form.primary_color,
+            accentColor: form.accent_color,
+            position: form.widget_position,
+          }}
+        />
+      ) : null}
     </AdminShell>
   );
 }
+
+function ColorInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const safe = /^#[0-9a-fA-F]{6}$/.test(value.trim()) ? value.trim() : "#1d4ed8";
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        aria-label="Pick color"
+        value={safe}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 w-12 cursor-pointer rounded-md border border-input bg-background p-1"
+      />
+      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="#1d4ed8" />
+    </div>
+  );
+}
+
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
