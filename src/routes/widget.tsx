@@ -144,6 +144,7 @@ function WidgetPage() {
   const [formKind, setFormKind] = useState<"live_agent" | "contact" | "referral" | "enrollment" | "message">("live_agent");
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [agentName, setAgentName] = useState<string | null>(null);
+  const [agentAvatar, setAgentAvatar] = useState<string | null>(null);
   const [faqQuery, setFaqQuery] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
   const lastSeen = useRef<string | null>(null);
@@ -279,6 +280,7 @@ function WidgetPage() {
       const data = await res.json();
       if (data.connected && data.agentName) {
         setAgentName(data.agentName);
+        setAgentAvatar(data.agentAvatarUrl ?? null);
         setLiveStatus("Representative connected");
       }
       const incoming = (data.messages ?? []).filter(
