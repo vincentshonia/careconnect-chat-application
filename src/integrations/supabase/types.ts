@@ -406,24 +406,32 @@ export type Database = {
           channel: string
           claimed_at: string | null
           closed_at: string | null
+          closed_by: string | null
           contact_id: string | null
           created_at: string
           department_id: string | null
           escalation_reason: string | null
           escalation_requested: boolean
           first_agent_response_at: string | null
+          first_human_requested_at: string | null
           first_response_at: string | null
           id: string
           is_ai_only: boolean
+          last_agent_message_at: string | null
           last_message_at: string
+          last_visitor_message_at: string | null
           organization_id: string
           outcome: string | null
           priority: Database["public"]["Enums"]["conversation_priority"]
           reference: string
+          reopened_count: number
           requested_agent_at: string | null
+          resolved_at: string | null
+          resolved_by: string | null
           status: Database["public"]["Enums"]["conversation_status"]
           subject: string | null
           tags: string[]
+          transfer_count: number
           unread_agent_count: number
           updated_at: string
           visitor_id: string | null
@@ -436,24 +444,32 @@ export type Database = {
           channel?: string
           claimed_at?: string | null
           closed_at?: string | null
+          closed_by?: string | null
           contact_id?: string | null
           created_at?: string
           department_id?: string | null
           escalation_reason?: string | null
           escalation_requested?: boolean
           first_agent_response_at?: string | null
+          first_human_requested_at?: string | null
           first_response_at?: string | null
           id?: string
           is_ai_only?: boolean
+          last_agent_message_at?: string | null
           last_message_at?: string
+          last_visitor_message_at?: string | null
           organization_id: string
           outcome?: string | null
           priority?: Database["public"]["Enums"]["conversation_priority"]
           reference?: string
+          reopened_count?: number
           requested_agent_at?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           status?: Database["public"]["Enums"]["conversation_status"]
           subject?: string | null
           tags?: string[]
+          transfer_count?: number
           unread_agent_count?: number
           updated_at?: string
           visitor_id?: string | null
@@ -466,24 +482,32 @@ export type Database = {
           channel?: string
           claimed_at?: string | null
           closed_at?: string | null
+          closed_by?: string | null
           contact_id?: string | null
           created_at?: string
           department_id?: string | null
           escalation_reason?: string | null
           escalation_requested?: boolean
           first_agent_response_at?: string | null
+          first_human_requested_at?: string | null
           first_response_at?: string | null
           id?: string
           is_ai_only?: boolean
+          last_agent_message_at?: string | null
           last_message_at?: string
+          last_visitor_message_at?: string | null
           organization_id?: string
           outcome?: string | null
           priority?: Database["public"]["Enums"]["conversation_priority"]
           reference?: string
+          reopened_count?: number
           requested_agent_at?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           status?: Database["public"]["Enums"]["conversation_status"]
           subject?: string | null
           tags?: string[]
+          transfer_count?: number
           unread_agent_count?: number
           updated_at?: string
           visitor_id?: string | null
@@ -2330,6 +2354,202 @@ export type Database = {
       platform_role_of: {
         Args: { _user?: string }
         Returns: Database["public"]["Enums"]["platform_role"]
+      }
+      report_ai: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _org: string
+          _to: string
+          _website?: string
+        }
+        Returns: Json
+      }
+      report_conv: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _org: string
+          _priority?: string
+          _staff?: string[]
+          _statuses?: string[]
+          _to: string
+          _transfer?: string
+          _type?: string
+          _website?: string
+        }
+        Returns: {
+          assigned_to: string | null
+          channel: string
+          claimed_at: string | null
+          closed_at: string | null
+          closed_by: string | null
+          contact_id: string | null
+          created_at: string
+          department_id: string | null
+          escalation_reason: string | null
+          escalation_requested: boolean
+          first_agent_response_at: string | null
+          first_human_requested_at: string | null
+          first_response_at: string | null
+          id: string
+          is_ai_only: boolean
+          last_agent_message_at: string | null
+          last_message_at: string
+          last_visitor_message_at: string | null
+          organization_id: string
+          outcome: string | null
+          priority: Database["public"]["Enums"]["conversation_priority"]
+          reference: string
+          reopened_count: number
+          requested_agent_at: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["conversation_status"]
+          subject: string | null
+          tags: string[]
+          transfer_count: number
+          unread_agent_count: number
+          updated_at: string
+          visitor_id: string | null
+          visitor_type: string
+          website_id: string
+          workspace_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "conversations"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      report_department_backlog: {
+        Args: { _dept?: string[]; _org: string; _sla?: number }
+        Returns: Json
+      }
+      report_departments: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _org: string
+          _priority?: string
+          _sla?: number
+          _staff?: string[]
+          _statuses?: string[]
+          _to: string
+          _transfer?: string
+          _type?: string
+          _website?: string
+        }
+        Returns: Json
+      }
+      report_intake: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _org: string
+          _staff?: string[]
+          _to: string
+        }
+        Returns: Json
+      }
+      report_overview: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _org: string
+          _priority?: string
+          _sla?: number
+          _staff?: string[]
+          _statuses?: string[]
+          _to: string
+          _transfer?: string
+          _type?: string
+          _website?: string
+        }
+        Returns: Json
+      }
+      report_sla: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _org: string
+          _priority?: string
+          _sla?: number
+          _staff?: string[]
+          _statuses?: string[]
+          _to: string
+          _transfer?: string
+          _type?: string
+          _website?: string
+        }
+        Returns: Json
+      }
+      report_staff: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _org: string
+          _priority?: string
+          _sla?: number
+          _staff?: string[]
+          _statuses?: string[]
+          _to: string
+          _transfer?: string
+          _type?: string
+          _website?: string
+        }
+        Returns: Json
+      }
+      report_staff_workload: {
+        Args: { _dept?: string[]; _org: string }
+        Returns: Json
+      }
+      report_tickets: {
+        Args: {
+          _dept?: string[]
+          _dir?: string
+          _flag?: string
+          _from: string
+          _limit?: number
+          _offset?: number
+          _org: string
+          _priority?: string
+          _sla?: number
+          _sort?: string
+          _staff?: string[]
+          _statuses?: string[]
+          _to: string
+          _transfer?: string
+          _type?: string
+          _website?: string
+        }
+        Returns: Json
+      }
+      report_transfers: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _limit?: number
+          _org: string
+          _to: string
+        }
+        Returns: Json
+      }
+      report_volume: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _org: string
+          _priority?: string
+          _staff?: string[]
+          _statuses?: string[]
+          _to: string
+          _transfer?: string
+          _type?: string
+          _website?: string
+        }
+        Returns: Json
       }
       role_rank: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }

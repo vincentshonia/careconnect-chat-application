@@ -19,6 +19,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
+  // `?c=<id>` lets report drill-downs open a specific conversation.
+  validateSearch: (search: Record<string, unknown>): { c?: string } =>
+    typeof search['c'] === "string" ? { c: search['c'] as string } : {},
+
   head: () => ({
     meta: [
       { title: "Inbox — Pacific Health Group Support Console" },
@@ -28,6 +32,7 @@ export const Route = createFileRoute("/_authenticated/inbox")({
   }),
   component: InboxPage,
 });
+
 
 type Conversation = {
   id: string;
@@ -84,10 +89,12 @@ function statusTone(status: string) {
 function InboxPage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
-  const [tab, setTab] = useState<Tab>("waiting");
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const search = Route.useSearch();
+  const [tab, setTab] = useState<Tab>(search.c ? "all" : "waiting");
+  const [activeId, setActiveId] = useState<string | null>(search.c ?? null);
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+
 
   const userId = session.data?.userId ?? null;
   const can = (p: string) => session.data?.permissions.has(p) ?? false;
