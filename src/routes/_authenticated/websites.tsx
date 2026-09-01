@@ -7,6 +7,13 @@ import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { WidgetPreview } from "@/components/admin/WidgetPreview";
+import {
+  DEFAULT_WIDGET_TABS,
+  WIDGET_TAB_ICONS,
+  resolveWidgetTabs,
+  tabIconPath,
+  type WidgetTabConfig,
+} from "@/lib/widget-tabs";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +54,7 @@ function WebsitesPage() {
   const [domainsText, setDomainsText] = useState("");
   const [creating, setCreating] = useState(false);
   const [newSite, setNewSite] = useState({ name: "", domain: "" });
+  const [tabs, setTabs] = useState<WidgetTabConfig[]>(DEFAULT_WIDGET_TABS);
 
   useEffect(() => setOrigin(window.location.origin), []);
 
@@ -79,6 +87,7 @@ function WebsitesPage() {
       setActiveId(active.id);
       setForm(active);
       setDomainsText(((active.allowed_domains as string[] | null) ?? []).join(", "));
+      setTabs(resolveWidgetTabs(active.tab_config));
     }
   }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -116,6 +125,7 @@ function WebsitesPage() {
           show_help_tab: Boolean(form.show_help_tab),
           show_services_tab: Boolean(form.show_services_tab),
           show_requests_tab: Boolean(form.show_requests_tab),
+          tab_config: tabs,
         })
         .eq("id", active.id);
       if (error) throw error;
@@ -457,27 +467,102 @@ function WebsitesPage() {
               </div>
 
               <div className="rounded-lg border border-border p-4">
-                <h3 className="text-sm font-semibold">Widget tabs</h3>
+                <h3 className="text-sm font-semibold">Bottom navigation buttons</h3>
                 <p className="mb-3 text-xs text-muted-foreground">
-                  Chat is always available. Toggle the other tabs per site.
+                  Rename, reorder, re-icon, or hide the buttons at the bottom of the widget. Chat
+                  always stays visible.
                 </p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {([
-                    ["show_home_tab", "Home"],
-                    ["show_help_tab", "Help"],
-                    ["show_services_tab", "Services"],
-                    ["show_requests_tab", "Requests"],
-                  ] as const).map(([key, label]) => (
-                    <div key={key} className="flex items-center gap-3">
+                <ul className="space-y-2">
+                  {tabs.map((tab, index) => (
+                    <li
+                      key={tab.key}
+                      className="grid items-center gap-2 rounded-lg border border-border p-2 sm:grid-cols-[auto_minmax(0,1fr)_minmax(0,160px)_auto]"
+                    >
                       <Switch
-                        id={key}
-                        checked={form[key] !== false}
-                        onCheckedChange={(v) => setForm({ ...form, [key]: v })}
+                        aria-label={`Show ${tab.label}`}
+                        checked={tab.enabled}
+                        disabled={tab.key === "chat"}
+                        onCheckedChange={(v) =>
+                          setTabs(tabs.map((t) => (t.key === tab.key ? { ...t, enabled: v } : t)))
+                        }
                       />
-                      <Label htmlFor={key}>{label} tab</Label>
-                    </div>
+                      <Input
+                        value={tab.label}
+                        placeholder={tab.key}
+                        onChange={(e) =>
+                          setTabs(
+                            tabs.map((t) =>
+                              t.key === tab.key ? { ...t, label: e.target.value } : t,
+                            ),
+                          )
+                        }
+                      />
+                      <div className="flex items-center gap-2">
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          className="shrink-0 text-muted-foreground"
+                        >
+                          <path d={tabIconPath(tab.icon)} />
+                        </svg>
+                        <select
+                          aria-label={`${tab.label} icon`}
+                          className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                          value={tab.icon}
+                          onChange={(e) =>
+                            setTabs(
+                              tabs.map((t) =>
+                                t.key === tab.key ? { ...t, icon: e.target.value } : t,
+                              ),
+                            )
+                          }
+                        >
+                          {Object.keys(WIDGET_TAB_ICONS).map((name) => (
+                            <option key={name} value={name}>
+                              {name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={index === 0}
+                          onClick={() => setTabs(moveTab(tabs, index, -1))}
+                        >
+                          ↑
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={index === tabs.length - 1}
+                          onClick={() => setTabs(moveTab(tabs, index, 1))}
+                        >
+                          ↓
+                        </Button>
+                      </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="mt-2"
+                  onClick={() => setTabs(DEFAULT_WIDGET_TABS)}
+                >
+                  Reset to defaults
+                </Button>
               </div>
 
               <div className="flex items-center gap-3">
@@ -587,6 +672,7 @@ function WebsitesPage() {
             showServicesTab: form.show_services_tab,
             showRequestsTab: form.show_requests_tab,
             topics: services.map((s) => s.name),
+            tabs,
           }}
         />
       ) : null}
@@ -733,4 +819,14 @@ function ServicesCard({ organizationId }: { organizationId: string }) {
       {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
     </div>
   );
+}
+
+
+function moveTab(list: WidgetTabConfig[], index: number, delta: number): WidgetTabConfig[] {
+  const next = [...list];
+  const target = index + delta;
+  if (target < 0 || target >= next.length) return list;
+  const [item] = next.splice(index, 1);
+  next.splice(target, 0, item!);
+  return next;
 }

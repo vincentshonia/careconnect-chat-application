@@ -1,5 +1,6 @@
 import { useState } from "react";
 import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
+import { resolveWidgetTabs, tabIconPath, type WidgetTabConfig } from "@/lib/widget-tabs";
 
 export type WidgetPreviewConfig = {
   chatbotName?: string | null;
@@ -24,25 +25,10 @@ export type WidgetPreviewConfig = {
   showServicesTab?: boolean | null;
   showRequestsTab?: boolean | null;
   topics?: string[];
+  tabs?: WidgetTabConfig[];
 };
 
-const TABS = [
-  { key: "home", label: "Home", icon: "M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" },
-  {
-    key: "chat",
-    label: "Chat",
-    icon: "M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z",
-  },
-  {
-    key: "help",
-    label: "Help",
-    icon: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4M12 17h0",
-  },
-  { key: "services", label: "Services", icon: "M4 6h16M4 12h16M4 18h10" },
-  { key: "requests", label: "Requests", icon: "M9 4h6a2 2 0 0 1 2 2v14l-5-3-5 3V6a2 2 0 0 1 2-2z" },
-] as const;
-
-type TabKey = (typeof TABS)[number]["key"];
+type TabKey = WidgetTabConfig["key"];
 
 /**
  * Live, non-functional visual preview of the chat widget rendered at the same
@@ -59,13 +45,16 @@ export function WidgetPreview({ config }: { config: WidgetPreviewConfig }) {
   const logo = config.logoUrl?.trim() || brandLogoAsset.url;
   const topics = (config.topics ?? []).slice(0, 4);
 
-  const visible = TABS.filter((t) => {
-    if (t.key === "home") return config.showHomeTab !== false;
-    if (t.key === "help") return config.showHelpTab !== false;
-    if (t.key === "services") return config.showServicesTab !== false;
-    if (t.key === "requests") return config.showRequestsTab !== false;
-    return true;
-  });
+  const visible = resolveWidgetTabs(config.tabs)
+    .filter((t) => {
+      if (!t.enabled) return false;
+      if (t.key === "home") return config.showHomeTab !== false;
+      if (t.key === "help") return config.showHelpTab !== false;
+      if (t.key === "services") return config.showServicesTab !== false;
+      if (t.key === "requests") return config.showRequestsTab !== false;
+      return true;
+    })
+    .map((t) => ({ ...t, icon: tabIconPath(t.icon) }));
   const activeTab = visible.some((t) => t.key === tab) ? tab : (visible[0]?.key ?? "chat");
 
   return (
