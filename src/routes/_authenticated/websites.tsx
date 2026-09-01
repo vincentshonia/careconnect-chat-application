@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { WidgetPreview } from "@/components/admin/WidgetPreview";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -107,6 +109,49 @@ function WebsitesPage() {
     onError: (err) => setNotice(err instanceof Error ? err.message : "Save failed"),
   });
 
+  const setStatus = useMutation({
+    mutationFn: async (status: "active" | "suspended") => {
+      if (!active) return;
+      const { error } = await supabase.from("websites").update({ status }).eq("id", active.id);
+      if (error) throw error;
+      await logAudit({
+        action: `website.${status === "suspended" ? "suspended" : "activated"}`,
+        recordType: "websites",
+        recordId: active.id,
+        websiteId: active.id,
+        newValue: { status },
+      });
+    },
+    onSuccess: (_d, status) => {
+      setNotice(status === "suspended" ? "Website suspended — the widget will stop loading." : "Website reactivated.");
+      queryClient.invalidateQueries({ queryKey: ["websites"] });
+    },
+    onError: (err) => setNotice(err instanceof Error ? err.message : "Update failed"),
+  });
+
+  const remove = useMutation({
+    mutationFn: async () => {
+      if (!active) return;
+      const { error } = await supabase.from("websites").delete().eq("id", active.id);
+      if (error) throw error;
+      await logAudit({
+        action: "website.deleted",
+        recordType: "websites",
+        recordId: active.id,
+        previousValue: { name: active.name, domain: active.domain },
+      });
+    },
+    onSuccess: () => {
+      setActiveId(null);
+      setNotice("Website deleted.");
+      queryClient.invalidateQueries({ queryKey: ["websites"] });
+    },
+    onError: () =>
+      setNotice(
+        "Could not delete this website. It still has conversations or other linked records — suspend it instead.",
+      ),
+  });
+
   // Preview/sandbox origins are auth-gated, so a snippet pointing at them never
   // loads on a customer site. Always emit the public production origin.
   const PUBLIC_EMBED_ORIGIN = "https://chat.mypacifichealth.com";
@@ -118,6 +163,7 @@ function WebsitesPage() {
   const snippet = active
     ? `<script src="${embedOrigin}/api/public/widget.js" data-website-id="${active.id}"></script>`
     : "";
+
 
   return (
     <AdminShell
@@ -135,7 +181,13 @@ function WebsitesPage() {
                   className={`w-full px-4 py-3 text-left hover:bg-accent ${w.id === active?.id ? "bg-accent" : ""}`}
                 >
                   <span className="text-sm font-medium">{w.name}</span>
+                  {w.status !== "active" ? (
+                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+                      {w.status}
+                    </span>
+                  ) : null}
                   <p className="text-xs text-muted-foreground">{w.domain}</p>
+
                 </button>
               </li>
             ))}
@@ -180,17 +232,18 @@ function WebsitesPage() {
                   />
                 </Field>
                 <Field label="Primary color">
-                  <Input
-                    value={form.primary_color ?? ""}
-                    onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+                  <ColorInput
+                    value={form.primary_color ?? "#1d4ed8"}
+                    onChange={(v) => setForm({ ...form, primary_color: v })}
                   />
                 </Field>
                 <Field label="Accent color">
-                  <Input
-                    value={form.accent_color ?? ""}
-                    onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
+                  <ColorInput
+                    value={form.accent_color ?? "#0891b2"}
+                    onChange={(v) => setForm({ ...form, accent_color: v })}
                   />
                 </Field>
+
                 <Field label="Widget position">
                   <select
                     className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -279,14 +332,90 @@ function WebsitesPage() {
                 Copy snippet
               </Button>
             </div>
+
+            <div className="rounded-xl border border-destructive/30 p-4">
+              <h2 className="text-sm font-semibold">Website status</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Suspending stops the widget from loading on {active.domain} but keeps all
+                conversations and history. Deleting is permanent and only possible when no
+                conversations are linked.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {active.status === "active" ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={setStatus.isPending}
+                    onClick={() => setStatus.mutate("suspended")}
+                  >
+                    Suspend website
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={setStatus.isPending}
+                    onClick={() => setStatus.mutate("active")}
+                  >
+                    Reactivate website
+                  </Button>
+                )}
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={remove.isPending}
+                  onClick={() => {
+                    if (window.confirm(`Delete "${active.name}"? This cannot be undone.`)) {
+                      setNotice(null);
+                      remove.mutate();
+                    }
+                  }}
+                >
+                  Delete website
+                </Button>
+              </div>
+              {notice ? <p className="mt-2 text-sm text-muted-foreground">{notice}</p> : null}
+            </div>
           </section>
         ) : (
           <p className="text-sm text-muted-foreground">No websites configured.</p>
         )}
       </div>
+
+      {active ? (
+        <WidgetPreview
+          config={{
+            chatbotName: form.chatbot_name,
+            organizationName: form.name,
+            welcomeMessage: form.welcome_message,
+            triggerMessage: form.trigger_message,
+            privacyDisclaimer: form.privacy_disclaimer,
+            primaryColor: form.primary_color,
+            accentColor: form.accent_color,
+            position: form.widget_position,
+          }}
+        />
+      ) : null}
     </AdminShell>
   );
 }
+
+function ColorInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const safe = /^#[0-9a-fA-F]{6}$/.test(value.trim()) ? value.trim() : "#1d4ed8";
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        aria-label="Pick color"
+        value={safe}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 w-12 cursor-pointer rounded-md border border-input bg-background p-1"
+      />
+      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="#1d4ed8" />
+    </div>
+  );
+}
+
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
