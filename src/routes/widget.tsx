@@ -852,7 +852,10 @@ function WidgetPage() {
               </svg>
             </button>
           </div>
-          <p className="mt-2 px-1 text-[10px] leading-tight text-muted-foreground">{config.organization.privacyNotice}</p>
+          <p className="mt-2 line-clamp-2 px-1 text-[10px] leading-tight text-muted-foreground">
+            {config.organization.privacyNotice}
+          </p>
+
 
         </form>
       )}
