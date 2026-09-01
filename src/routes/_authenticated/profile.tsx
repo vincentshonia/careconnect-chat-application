@@ -194,9 +194,11 @@ function PersonalSettingsPage() {
           <div>
             <Label>Profile photo</Label>
             <p className="text-xs text-muted-foreground">
-              PNG or JPG up to 5 MB. Shown to teammates and to visitors while you are chatting.
+              PNG or JPG up to 5 MB. Shown to teammates in CareConnect. It is only shown to
+              website visitors if you turn on public visibility below.
             </p>
           </div>
+
           <div className="flex flex-wrap items-center gap-4">
             <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-full border border-border bg-muted text-sm font-semibold text-muted-foreground">
               {avatarUrl ? (
