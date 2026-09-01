@@ -229,6 +229,7 @@ function InboxPage() {
       .channel("inbox-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => {
         queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        queryClient.invalidateQueries({ queryKey: ["conversation"] });
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
         queryClient.invalidateQueries({ queryKey: ["conversations"] });
@@ -317,6 +318,7 @@ function InboxPage() {
       const claimedId = activeId;
       toast.success("You now own this conversation");
       await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      await queryClient.invalidateQueries({ queryKey: ["conversation"] });
       queryClient.invalidateQueries({ queryKey: ["messages", claimedId] });
       // Stay on the chat you just claimed: it has left the Waiting queue.
       setTab("mine");
@@ -429,7 +431,13 @@ function InboxPage() {
       title="Inbox"
       description="Website chat conversations, AI answers, and live agent replies."
       actions={
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search reference or subject"
+            className="h-8 w-56 rounded-md border border-border bg-background px-2 text-xs"
+          />
           {tabs.map((t) => (
             <Button
               key={t.key}
@@ -479,6 +487,26 @@ function InboxPage() {
               ))}
             </ul>
           )}
+          {total > PAGE_SIZE ? (
+            <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2 text-xs text-muted-foreground">
+              <span>
+                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+              </span>
+              <span className="flex gap-1">
+                <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+                  Prev
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={(page + 1) * PAGE_SIZE >= total}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </span>
+            </div>
+          ) : null}
         </aside>
 
         <section className="flex max-h-[70vh] flex-col rounded-xl border border-border">
