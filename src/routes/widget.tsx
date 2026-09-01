@@ -924,7 +924,7 @@ function WidgetPage() {
 
       <nav
         aria-label="Chat sections"
-        className="grid shrink-0 grid-cols-5 gap-0.5 border-t border-border/60 bg-card px-1.5 pb-2 pt-1.5"
+        className="flex shrink-0 items-stretch gap-0.5 border-t border-border/60 bg-card px-1.5 pb-2 pt-1.5 [&>button]:flex-1"
       >
         {TABS.filter((tab) => {
           const w = config.website;
