@@ -10,6 +10,7 @@ import {
   closeConversationFn,
   reassignConversationFn,
   replyToConversationFn,
+  resolveConversationFn,
 } from "@/lib/conversations.functions";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { toast } from "sonner";
@@ -249,6 +250,7 @@ function InboxPage() {
   const claimFn = useServerFn(claimConversationFn);
   const replyFn = useServerFn(replyToConversationFn);
   const closeFn = useServerFn(closeConversationFn);
+  const resolveFn = useServerFn(resolveConversationFn);
   const reassignFn = useServerFn(reassignConversationFn);
   const transferFn = useServerFn(transferConversationFn);
 
@@ -287,6 +289,18 @@ function InboxPage() {
     },
     onError: (e) => fail(e, "Could not close this conversation"),
   });
+
+  // Resolving credits the outcome to this agent for reporting; closing does not.
+  const resolveConversation = useMutation({
+    mutationFn: async () => resolveFn({ data: { conversationId: active!.id } }),
+    onSuccess: () => {
+      toast.success("Conversation resolved");
+      invalidate();
+    },
+    onError: (e) => fail(e, "Could not resolve this conversation"),
+  });
+
+
 
   const reassign = useMutation({
     mutationFn: async (targetUserId: string | null) =>
@@ -474,15 +488,25 @@ function InboxPage() {
 
 
                   {canReply ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => closeConversation.mutate()}
-                      disabled={closeConversation.isPending}
-                    >
-                      Close
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => resolveConversation.mutate()}
+                        disabled={resolveConversation.isPending}
+                      >
+                        Resolve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => closeConversation.mutate()}
+                        disabled={closeConversation.isPending}
+                      >
+                        Close
+                      </Button>
+                    </>
                   ) : null}
+
                 </div>
               </div>
 
