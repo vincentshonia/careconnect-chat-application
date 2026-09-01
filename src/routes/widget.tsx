@@ -487,7 +487,13 @@ function WidgetPage() {
           aria-hidden="true"
         />
         <div className="relative shrink-0">
-          {config.website.logoUrl ? (
+          {agentAvatar ? (
+            <img
+              src={agentAvatar}
+              alt={agentName ?? "Representative"}
+              className="h-9 w-9 rounded-full object-cover ring-2 ring-white/30"
+            />
+          ) : config.website.logoUrl ? (
             <img src={config.website.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover ring-2 ring-white/30" />
           ) : (
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-sm font-bold ring-2 ring-white/25">
@@ -496,17 +502,24 @@ function WidgetPage() {
           )}
           <span
             className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white/80 ${
-              config.agentsAvailable ? "bg-emerald-400" : "bg-amber-300"
+              agentName || config.agentsAvailable ? "bg-emerald-400" : "bg-amber-300"
             }`}
             aria-hidden="true"
           />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold tracking-tight">{config.website.chatbotName}</p>
+          <p className="truncate text-sm font-semibold tracking-tight">
+            {agentName ?? config.website.chatbotName}
+          </p>
           <p className="truncate text-[11px] text-white/80">
-            {config.agentsAvailable ? "Live representatives are available" : "AI assistant · leave a message anytime"}
+            {agentName
+              ? `${config.organization.name} · live representative`
+              : config.agentsAvailable
+                ? "Live representatives are available"
+                : "AI assistant · leave a message anytime"}
           </p>
         </div>
+
         {view !== "menu" && (
           <button
             onClick={() => setView("menu")}
