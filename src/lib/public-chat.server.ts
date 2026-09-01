@@ -132,14 +132,18 @@ export async function loadWidgetConfig(websiteId: string, hostOrigin: string | n
         .eq("organization_id", website.organization_id)
         .eq("status", "active")
         .order("name"),
-      // Real staff photos only — the hero never renders placeholder faces.
+      // Real staff photos only, and only for staff who explicitly opted in.
+      // `show_in_widget_team` defaults to false, so no employee photo can ever
+      // reach an anonymous visitor by accident.
       db
         .from("profiles")
         .select("id,display_name,full_name,avatar_url")
         .eq("organization_id", website.organization_id)
         .eq("status", "active")
+        .eq("show_in_widget_team", true)
         .not("avatar_url", "is", null)
         .limit(3),
+
     ]);
 
 
