@@ -17,6 +17,8 @@ Executed in phases. Each phase ends with typecheck + build + tests.
 - [x] Waiting/Escalated filter vocabulary matches SQL (`claimable_conversation_statuses`)
 - [x] Personal settings hardening (RLS: no self role/org/department/capacity edits, email locked)
 - [x] Transfer/reassign eligibility (dept + active membership + presence/workload display, audited overrides)
+- [x] Self-service profile freeze applies to every role (no `staff.edit` bypass on your own record)
+- [x] Full authenticated RBAC matrix (agents, team lead, managers ±departments, admin, super admin, tenant B), suspension revokes a live session
 - [x] RBAC + tenant isolation integration tests; repair obsolete test table names
 
 ## Phase 3 — Data-volume scale

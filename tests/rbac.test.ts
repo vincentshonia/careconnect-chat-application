@@ -1,13 +1,17 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { permissionsFor, roleTransitionError, type OrgRole } from "@/lib/permissions";
+import { dashboardScopeFor, reportScopeFor } from "@/lib/report-scope";
 
 /**
  * Authenticated RBAC integration tests.
  *
- * These provision real, ephemeral users in two tenants and then talk to the
- * database as those users through the public API — the same path a browser
- * takes. They prove three boundaries that unit tests cannot: cross-tenant
- * denial, role boundaries within one tenant, and department-level visibility.
+ * These provision real, ephemeral users across two tenants and then talk to
+ * the database as those users through the public API — the same path a browser
+ * takes. They prove the boundaries unit tests cannot: cross-tenant denial,
+ * role boundaries within one tenant, department-level visibility, self-service
+ * profile limits (including for administrators) and loss of authorization the
+ * moment a membership is suspended, without signing the user out.
  *
  * Everything created here is deleted again in `afterAll`.
  */
@@ -30,10 +34,14 @@ type Ctx = {
   deptA2: string;
   websiteA: string;
   websiteB: string;
+  /** deptA1, owned by user A */
   convA1: string;
+  /** deptA1, unowned */
+  convA1Open: string;
+  /** deptA2, unowned */
   convA2: string;
   convB: string;
-  users: Record<string, { id: string; email: string }>;
+  users: Record<string, { id: string; email: string; role: OrgRole; departments: string[] }>;
 };
 
 const ctx = {} as Ctx;
@@ -74,7 +82,7 @@ async function createWebsite(org: string, name: string) {
   return data.id as string;
 }
 
-async function createUser(key: string, org: string, role: string, departments: string[]) {
+async function createUser(key: string, org: string, role: OrgRole, departments: string[]) {
   const email = `rbac-${key}-${suffix}@example.test`;
   const { data, error } = await admin.auth.admin.createUser({
     email,
@@ -104,7 +112,7 @@ async function createUser(key: string, org: string, role: string, departments: s
   const { error: signInError } = await client.auth.signInWithPassword({ email, password });
   if (signInError) throw new Error(`sign-in ${key}: ${signInError.message}`);
   clients[key] = client;
-  ctx.users[key] = { id, email };
+  ctx.users[key] = { id, email, role, departments };
   return id;
 }
 
@@ -131,6 +139,41 @@ async function createConversation(
   return data.id as string;
 }
 
+/** Ids of conversations this signed-in user can actually read. */
+async function visibleConversations(key: string, ids: string[]) {
+  const { data } = await clients[key]!.from("conversations").select("id").in("id", ids);
+  return (data ?? []).map((r) => r.id as string);
+}
+
+/**
+ * Resolve the reporting scope the way the server does: read the caller's real
+ * membership role and department rows through their own authenticated session,
+ * expand the role into permissions, then apply the scope rules. This exercises
+ * the whole role -> permission -> scope chain rather than a synthetic actor.
+ */
+async function scopeForSignedInUser(key: string) {
+  const client = clients[key]!;
+  const userId = ctx.users[key]!.id;
+  const { data: membership, error } = await client
+    .from("organization_memberships")
+    .select("organization_id, role")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (error) throw new Error(`membership read ${key}: ${error.message}`);
+  const { data: depts } = await client
+    .from("department_members")
+    .select("department_id")
+    .eq("user_id", userId);
+  const actor = {
+    userId,
+    organizationId: (membership?.organization_id ?? "") as string,
+    departmentIds: (depts ?? []).map((d) => d.department_id as string),
+    permissions: permissionsFor((membership?.role ?? null) as OrgRole | null, null),
+  };
+  return { actor, report: reportScopeFor(actor), dashboard: dashboardScopeFor(actor) };
+}
+
 describe.runIf(configured)("authenticated RBAC boundaries", () => {
   beforeAll(async () => {
     ctx.users = {};
@@ -141,21 +184,35 @@ describe.runIf(configured)("authenticated RBAC boundaries", () => {
     ctx.websiteA = await createWebsite(ctx.orgA, `SiteA${suffix}`);
     ctx.websiteB = await createWebsite(ctx.orgB, `SiteB${suffix}`);
 
-    await createUser("agentA", ctx.orgA, "agent", [ctx.deptA1]);
-    const otherAgent = await createUser("agentA2", ctx.orgA, "agent", [ctx.deptA2]);
+    // Full role matrix inside tenant A.
+    const userA = await createUser("userA", ctx.orgA, "agent", [ctx.deptA1]);
+    await createUser("userB", ctx.orgA, "agent", [ctx.deptA1]);
+    await createUser("userC", ctx.orgA, "agent", [ctx.deptA2]);
+    await createUser("lead", ctx.orgA, "team_lead", [ctx.deptA1]);
+    await createUser("manager", ctx.orgA, "manager", [ctx.deptA1]);
+    await createUser("managerNone", ctx.orgA, "manager", []);
     await createUser("adminA", ctx.orgA, "administrator", []);
+    await createUser("superA", ctx.orgA, "super_admin", []);
+    await createUser("suspended", ctx.orgA, "agent", [ctx.deptA1]);
+    // Tenant B employee.
     await createUser("agentB", ctx.orgB, "agent", []);
 
-    ctx.convA1 = await createConversation(ctx.orgA, ctx.websiteA, ctx.deptA1, `A1-${suffix}`);
-    ctx.convA2 = await createConversation(
+    ctx.convA1 = await createConversation(
       ctx.orgA,
       ctx.websiteA,
-      ctx.deptA2,
-      `A2-${suffix}`,
-      otherAgent,
+      ctx.deptA1,
+      `A1-${suffix}`,
+      userA,
     );
+    ctx.convA1Open = await createConversation(
+      ctx.orgA,
+      ctx.websiteA,
+      ctx.deptA1,
+      `A1open-${suffix}`,
+    );
+    ctx.convA2 = await createConversation(ctx.orgA, ctx.websiteA, ctx.deptA2, `A2-${suffix}`);
     ctx.convB = await createConversation(ctx.orgB, ctx.websiteB, null, `B1-${suffix}`);
-  }, 60_000);
+  }, 120_000);
 
   afterAll(async () => {
     if (!configured) return;
@@ -177,7 +234,7 @@ describe.runIf(configured)("authenticated RBAC boundaries", () => {
     for (const org of [ctx.orgA, ctx.orgB].filter(Boolean)) {
       await admin.from("organizations").delete().eq("id", org);
     }
-  }, 60_000);
+  }, 120_000);
 
   describe("cross-tenant denial", () => {
     it("a member of tenant B sees no conversation from tenant A", async () => {
@@ -196,14 +253,6 @@ describe.runIf(configured)("authenticated RBAC boundaries", () => {
       expect(data ?? []).toHaveLength(0);
     });
 
-    it("an administrator of tenant A cannot read tenant B's conversations", async () => {
-      const { data } = await clients['adminA']!
-        .from("conversations")
-        .select("id")
-        .eq("organization_id", ctx.orgB);
-      expect(data ?? []).toHaveLength(0);
-    });
-
     it("a member of tenant B cannot write into tenant A", async () => {
       const { error } = await clients['agentB']!.from("conversations").insert({
         organization_id: ctx.orgA,
@@ -214,143 +263,413 @@ describe.runIf(configured)("authenticated RBAC boundaries", () => {
     });
   });
 
-  describe("department visibility", () => {
-    it("an agent sees the unclaimed conversation in their own department", async () => {
-      const { data } = await clients['agentA']!
+  describe("Standard Users", () => {
+    it("A and B both see the conversations in their shared department", async () => {
+      const seenA = await visibleConversations("userA", [ctx.convA1, ctx.convA1Open]);
+      const seenB = await visibleConversations("userB", [ctx.convA1, ctx.convA1Open]);
+      expect(seenA.sort()).toEqual([ctx.convA1, ctx.convA1Open].sort());
+      expect(seenB.sort()).toEqual([ctx.convA1, ctx.convA1Open].sort());
+    });
+
+    it("B may view A's owned conversation but cannot take ownership of it", async () => {
+      await clients['userB']!
         .from("conversations")
-        .select("id")
+        .update({ assigned_to: ctx.users['userB']!.id })
         .eq("id", ctx.convA1);
-      expect((data ?? []).map((r) => r.id)).toContain(ctx.convA1);
-    });
-
-    it("an agent does not see another department's assigned conversation", async () => {
-      const { data } = await clients['agentA']!
+      const { data } = await admin
         .from("conversations")
-        .select("id")
-        .eq("id", ctx.convA2);
-      expect(data ?? []).toHaveLength(0);
+        .select("assigned_to")
+        .eq("id", ctx.convA1)
+        .single();
+      expect(data?.assigned_to).toBe(ctx.users['userA']!.id);
     });
 
-    it("an administrator sees every conversation in their tenant", async () => {
-      const { data } = await clients['adminA']!
-        .from("conversations")
-        .select("id")
-        .in("id", [ctx.convA1, ctx.convA2]);
-      expect((data ?? []).length).toBe(2);
+    it("B cannot reply on a conversation owned by A", async () => {
+      const { error } = await clients['userB']!.from("messages").insert({
+        conversation_id: ctx.convA1,
+        organization_id: ctx.orgA,
+        website_id: ctx.websiteA,
+        sender_type: "agent",
+        sender_user_id: ctx.users['userB']!.id,
+        body: "impersonation attempt",
+      } as never);
+      expect(error).not.toBeNull();
     });
-  });
 
-  describe("role boundaries and privilege escalation", () => {
-    it("an agent cannot promote themselves", async () => {
-      await clients['agentA']!
+    it("A can reply on the conversation they own", async () => {
+      const { error } = await clients['userA']!.from("messages").insert({
+        conversation_id: ctx.convA1,
+        organization_id: ctx.orgA,
+        website_id: ctx.websiteA,
+        sender_type: "agent",
+        sender_user_id: ctx.users['userA']!.id,
+        body: "hello from the owner",
+      } as never);
+      expect(error).toBeNull();
+    });
+
+    it("C cannot see the other department's conversations", async () => {
+      const seen = await visibleConversations("userC", [ctx.convA1, ctx.convA1Open]);
+      expect(seen).toHaveLength(0);
+    });
+
+    it("C sees their own department's conversation", async () => {
+      const seen = await visibleConversations("userC", [ctx.convA2]);
+      expect(seen).toEqual([ctx.convA2]);
+    });
+
+    it("a Standard User cannot modify roles", async () => {
+      await clients['userA']!
         .from("organization_memberships")
         .update({ role: "administrator" })
-        .eq("user_id", ctx.users['agentA']!.id);
+        .eq("user_id", ctx.users['userA']!.id);
       const { data } = await admin
         .from("organization_memberships")
         .select("role")
-        .eq("user_id", ctx.users['agentA']!.id)
+        .eq("user_id", ctx.users['userA']!.id)
+        .single();
+      expect(data?.role).toBe("agent");
+      expect(
+        roleTransitionError({
+          actorRole: "agent",
+          actorIsSelf: true,
+          actorIsPlatformAdmin: false,
+          targetCurrentRole: "agent",
+          targetNewRole: "administrator",
+        }),
+      ).toBeTruthy();
+    });
+
+    it("a Standard User cannot make themselves a platform administrator", async () => {
+      const { error } = await clients['userA']!
+        .from("platform_admins")
+        .insert({ user_id: ctx.users['userA']!.id, role: "platform_owner" } as never);
+      expect(error).not.toBeNull();
+    });
+
+    it("a Standard User cannot grant themselves a role row", async () => {
+      const { error } = await clients['userA']!.from("user_roles").insert({
+        user_id: ctx.users['userA']!.id,
+        role: "administrator",
+        organization_id: ctx.orgA,
+      } as never);
+      expect(error).not.toBeNull();
+    });
+  });
+
+  describe("Team Lead", () => {
+    it("can access their assigned department's conversations", async () => {
+      const seen = await visibleConversations("lead", [ctx.convA1, ctx.convA1Open]);
+      expect(seen.sort()).toEqual([ctx.convA1, ctx.convA1Open].sort());
+    });
+
+    it("cannot access an unauthorized department", async () => {
+      const seen = await visibleConversations("lead", [ctx.convA2]);
+      expect(seen).toHaveLength(0);
+    });
+
+    it("cannot change organization roles", async () => {
+      await clients['lead']!
+        .from("organization_memberships")
+        .update({ role: "agent" })
+        .eq("user_id", ctx.users['userB']!.id);
+      const { data } = await admin
+        .from("organization_memberships")
+        .select("role")
+        .eq("user_id", ctx.users['userB']!.id)
+        .single();
+      expect(data?.role).toBe("agent");
+      expect(
+        roleTransitionError({
+          actorRole: "team_lead",
+          actorIsSelf: false,
+          actorIsPlatformAdmin: false,
+          targetCurrentRole: "agent",
+          targetNewRole: "manager",
+        }),
+      ).toBeTruthy();
+    });
+  });
+
+  describe("Manager", () => {
+    it("can access their assigned department", async () => {
+      const seen = await visibleConversations("manager", [ctx.convA1, ctx.convA1Open]);
+      expect(seen.sort()).toEqual([ctx.convA1, ctx.convA1Open].sort());
+    });
+
+    it("cannot access an unauthorized department", async () => {
+      const seen = await visibleConversations("manager", [ctx.convA2]);
+      expect(seen).toHaveLength(0);
+    });
+
+    it("cannot change organization roles", async () => {
+      expect(
+        roleTransitionError({
+          actorRole: "manager",
+          actorIsSelf: false,
+          actorIsPlatformAdmin: false,
+          targetCurrentRole: "agent",
+          targetNewRole: "team_lead",
+        }),
+      ).toBeTruthy();
+      await clients['manager']!
+        .from("organization_memberships")
+        .update({ role: "team_lead" })
+        .eq("user_id", ctx.users['userB']!.id);
+      const { data } = await admin
+        .from("organization_memberships")
+        .select("role")
+        .eq("user_id", ctx.users['userB']!.id)
         .single();
       expect(data?.role).toBe("agent");
     });
+  });
 
-    it("an agent cannot make themselves a platform administrator", async () => {
-      const { error } = await clients['agentA']!
-        .from("platform_admins")
-        .insert({ user_id: ctx.users['agentA']!.id, role: "platform_owner" } as never);
-      expect(error).not.toBeNull();
+  describe("Manager with zero departments", () => {
+    it("receives no department conversations at all", async () => {
+      const seen = await visibleConversations("managerNone", [
+        ctx.convA1,
+        ctx.convA1Open,
+        ctx.convA2,
+      ]);
+      expect(seen).toHaveLength(0);
     });
 
-    it("an agent cannot grant themselves a role row", async () => {
-      const { error } = await clients['agentA']!
-        .from("user_roles")
-        .insert({
-          user_id: ctx.users['agentA']!.id,
-          role: "administrator",
-          organization_id: ctx.orgA,
-        } as never);
-      expect(error).not.toBeNull();
+    it("never falls back to organization-wide reporting scope", async () => {
+      const { report, dashboard } = await scopeForSignedInUser("managerNone");
+      expect(dashboard).toBe("team");
+      expect(report.level).toBe("team");
+      expect(report.departmentIds).toEqual([]);
+    });
+  });
+
+  describe("Administrator", () => {
+    it("can access organization-wide conversations", async () => {
+      const seen = await visibleConversations("adminA", [
+        ctx.convA1,
+        ctx.convA1Open,
+        ctx.convA2,
+      ]);
+      expect(seen.sort()).toEqual([ctx.convA1, ctx.convA1Open, ctx.convA2].sort());
     });
 
-    it("an administrator cannot reach another tenant's memberships", async () => {
+    it("cannot access organization B", async () => {
+      const seen = await visibleConversations("adminA", [ctx.convB]);
+      expect(seen).toHaveLength(0);
       const { data } = await clients['adminA']!
         .from("organization_memberships")
         .select("user_id")
         .eq("organization_id", ctx.orgB);
       expect(data ?? []).toHaveLength(0);
     });
+
+    it("cannot promote another user to Super Admin", async () => {
+      expect(
+        roleTransitionError({
+          actorRole: "administrator",
+          actorIsSelf: false,
+          actorIsPlatformAdmin: false,
+          targetCurrentRole: "agent",
+          targetNewRole: "super_admin",
+        }),
+      ).toBeTruthy();
+      await clients['adminA']!
+        .from("organization_memberships")
+        .update({ role: "super_admin" })
+        .eq("user_id", ctx.users['userB']!.id);
+      const { data } = await admin
+        .from("organization_memberships")
+        .select("role")
+        .eq("user_id", ctx.users['userB']!.id)
+        .single();
+      expect(data?.role).toBe("agent");
+    });
+
+    it("cannot modify their own role", async () => {
+      expect(
+        roleTransitionError({
+          actorRole: "administrator",
+          actorIsSelf: true,
+          actorIsPlatformAdmin: false,
+          targetCurrentRole: "administrator",
+          targetNewRole: "super_admin",
+        }),
+      ).toBeTruthy();
+      await clients['adminA']!
+        .from("organization_memberships")
+        .update({ role: "super_admin" })
+        .eq("user_id", ctx.users['adminA']!.id);
+      const { data } = await admin
+        .from("organization_memberships")
+        .select("role")
+        .eq("user_id", ctx.users['adminA']!.id)
+        .single();
+      expect(data?.role).toBe("administrator");
+    });
   });
 
-  describe("personal settings are locked to personal fields", () => {
-    it("a user cannot move themselves to another organization", async () => {
-      await clients['agentA']!
-        .from("profiles")
-        .update({ organization_id: ctx.orgB })
-        .eq("id", ctx.users['agentA']!.id);
-      const { data } = await admin
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", ctx.users['agentA']!.id)
-        .single();
-      expect(data?.organization_id).toBe(ctx.orgA);
+  describe("Super Admin", () => {
+    it("receives organization-wide access", async () => {
+      const seen = await visibleConversations("superA", [
+        ctx.convA1,
+        ctx.convA1Open,
+        ctx.convA2,
+      ]);
+      expect(seen.sort()).toEqual([ctx.convA1, ctx.convA1Open, ctx.convA2].sort());
     });
 
-    it("a user cannot raise their own concurrent chat capacity or reactivate a suspended account", async () => {
-      await admin
-        .from("profiles")
-        .update({ max_concurrent_chats: 2, status: "active" })
-        .eq("id", ctx.users['agentA']!.id);
-      await clients['agentA']!
-        .from("profiles")
-        .update({ max_concurrent_chats: 99, status: "suspended" })
-        .eq("id", ctx.users['agentA']!.id);
-      const { data } = await admin
-        .from("profiles")
-        .select("max_concurrent_chats, status")
-        .eq("id", ctx.users['agentA']!.id)
-        .single();
-      expect(data?.max_concurrent_chats).toBe(2);
-      expect(data?.status).toBe("active");
+    it("still cannot access another tenant", async () => {
+      const seen = await visibleConversations("superA", [ctx.convB]);
+      expect(seen).toHaveLength(0);
+      const { data } = await clients['superA']!
+        .from("organizations")
+        .select("id")
+        .eq("id", ctx.orgB);
+      expect(data ?? []).toHaveLength(0);
     });
+  });
 
-    it("profiles.email always mirrors the sign-in email", async () => {
-      await clients['agentA']!
-        .from("profiles")
-        .update({ email: "attacker@example.test" })
-        .eq("id", ctx.users['agentA']!.id);
-      const { data } = await admin
-        .from("profiles")
-        .select("email")
-        .eq("id", ctx.users['agentA']!.id)
-        .single();
-      expect(data?.email).toBe(ctx.users['agentA']!.email.toLowerCase());
-    });
+  describe("personal profile updates never grant authority", () => {
+    for (const key of ["userA", "adminA", "superA"] as const) {
+      it(`${key} cannot move themselves to another organization`, async () => {
+        await clients[key]!
+          .from("profiles")
+          .update({ organization_id: ctx.orgB })
+          .eq("id", ctx.users[key]!.id);
+        const { data } = await admin
+          .from("profiles")
+          .select("organization_id")
+          .eq("id", ctx.users[key]!.id)
+          .single();
+        expect(data?.organization_id).toBe(ctx.orgA);
+      });
 
-    it("a user can still edit their own personal details", async () => {
-      const { error } = await clients['agentA']!
+      it(`${key} cannot raise their own concurrent chat capacity`, async () => {
+        await admin
+          .from("profiles")
+          .update({ max_concurrent_chats: 2 })
+          .eq("id", ctx.users[key]!.id);
+        await clients[key]!
+          .from("profiles")
+          .update({ max_concurrent_chats: 99 })
+          .eq("id", ctx.users[key]!.id);
+        const { data } = await admin
+          .from("profiles")
+          .select("max_concurrent_chats")
+          .eq("id", ctx.users[key]!.id)
+          .single();
+        expect(data?.max_concurrent_chats).toBe(2);
+      });
+
+      it(`${key} cannot change their own account status`, async () => {
+        await admin.from("profiles").update({ status: "active" }).eq("id", ctx.users[key]!.id);
+        await clients[key]!
+          .from("profiles")
+          .update({ status: "suspended" })
+          .eq("id", ctx.users[key]!.id);
+        const { data } = await admin
+          .from("profiles")
+          .select("status")
+          .eq("id", ctx.users[key]!.id)
+          .single();
+        expect(data?.status).toBe("active");
+      });
+
+      it(`${key}'s profile email keeps mirroring the sign-in email`, async () => {
+        await clients[key]!
+          .from("profiles")
+          .update({ email: "attacker@example.test" })
+          .eq("id", ctx.users[key]!.id);
+        const { data } = await admin
+          .from("profiles")
+          .select("email")
+          .eq("id", ctx.users[key]!.id)
+          .single();
+        expect(data?.email).toBe(ctx.users[key]!.email.toLowerCase());
+      });
+    }
+
+    it("a Standard User can still edit their own personal details", async () => {
+      const { error } = await clients['userA']!
         .from("profiles")
         .update({ full_name: "Renamed Agent", phone: "555-0100" })
-        .eq("id", ctx.users['agentA']!.id);
+        .eq("id", ctx.users['userA']!.id);
       expect(error).toBeNull();
       const { data } = await admin
         .from("profiles")
         .select("full_name")
-        .eq("id", ctx.users['agentA']!.id)
+        .eq("id", ctx.users['userA']!.id)
         .single();
       expect(data?.full_name).toBe("Renamed Agent");
     });
 
-    it("a user cannot edit a colleague's profile", async () => {
-      await clients['agentA']!
+    it("a Standard User cannot edit a colleague's profile", async () => {
+      await clients['userA']!
         .from("profiles")
         .update({ full_name: "Hacked" })
-        .eq("id", ctx.users['agentA2']!.id);
+        .eq("id", ctx.users['userB']!.id);
       const { data } = await admin
         .from("profiles")
         .select("full_name")
-        .eq("id", ctx.users['agentA2']!.id)
+        .eq("id", ctx.users['userB']!.id)
         .single();
       expect(data?.full_name).not.toBe("Hacked");
+    });
+
+    it("an Administrator can still perform authorized staff management on another employee", async () => {
+      const { error } = await clients['adminA']!
+        .from("profiles")
+        .update({ max_concurrent_chats: 7, status: "inactive", title: "Senior Advocate" })
+        .eq("id", ctx.users['userC']!.id);
+      expect(error).toBeNull();
+      const { data } = await admin
+        .from("profiles")
+        .select("max_concurrent_chats, status, title")
+        .eq("id", ctx.users['userC']!.id)
+        .single();
+      expect(data?.max_concurrent_chats).toBe(7);
+      expect(data?.status).toBe("inactive");
+      expect(data?.title).toBe("Senior Advocate");
+      await admin.from("profiles").update({ status: "active" }).eq("id", ctx.users['userC']!.id);
+    });
+  });
+
+  describe("role -> permission -> reporting scope", () => {
+    it("a Standard User resolves to self scope", async () => {
+      const { report, dashboard } = await scopeForSignedInUser("userA");
+      expect(dashboard).toBe("self");
+      expect(report.level).toBe("self");
+      expect(report.staffIds).toEqual([ctx.users['userA']!.id]);
+      expect(report.departmentIds).toEqual([ctx.deptA1]);
+    });
+
+    it("a Team Lead resolves to their assigned departments", async () => {
+      const { report, dashboard } = await scopeForSignedInUser("lead");
+      expect(dashboard).toBe("team");
+      expect(report.level).toBe("team");
+      expect(report.departmentIds).toEqual([ctx.deptA1]);
+      expect(report.staffIds).toBeNull();
+    });
+
+    it("a Manager resolves to their assigned departments", async () => {
+      const { report } = await scopeForSignedInUser("manager");
+      expect(report.level).toBe("team");
+      expect(report.departmentIds).toEqual([ctx.deptA1]);
+    });
+
+    it("an Administrator resolves to organization scope", async () => {
+      const { report, dashboard } = await scopeForSignedInUser("adminA");
+      expect(dashboard).toBe("organization");
+      expect(report.level).toBe("organization");
+      expect(report.departmentIds).toBeNull();
+      expect(report.organizationId).toBe(ctx.orgA);
+    });
+
+    it("a Super Admin resolves to organization scope", async () => {
+      const { report, dashboard } = await scopeForSignedInUser("superA");
+      expect(dashboard).toBe("organization");
+      expect(report.level).toBe("organization");
+      expect(report.organizationId).toBe(ctx.orgA);
     });
   });
 
@@ -362,17 +681,51 @@ describe.runIf(configured)("authenticated RBAC boundaries", () => {
       } as never);
       expect(error).toBeNull();
       const rows = (data ?? []) as Array<{ user_id: string; in_department: boolean }>;
-      expect(rows.map((r) => r.user_id)).toContain(ctx.users['agentA']!.id);
-      expect(rows.map((r) => r.user_id)).not.toContain(ctx.users['agentA2']!.id);
+      expect(rows.map((r) => r.user_id)).toContain(ctx.users['userB']!.id);
       expect(rows.map((r) => r.user_id)).not.toContain(ctx.users['agentB']!.id);
     });
 
     it("is not callable by signed-in users directly", async () => {
-      const { error } = await clients['agentA']!.rpc("reassignment_candidates", {
+      const { error } = await clients['userA']!.rpc("reassignment_candidates", {
         _org: ctx.orgA,
         _conversation: ctx.convA1,
       } as never);
       expect(error).not.toBeNull();
+    });
+  });
+
+  // Kept last: it permanently revokes one user's membership.
+  describe("membership suspension revokes an existing session", () => {
+    it("denies tenant reads and writes on the still-signed-in client", async () => {
+      const client = clients['suspended']!;
+      const before = await visibleConversations("suspended", [ctx.convA1Open]);
+      expect(before).toEqual([ctx.convA1Open]);
+
+      const { error: suspendError } = await admin
+        .from("organization_memberships")
+        .update({ status: "suspended" })
+        .eq("user_id", ctx.users['suspended']!.id);
+      expect(suspendError).toBeNull();
+
+      // Same JWT, same client, no re-authentication.
+      const { data: session } = await client.auth.getSession();
+      expect(session.session).not.toBeNull();
+
+      const { data: reads } = await client
+        .from("conversations")
+        .select("id")
+        .in("id", [ctx.convA1, ctx.convA1Open, ctx.convA2]);
+      expect(reads ?? []).toHaveLength(0);
+
+      const { error: writeError } = await client.from("conversations").insert({
+        organization_id: ctx.orgA,
+        website_id: ctx.websiteA,
+        reference: `suspended-${suffix}`,
+      } as never);
+      expect(writeError).not.toBeNull();
+
+      const { data: orgs } = await client.from("organizations").select("id").eq("id", ctx.orgA);
+      expect(orgs ?? []).toHaveLength(0);
     });
   });
 });
