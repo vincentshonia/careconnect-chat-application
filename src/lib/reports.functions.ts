@@ -232,10 +232,12 @@ export const runReportFn = createServerFn({ method: "POST" })
       console.error("[reports] rpc failed", fn, error.message);
       throw new Error("Could not build that report");
     }
+    // Serialized as JSON: report payloads are dynamic jsonb, which the RPC
+    // boundary's structural serializer cannot type.
     return {
       section: data.section as string,
       scope: scope.level as string,
-      data: (result ?? null) as Record<string, unknown> | Record<string, unknown>[] | null,
+      json: JSON.stringify(result ?? null),
     };
   });
 

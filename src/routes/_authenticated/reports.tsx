@@ -307,8 +307,10 @@ function useReport<T>(section: string, filters: Filters, options?: Record<string
   return useQuery({
     queryKey: ["report", section, filters, options],
     queryFn: async () => {
-      const res = await run({ data: { section: section as "overview", filters, options } });
-      return res.data as T;
+      const res = (await run({ data: { section: section as "overview", filters, options } })) as {
+        json: string;
+      };
+      return JSON.parse(res.json) as T;
     },
   });
 }
