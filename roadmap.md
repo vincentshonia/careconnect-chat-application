@@ -2,13 +2,13 @@
 
 Executed in phases. Each phase ends with typecheck + build + tests.
 
-## Phase 1 — Concurrency, routing & notification scale (in progress)
+## Phase 1 — Concurrency, routing & notification scale (complete)
 - [x] Atomic `claim_conversation` RPC (membership, profile, presence, capacity, visibility, one winner)
 - [x] `assign_round_robin` in SQL (no in-memory conversation scans)
 - [x] Eligible notification recipients in SQL (active membership + active profile + prefs), batched inserts
 - [x] Sidebar badges: Inbox = waiting/authorized, Notifications = unread count
 - [x] Scale indexes (conversations, notifications, memberships, department_members)
-- [ ] Concurrency + routing tests
+- [x] Concurrency + routing tests (claim races, per-agent capacity, presence/status/department gates, round-robin capacity + revalidation + fairness, notification fan-out, transfer revalidation)
 
 
 ## Phase 2 — Authorization scoping
