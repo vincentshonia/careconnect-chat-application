@@ -629,7 +629,58 @@ function WidgetPage() {
           </div>
         )}
 
+        {view === "requests" && (
+          <div className="space-y-3">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">How can we help?</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Choose a request and a representative will follow up.
+              </p>
+            </div>
+            {[
+              {
+                key: "live_agent",
+                title: "Speak with a representative",
+                sub: config.agentsAvailable ? "Someone is available now" : "We will reply as soon as we are back",
+              },
+              { key: "referral", title: "Submit a referral", sub: "Refer a patient or member" },
+              { key: "enrollment", title: "Enrollment assistance", sub: "Get help choosing or joining a plan" },
+              { key: "message", title: "Leave a message", sub: "We will get back to you" },
+            ].map((option) => (
+              <button
+                key={option.key}
+                onClick={() => {
+                  setFormKind(
+                    option.key === "live_agent" && !config.agentsAvailable
+                      ? "message"
+                      : (option.key as typeof formKind),
+                  );
+                  setView("form");
+                }}
+                className="flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-panel"
+              >
+                <span
+                  className="h-8 w-1 shrink-0 rounded-full"
+                  style={{ background: brand }}
+                  aria-hidden="true"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-card-foreground">{option.title}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">{option.sub}</span>
+                </span>
+              </button>
+            ))}
+            <button
+              onClick={() => setView("contact")}
+              className="w-full rounded-2xl border border-border px-4 py-2.5 text-xs font-semibold text-foreground"
+            >
+              View contact details
+            </button>
+          </div>
+        )}
+
         {view === "contact" && (
+
           <div className="space-y-3 text-sm">
             <div className="rounded-xl border border-border bg-card p-3">
               <p className="font-semibold text-card-foreground">{config.organization.name}</p>
