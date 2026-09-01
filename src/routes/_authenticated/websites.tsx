@@ -445,6 +445,52 @@ function WebsitesPage() {
               </div>
 
               <div className="rounded-lg border border-border p-4">
+                <h3 className="text-sm font-semibold">Chat & messaging</h3>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Copy used in the chat tab and AI behaviour for this site.
+                </p>
+                <div className="space-y-4">
+                  <Field label="Welcome message">
+                    <Textarea
+                      rows={2}
+                      value={form.welcome_message ?? ""}
+                      onChange={(e) => setForm({ ...form, welcome_message: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Proactive trigger message">
+                    <Textarea
+                      rows={2}
+                      value={form.trigger_message ?? ""}
+                      onChange={(e) => setForm({ ...form, trigger_message: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Offline message">
+                    <Textarea
+                      rows={2}
+                      value={form.offline_message ?? ""}
+                      onChange={(e) => setForm({ ...form, offline_message: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Privacy disclaimer">
+                    <Textarea
+                      rows={2}
+                      value={form.privacy_disclaimer ?? ""}
+                      onChange={(e) => setForm({ ...form, privacy_disclaimer: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="AI instructions (site specific)">
+                    <Textarea
+                      rows={4}
+                      value={form.ai_instructions ?? ""}
+                      onChange={(e) => setForm({ ...form, ai_instructions: e.target.value })}
+                    />
+                  </Field>
+                </div>
+              </div>
+
+
+
+              <div className="rounded-lg border border-border p-4">
                 <h3 className="text-sm font-semibold">Bottom navigation buttons</h3>
                 <p className="mb-3 text-xs text-muted-foreground">
                   Rename, reorder, re-icon, or hide the buttons at the bottom of the widget. Chat
