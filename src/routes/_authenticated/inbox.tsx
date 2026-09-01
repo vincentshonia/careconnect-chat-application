@@ -95,6 +95,9 @@ function statusTone(status: string) {
   return "default" as const;
 }
 
+const PAGE_SIZE = 25;
+const NO_DEPARTMENT = "00000000-0000-0000-0000-000000000000";
+
 function InboxPage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
@@ -111,6 +114,8 @@ function InboxPage() {
   const statusFilter = search.status ?? null;
 
   const [activeId, setActiveId] = useState<string | null>(search.c ?? null);
+  const [page, setPage] = useState(0);
+  const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
