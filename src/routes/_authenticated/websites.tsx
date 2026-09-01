@@ -179,7 +179,13 @@ function WebsitesPage() {
                   className={`w-full px-4 py-3 text-left hover:bg-accent ${w.id === active?.id ? "bg-accent" : ""}`}
                 >
                   <span className="text-sm font-medium">{w.name}</span>
+                  {w.status !== "active" ? (
+                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+                      {w.status}
+                    </span>
+                  ) : null}
                   <p className="text-xs text-muted-foreground">{w.domain}</p>
+
                 </button>
               </li>
             ))}
