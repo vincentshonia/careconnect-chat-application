@@ -348,7 +348,7 @@ function QualityPage() {
           <div className="rounded-xl border border-border">
             <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">Recent QA reviews</h2>
             <ul className="divide-y divide-border">
-              {reviewRows.slice(0, 12).map((r) => (
+              {reviewRows.map((r) => (
                 <li key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
                   <Badge variant={r.flagged ? "destructive" : "outline"}>
                     {Number(r.overall_score ?? 0).toFixed(1)} / 5
@@ -364,6 +364,14 @@ function QualityPage() {
                 <li className="px-4 py-6 text-center text-sm text-muted-foreground">No reviews recorded yet.</li>
               ) : null}
             </ul>
+            <Pager
+              page={reviewPage}
+              pageSize={PAGE}
+              total={reviews.data?.total ?? 0}
+              onPage={setReviewPage}
+              noun="reviews"
+              busy={reviews.isFetching}
+            />
           </div>
         </section>
       </div>
