@@ -172,7 +172,7 @@ export const claimConversationFn = createServerFn({ method: "POST" })
         assigned_name: name,
         status: "assigned",
         department_id: conversation.department_id,
-        claimed_at: now,
+        claimed_at: new Date().toISOString(),
       },
     });
 
