@@ -60,6 +60,18 @@ function WebsitesPage() {
   });
 
   const websites = listQuery.data ?? [];
+  const servicesQuery = useQuery({
+    queryKey: ["widget-services"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("services")
+        .select("id, name, short_description, status, sort_order")
+        .order("sort_order");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const services = servicesQuery.data ?? [];
   const active = websites.find((w) => w.id === activeId) ?? websites[0] ?? null;
 
   useEffect(() => {
@@ -124,11 +136,6 @@ function WebsitesPage() {
 
   const create = useMutation({
     mutationFn: async () => {
-      const orgId =
-        websites[0]?.organization_id ??
-        (await supabase.auth.getUser()).data.user?.id === undefined
-          ? undefined
-          : undefined;
       let organizationId = websites[0]?.organization_id ?? null;
       if (!organizationId) {
         const { data: prof } = await supabase
@@ -137,7 +144,6 @@ function WebsitesPage() {
           .maybeSingle();
         organizationId = prof?.organization_id ?? null;
       }
-      void orgId;
       if (!organizationId) throw new Error("No organization found for this account.");
       const domain = newSite.domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
       if (!newSite.name.trim() || !domain) throw new Error("Name and domain are required.");
@@ -610,6 +616,121 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="space-y-2">
       <Label>{label}</Label>
       {children}
+    </div>
+  );
+}
+
+
+function ServicesCard({ organizationId }: { organizationId: string }) {
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState({ name: "", short_description: "" });
+  const [error, setError] = useState<string | null>(null);
+
+  const list = useQuery({
+    queryKey: ["widget-services"],
+    queryFn: async () => {
+      const { data, error: err } = await supabase
+        .from("services")
+        .select("id, name, short_description, status, sort_order")
+        .order("sort_order");
+      if (err) throw err;
+      return data ?? [];
+    },
+  });
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["widget-services"] });
+
+  const add = useMutation({
+    mutationFn: async () => {
+      if (!draft.name.trim()) throw new Error("Service name is required.");
+      const { error: err } = await supabase.from("services").insert({
+        organization_id: organizationId,
+        name: draft.name.trim(),
+        short_description: draft.short_description.trim() || draft.name.trim(),
+        applies_to_all: true,
+      });
+      if (err) throw err;
+    },
+    onSuccess: () => {
+      setDraft({ name: "", short_description: "" });
+      setError(null);
+      invalidate();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : "Could not add service"),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error: err } = await supabase.from("services").delete().eq("id", id);
+      if (err) throw err;
+    },
+    onSuccess: invalidate,
+    onError: (e) => setError(e instanceof Error ? e.message : "Could not delete service"),
+  });
+
+  const toggle = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: "active" | "inactive" }) => {
+      const { error: err } = await supabase.from("services").update({ status }).eq("id", id);
+      if (err) throw err;
+    },
+    onSuccess: invalidate,
+  });
+
+  return (
+    <div className="rounded-xl border border-border p-4">
+      <h2 className="text-sm font-semibold">Services shown in the widget</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        These appear on the widget Services tab and in home-screen suggestions.
+      </p>
+
+      <ul className="mt-3 divide-y divide-border rounded-lg border border-border">
+        {(list.data ?? []).map((s) => (
+          <li key={s.id} className="flex items-center gap-3 px-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{s.name}</p>
+              <p className="truncate text-xs text-muted-foreground">{s.short_description}</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                toggle.mutate({ id: s.id, status: s.status === "active" ? "inactive" : "active" })
+              }
+            >
+              {s.status === "active" ? "Hide" : "Show"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => remove.mutate(s.id)}>
+              Delete
+            </Button>
+          </li>
+        ))}
+        {(list.data ?? []).length === 0 ? (
+          <li className="px-3 py-2.5 text-sm text-muted-foreground">No services yet.</li>
+        ) : null}
+      </ul>
+
+      <form
+        className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]"
+        onSubmit={(e) => {
+          e.preventDefault();
+          add.mutate();
+        }}
+      >
+        <Input
+          placeholder="Service name"
+          value={draft.name}
+          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+        />
+        <Input
+          placeholder="Short description"
+          value={draft.short_description}
+          onChange={(e) => setDraft({ ...draft, short_description: e.target.value })}
+        />
+        <Button type="submit" size="sm" disabled={add.isPending}>
+          Add service
+        </Button>
+      </form>
+      {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
     </div>
   );
 }
