@@ -323,7 +323,7 @@ describe.runIf(configured)("authenticated RBAC boundaries", () => {
         .select("email")
         .eq("id", ctx.users['agentA']!.id)
         .single();
-      expect(data?.email).toBe(ctx.users['agentA']!.email);
+      expect(data?.email).toBe(ctx.users['agentA']!.email.toLowerCase());
     });
 
     it("a user can still edit their own personal details", async () => {
