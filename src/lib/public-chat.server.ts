@@ -103,8 +103,14 @@ export function assertHostAllowed(website: Record<string, any>, hostOrigin: stri
 export async function loadWidgetConfig(websiteId: string, hostOrigin: string | null) {
   const website = await resolveWebsite(websiteId, hostOrigin);
   const db = admin();
-  const [{ data: org }, { data: services }, { data: faqs }, { data: hours }, { data: departments }] =
-    await Promise.all([
+  const [
+    { data: org },
+    { data: services },
+    { data: faqs },
+    { data: hours },
+    { data: departments },
+    { data: team },
+  ] = await Promise.all([
       db.from("organizations").select("*").eq("id", website.organization_id).maybeSingle(),
       db
         .from("services")
@@ -125,11 +131,20 @@ export async function loadWidgetConfig(websiteId: string, hostOrigin: string | n
         .eq("organization_id", website.organization_id)
         .eq("status", "active")
         .order("name"),
+      // Real staff photos only — the hero never renders placeholder faces.
+      db
+        .from("profiles")
+        .select("id,display_name,full_name,avatar_url")
+        .eq("organization_id", website.organization_id)
+        .eq("status", "active")
+        .not("avatar_url", "is", null)
+        .limit(3),
     ]);
 
 
   const open = isOpenNow(hours ?? [], website.timezone);
   const agentsAvailable = await hasAvailableAgent(website.organization_id);
+
 
   return {
     website: {
