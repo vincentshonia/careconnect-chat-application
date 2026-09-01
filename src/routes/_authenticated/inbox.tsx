@@ -99,7 +99,17 @@ function InboxPage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
   const search = Route.useSearch();
-  const [tab, setTab] = useState<Tab>(search.c ? "all" : "waiting");
+  const [tab, setTab] = useState<Tab>(
+    (["waiting", "mine", "department", "active", "closed", "all"] as const).includes(
+      search.tab as Tab,
+    )
+      ? (search.tab as Tab)
+      : search.c
+        ? "all"
+        : "waiting",
+  );
+  const statusFilter = search.status ?? null;
+
   const [activeId, setActiveId] = useState<string | null>(search.c ?? null);
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
