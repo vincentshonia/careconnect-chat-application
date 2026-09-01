@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Pager } from "@/components/admin/Pager";
 
 export const Route = createFileRoute("/_authenticated/quality")({
   head: () => ({
@@ -70,42 +71,51 @@ function QualityPage() {
   const [flagged, setFlagged] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
-  const ratings = useQuery({
-    queryKey: ["conversation-ratings"],
+  const organizationId = session.data?.organizationId ?? null;
+  const [convPage, setConvPage] = useState(0);
+  const [reviewPage, setReviewPage] = useState(0);
+  const PAGE = 25;
+
+  // Headline quality numbers are aggregated in SQL over every rating and
+  // review, never averaged from whatever slice the browser happened to load.
+  const summary = useQuery({
+    queryKey: ["quality-summary", organizationId],
+    enabled: Boolean(organizationId),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("conversation_ratings")
-        .select("id, conversation_id, score, comment, created_at")
-        .order("created_at", { ascending: false })
-        .limit(200);
+      const { data, error } = await supabase.rpc("quality_summary", { _org: organizationId! });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? {}) as Record<string, number | null>;
     },
   });
 
   const conversations = useQuery({
-    queryKey: ["quality-conversations"],
+    queryKey: ["quality-conversations", convPage],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("conversations")
-        .select("id, reference, subject, status, assigned_to, created_at, escalation_requested")
+        .select("id, reference, subject, status, assigned_to, created_at, escalation_requested", {
+          count: "exact",
+        })
+        // Stable ordering: created_at then id, so paging never repeats or skips.
         .order("created_at", { ascending: false })
-        .limit(60);
+        .order("id", { ascending: false })
+        .range(convPage * PAGE, convPage * PAGE + PAGE - 1);
       if (error) throw error;
-      return data ?? [];
+      return { rows: data ?? [], total: count ?? 0 };
     },
   });
 
   const reviews = useQuery({
-    queryKey: ["qa-reviews"],
+    queryKey: ["qa-reviews", reviewPage],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("qa_reviews")
-        .select("*")
+        .select("*", { count: "exact" })
         .order("created_at", { ascending: false })
-        .limit(200);
+        .order("id", { ascending: false })
+        .range(reviewPage * PAGE, reviewPage * PAGE + PAGE - 1);
       if (error) throw error;
-      return (data ?? []) as Review[];
+      return { rows: (data ?? []) as Review[], total: count ?? 0 };
     },
   });
 
@@ -158,15 +168,15 @@ function QualityPage() {
     onError: (e) => setStatus(e instanceof Error ? e.message : "Could not save review"),
   });
 
-  const ratingRows = ratings.data ?? [];
-  const csat = ratingRows.length
-    ? Math.round((ratingRows.reduce((s, r) => s + r.score, 0) / ratingRows.length) * 20)
-    : 0;
-  const promoters = ratingRows.filter((r) => r.score >= 4).length;
-  const reviewRows = reviews.data ?? [];
-  const avgQa = reviewRows.length
-    ? (reviewRows.reduce((s, r) => s + Number(r.overall_score ?? 0), 0) / reviewRows.length).toFixed(1)
-    : "—";
+  const stats = summary.data ?? {};
+  const ratingsTotal = Number(stats['ratings_total'] ?? 0);
+  const reviewsTotal = Number(stats['reviews_total'] ?? 0);
+  const csat = stats['csat'] == null ? null : Number(stats['csat']);
+  const positiveRate = stats['positive_rate'] == null ? null : Number(stats['positive_rate']);
+  const avgQa = stats['avg_qa'] == null ? "—" : Number(stats['avg_qa']).toFixed(1);
+  const flaggedTotal = Number(stats['flagged_total'] ?? 0);
+  const reviewRows = reviews.data?.rows ?? [];
+  const conversationRows = conversations.data?.rows ?? [];
   const reviewedIds = new Set(reviewRows.map((r) => r.conversation_id));
 
   return (
@@ -200,25 +210,21 @@ function QualityPage() {
       }
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="CSAT" value={ratingRows.length ? `${csat}%` : "—"} hint={`${ratingRows.length} ratings`} />
+        <Stat label="CSAT" value={csat == null ? "—" : `${csat}%`} hint={`${ratingsTotal} ratings`} />
         <Stat
           label="Positive ratings"
-          value={ratingRows.length ? `${Math.round((promoters / ratingRows.length) * 100)}%` : "—"}
+          value={positiveRate == null ? "—" : `${positiveRate}%`}
           hint="4 or 5 stars"
         />
-        <Stat label="Avg. QA score" value={avgQa} hint={`${reviewRows.length} reviews logged`} />
-        <Stat
-          label="Flagged for coaching"
-          value={reviewRows.filter((r) => r.flagged).length}
-          hint="Needs follow-up"
-        />
+        <Stat label="Avg. QA score" value={avgQa} hint={`${reviewsTotal} reviews logged`} />
+        <Stat label="Flagged for coaching" value={flaggedTotal} hint="Needs follow-up" />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[320px_1fr]">
         <section className="rounded-xl border border-border">
           <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">Recent conversations</h2>
           <ul className="max-h-[520px] divide-y divide-border overflow-y-auto">
-            {(conversations.data ?? []).map((c) => (
+            {conversationRows.map((c) => (
               <li key={c.id}>
                 <button
                   type="button"
@@ -245,6 +251,14 @@ function QualityPage() {
               </li>
             ))}
           </ul>
+          <Pager
+            page={convPage}
+            pageSize={PAGE}
+            total={conversations.data?.total ?? 0}
+            onPage={setConvPage}
+            noun="conversations"
+            busy={conversations.isFetching}
+          />
         </section>
 
         <section className="space-y-6">
