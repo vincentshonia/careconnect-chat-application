@@ -133,60 +133,90 @@ function InboxPage() {
     },
   });
 
+  /**
+   * Queue loading is done by the database, one page at a time: each tab is a
+   * filtered, ordered, ranged query so the browser never holds — or filters —
+   * the whole conversation table.
+   */
   const conversationsQuery = useQuery({
-    queryKey: ["conversations"],
+    queryKey: ["conversations", tab, statusFilter, page, query, userId, departmentIds.join(",")],
     refetchInterval: 60_000,
+    placeholderData: (prev) => prev,
+    queryFn: async () => {
+      let q = supabase
+        .from("conversations")
+        .select(
+          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, organization_id, website_id, visitor_type, contact_id",
+          { count: "exact" },
+        );
+
+      switch (tab) {
+        case "waiting":
+          q = q.is("assigned_to", null).in("status", CLAIMABLE_STATUSES);
+          break;
+        case "mine":
+          q = q.eq("assigned_to", userId ?? "").not("status", "in", `(${CLOSED_STATUSES.join(",")})`);
+          break;
+        case "department":
+          q = q
+            .in("department_id", departmentIds.length ? departmentIds : [NO_DEPARTMENT])
+            .not("status", "in", `(${CLOSED_STATUSES.join(",")})`);
+          break;
+        case "active":
+          q = q.in("status", ["active", "assigned"]);
+          break;
+        case "closed":
+          q = q.in("status", CLOSED_STATUSES);
+          break;
+        default:
+          if (!can("conversation.view_all")) q = q.in("status", OPEN_STATUSES);
+      }
+
+      if (statusFilter) q = q.eq("status", statusFilter);
+      if (query.trim()) {
+        const term = query.trim().replace(/[%,()]/g, "");
+        if (term) q = q.or(`reference.ilike.%${term}%,subject.ilike.%${term}%`);
+      }
+
+      const { data, error, count } = await q
+        .order("last_message_at", { ascending: false })
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+      if (error) throw error;
+      return { rows: (data ?? []) as Conversation[], total: count ?? 0 };
+    },
+  });
+
+  const conversations = conversationsQuery.data?.rows ?? [];
+  const total = conversationsQuery.data?.total ?? 0;
+
+  // The open conversation is fetched by id so it survives paging and filtering.
+  const activeQuery = useQuery({
+    queryKey: ["conversation", activeId],
+    enabled: Boolean(activeId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("conversations")
         .select(
           "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, organization_id, website_id, visitor_type, contact_id",
         )
-        .order("last_message_at", { ascending: false })
-        .limit(200);
+        .eq("id", activeId!)
+        .maybeSingle();
       if (error) throw error;
-      return (data ?? []) as Conversation[];
+      return (data ?? null) as Conversation | null;
     },
   });
 
-  const all = useMemo(() => conversationsQuery.data ?? [], [conversationsQuery.data]);
-
-  const conversations = useMemo(() => {
-    const byTab = (() => {
-      switch (tab) {
-        case "waiting":
-          return all.filter((c) => !c.assigned_to && CLAIMABLE_STATUSES.includes(c.status));
-        case "mine":
-          return all.filter((c) => c.assigned_to === userId && !CLOSED_STATUSES.includes(c.status));
-        case "department":
-          return all.filter(
-            (c) =>
-              !CLOSED_STATUSES.includes(c.status) &&
-              c.department_id &&
-              departmentIds.includes(c.department_id),
-          );
-        case "active":
-          return all.filter((c) => c.status === "active" || c.status === "assigned");
-        case "closed":
-          return all.filter((c) => CLOSED_STATUSES.includes(c.status));
-        default:
-          return all.filter((c) => OPEN_STATUSES.includes(c.status) || can("conversation.view_all"));
-      }
-    })();
-    return statusFilter ? byTab.filter((c) => c.status === statusFilter) : byTab;
-  }, [all, tab, userId, departmentIds, statusFilter]);
-
-
-  const active = useMemo(
-    () => all.find((c) => c.id === activeId) ?? null,
-    [all, activeId],
-  );
+  const active = activeQuery.data ?? null;
 
   useEffect(() => {
-    if (conversations.length && !conversations.some((c) => c.id === activeId)) {
-      setActiveId(conversations[0].id);
-    }
+    if (conversations.length && !activeId) setActiveId(conversations[0].id);
   }, [conversations, activeId]);
+
+  // Changing queue or filters always restarts at the first page.
+  useEffect(() => {
+    setPage(0);
+  }, [tab, statusFilter, query]);
+
 
   // Live updates: claims, replies, status changes and new chats push instantly.
   useEffect(() => {
