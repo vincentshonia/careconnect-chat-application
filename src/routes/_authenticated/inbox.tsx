@@ -223,24 +223,63 @@ function InboxPage() {
   }, [tab, statusFilter, query]);
 
 
-  // Live updates: claims, replies, status changes and new chats push instantly.
+  /**
+   * Live updates, scoped as narrowly as the data allows: conversation events
+   * are limited to this organization, and message events to the chat that is
+   * actually open. Events only invalidate the affected query — the list is
+   * refetched from the server rather than patched in the browser, so paging
+   * and counts stay authoritative.
+   */
   useEffect(() => {
+    if (!organizationId) return;
     const channel = supabase
-      .channel("inbox-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["conversations"] });
-        queryClient.invalidateQueries({ queryKey: ["conversation"] });
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
-        queryClient.invalidateQueries({ queryKey: ["conversations"] });
-        const convId = (payload.new as { conversation_id?: string })?.conversation_id;
-        if (convId) queryClient.invalidateQueries({ queryKey: ["messages", convId] });
-      })
+      .channel(`inbox-live-${organizationId}-${userId ?? "anon"}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "conversations",
+          filter: `organization_id=eq.${organizationId}`,
+        },
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: ["conversations"] });
+          const changed = (payload.new ?? payload.old) as { id?: string } | null;
+          if (changed?.id && changed.id === activeId) {
+            queryClient.invalidateQueries({ queryKey: ["conversation", activeId] });
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, organizationId, userId, activeId]);
+
+  /** Message stream for the open conversation only. */
+  useEffect(() => {
+    if (!activeId) return;
+    const channel = supabase
+      .channel(`inbox-messages-${activeId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${activeId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["messages", activeId] });
+          queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        },
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, activeId]);
 
   const messagesQuery = useQuery({
     queryKey: ["messages", activeId],
@@ -251,10 +290,12 @@ function InboxPage() {
         .from("messages")
         .select("id, sender_type, sender_name, body, created_at, metadata")
         .eq("conversation_id", activeId!)
-        .order("created_at")
-        .limit(200);
+        // Newest 200 first, then flipped for display: a very long chat still
+        // shows its latest turns instead of truncating at the beginning.
+        .order("created_at", { ascending: false })
+        .range(0, 199);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).slice().reverse();
     },
   });
 
@@ -270,7 +311,8 @@ function InboxPage() {
         .from("profiles")
         .select("id, full_name")
         .eq("status", "active")
-        .order("full_name");
+        .order("full_name")
+        .range(0, 199);
       return data ?? [];
     },
   });
