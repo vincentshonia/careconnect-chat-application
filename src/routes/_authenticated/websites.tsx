@@ -7,6 +7,13 @@ import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { WidgetPreview } from "@/components/admin/WidgetPreview";
+import {
+  DEFAULT_WIDGET_TABS,
+  WIDGET_TAB_ICONS,
+  resolveWidgetTabs,
+  tabIconPath,
+  type WidgetTabConfig,
+} from "@/lib/widget-tabs";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +54,7 @@ function WebsitesPage() {
   const [domainsText, setDomainsText] = useState("");
   const [creating, setCreating] = useState(false);
   const [newSite, setNewSite] = useState({ name: "", domain: "" });
+  const [tabs, setTabs] = useState<WidgetTabConfig[]>(DEFAULT_WIDGET_TABS);
 
   useEffect(() => setOrigin(window.location.origin), []);
 
@@ -79,6 +87,7 @@ function WebsitesPage() {
       setActiveId(active.id);
       setForm(active);
       setDomainsText(((active.allowed_domains as string[] | null) ?? []).join(", "));
+      setTabs(resolveWidgetTabs(active.tab_config));
     }
   }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -116,6 +125,7 @@ function WebsitesPage() {
           show_help_tab: Boolean(form.show_help_tab),
           show_services_tab: Boolean(form.show_services_tab),
           show_requests_tab: Boolean(form.show_requests_tab),
+          tab_config: tabs,
         })
         .eq("id", active.id);
       if (error) throw error;
@@ -662,6 +672,7 @@ function WebsitesPage() {
             showServicesTab: form.show_services_tab,
             showRequestsTab: form.show_requests_tab,
             topics: services.map((s) => s.name),
+            tabs,
           }}
         />
       ) : null}
@@ -808,4 +819,14 @@ function ServicesCard({ organizationId }: { organizationId: string }) {
       {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
     </div>
   );
+}
+
+
+function moveTab(list: WidgetTabConfig[], index: number, delta: number): WidgetTabConfig[] {
+  const next = [...list];
+  const target = index + delta;
+  if (target < 0 || target >= next.length) return list;
+  const [item] = next.splice(index, 1);
+  next.splice(target, 0, item!);
+  return next;
 }
