@@ -317,103 +317,81 @@ function WebsitesPage() {
                 save.mutate();
               }}
             >
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Site name">
-                  <Input
-                    value={form.name ?? ""}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+              <div className="rounded-lg border border-border p-4">
+                <h3 className="text-sm font-semibold">Site basics</h3>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Identity, domains, and widget appearance.
+                </p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Site name">
+                    <Input
+                      value={form.name ?? ""}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Chatbot name">
+                    <Input
+                      value={form.chatbot_name ?? ""}
+                      onChange={(e) => setForm({ ...form, chatbot_name: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Primary domain">
+                    <Input
+                      placeholder="mypacifichealth.com"
+                      value={form.domain ?? ""}
+                      onChange={(e) => setForm({ ...form, domain: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Allowed embed domains">
+                    <Input
+                      placeholder="mypacifichealth.com, www.mypacifichealth.com"
+                      value={domainsText}
+                      onChange={(e) => setDomainsText(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Primary color">
+                    <ColorInput
+                      value={form.primary_color ?? "#1d4ed8"}
+                      onChange={(v) => setForm({ ...form, primary_color: v })}
+                    />
+                  </Field>
+                  <Field label="Accent color">
+                    <ColorInput
+                      value={form.accent_color ?? "#0891b2"}
+                      onChange={(v) => setForm({ ...form, accent_color: v })}
+                    />
+                  </Field>
+                  <Field label="Widget position">
+                    <select
+                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      value={form.widget_position ?? "bottom-right"}
+                      onChange={(e) => setForm({ ...form, widget_position: e.target.value })}
+                    >
+                      <option value="bottom-right">bottom-right</option>
+                      <option value="bottom-left">bottom-left</option>
+                    </select>
+                  </Field>
+                  <Field label="Trigger delay (seconds)">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={form.trigger_delay_seconds ?? 0}
+                      onChange={(e) =>
+                        setForm({ ...form, trigger_delay_seconds: Number(e.target.value) })
+                      }
+                    />
+                  </Field>
+                </div>
+                <div className="mt-4 flex items-center gap-3">
+                  <Switch
+                    id="auto-open"
+                    checked={Boolean(form.auto_open)}
+                    onCheckedChange={(v) => setForm({ ...form, auto_open: v })}
                   />
-                </Field>
-                <Field label="Chatbot name">
-                  <Input
-                    value={form.chatbot_name ?? ""}
-                    onChange={(e) => setForm({ ...form, chatbot_name: e.target.value })}
-                  />
-                </Field>
-                <Field label="Primary domain">
-                  <Input
-                    placeholder="mypacifichealth.com"
-                    value={form.domain ?? ""}
-                    onChange={(e) => setForm({ ...form, domain: e.target.value })}
-                  />
-                </Field>
-                <Field label="Allowed embed domains">
-                  <Input
-                    placeholder="mypacifichealth.com, www.mypacifichealth.com"
-                    value={domainsText}
-                    onChange={(e) => setDomainsText(e.target.value)}
-                  />
-                </Field>
-                <Field label="Primary color">
-                  <ColorInput
-                    value={form.primary_color ?? "#1d4ed8"}
-                    onChange={(v) => setForm({ ...form, primary_color: v })}
-                  />
-                </Field>
-                <Field label="Accent color">
-                  <ColorInput
-                    value={form.accent_color ?? "#0891b2"}
-                    onChange={(v) => setForm({ ...form, accent_color: v })}
-                  />
-                </Field>
-
-                <Field label="Widget position">
-                  <select
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={form.widget_position ?? "bottom-right"}
-                    onChange={(e) => setForm({ ...form, widget_position: e.target.value })}
-                  >
-                    <option value="bottom-right">bottom-right</option>
-                    <option value="bottom-left">bottom-left</option>
-                  </select>
-                </Field>
-                <Field label="Trigger delay (seconds)">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.trigger_delay_seconds ?? 0}
-                    onChange={(e) =>
-                      setForm({ ...form, trigger_delay_seconds: Number(e.target.value) })
-                    }
-                  />
-                </Field>
+                  <Label htmlFor="auto-open">Auto-open the widget after the trigger delay</Label>
+                </div>
               </div>
 
-              <Field label="Welcome message">
-                <Textarea
-                  rows={2}
-                  value={form.welcome_message ?? ""}
-                  onChange={(e) => setForm({ ...form, welcome_message: e.target.value })}
-                />
-              </Field>
-              <Field label="Proactive trigger message">
-                <Textarea
-                  rows={2}
-                  value={form.trigger_message ?? ""}
-                  onChange={(e) => setForm({ ...form, trigger_message: e.target.value })}
-                />
-              </Field>
-              <Field label="Offline message">
-                <Textarea
-                  rows={2}
-                  value={form.offline_message ?? ""}
-                  onChange={(e) => setForm({ ...form, offline_message: e.target.value })}
-                />
-              </Field>
-              <Field label="Privacy disclaimer">
-                <Textarea
-                  rows={2}
-                  value={form.privacy_disclaimer ?? ""}
-                  onChange={(e) => setForm({ ...form, privacy_disclaimer: e.target.value })}
-                />
-              </Field>
-              <Field label="AI instructions (site specific)">
-                <Textarea
-                  rows={4}
-                  value={form.ai_instructions ?? ""}
-                  onChange={(e) => setForm({ ...form, ai_instructions: e.target.value })}
-                />
-              </Field>
 
               <div className="rounded-lg border border-border p-4">
                 <h3 className="text-sm font-semibold">Home screen</h3>
@@ -465,6 +443,52 @@ function WebsitesPage() {
                   </Field>
                 </div>
               </div>
+
+              <div className="rounded-lg border border-border p-4">
+                <h3 className="text-sm font-semibold">Chat & messaging</h3>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Copy used in the chat tab and AI behaviour for this site.
+                </p>
+                <div className="space-y-4">
+                  <Field label="Welcome message">
+                    <Textarea
+                      rows={2}
+                      value={form.welcome_message ?? ""}
+                      onChange={(e) => setForm({ ...form, welcome_message: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Proactive trigger message">
+                    <Textarea
+                      rows={2}
+                      value={form.trigger_message ?? ""}
+                      onChange={(e) => setForm({ ...form, trigger_message: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Offline message">
+                    <Textarea
+                      rows={2}
+                      value={form.offline_message ?? ""}
+                      onChange={(e) => setForm({ ...form, offline_message: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Privacy disclaimer">
+                    <Textarea
+                      rows={2}
+                      value={form.privacy_disclaimer ?? ""}
+                      onChange={(e) => setForm({ ...form, privacy_disclaimer: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="AI instructions (site specific)">
+                    <Textarea
+                      rows={4}
+                      value={form.ai_instructions ?? ""}
+                      onChange={(e) => setForm({ ...form, ai_instructions: e.target.value })}
+                    />
+                  </Field>
+                </div>
+              </div>
+
+
 
               <div className="rounded-lg border border-border p-4">
                 <h3 className="text-sm font-semibold">Bottom navigation buttons</h3>
@@ -565,14 +589,7 @@ function WebsitesPage() {
                 </Button>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Switch
-                  id="auto-open"
-                  checked={Boolean(form.auto_open)}
-                  onCheckedChange={(v) => setForm({ ...form, auto_open: v })}
-                />
-                <Label htmlFor="auto-open">Auto-open the widget after the trigger delay</Label>
-              </div>
+
 
               {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
               <Button type="submit" disabled={save.isPending}>
