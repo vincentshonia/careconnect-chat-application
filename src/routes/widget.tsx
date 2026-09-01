@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
+
+const BRAND_LOGO_URL = brandLogoAsset.url;
+
+
 
 export const Route = createFileRoute("/widget")({
   head: () => ({
@@ -64,9 +69,11 @@ type Config = {
     learn_more_url: string | null;
   }>;
   faqs: Array<{ id: string; category: string; question: string; answer: string }>;
+  team?: Array<{ id: string; name: string; avatarUrl: string }>;
   businessOpen: boolean;
   agentsAvailable: boolean;
 };
+
 
 type Bubble = {
   id: string;
@@ -153,6 +160,34 @@ function WidgetPage() {
   const [uploading, setUploading] = useState(false);
 
   const storageKey = `phg-widget-${websiteId}`;
+
+  // Personalized greeting when the visitor has already told us their name.
+  const [visitorName, setVisitorName] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(`phg-widget-${websiteId}-name`);
+      if (stored) setVisitorName(stored.split(" ")[0]);
+    } catch {
+      /* storage unavailable */
+    }
+  }, [websiteId]);
+
+  // Suggested help topics on Home: services first, then FAQ questions.
+  const homeTopics = useMemo(() => {
+    if (!config) return [];
+    const services = (config.services ?? []).slice(0, 2).map((s) => ({
+      id: `svc-${s.id}`,
+      label: s.name,
+      kind: "service" as const,
+    }));
+    const faqs = (config.faqs ?? []).slice(0, 4 - services.length).map((f) => ({
+      id: `faq-${f.id}`,
+      label: f.question,
+      kind: "faq" as const,
+    }));
+    return [...services, ...faqs];
+  }, [config]);
+
 
   /* ------------------------- signed chat session ------------------------ */
   // The server mints and signs the session; the browser only stores it.
@@ -478,81 +513,86 @@ function WidgetPage() {
       className="flex h-screen w-full flex-col overflow-hidden bg-card shadow-float ring-1 ring-black/5"
       style={{ borderRadius: radius, fontFamily: config.website.fontFamily }}
     >
-      <header
-        className="relative flex items-center gap-3 px-4 py-3.5 text-white"
-        style={{ background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 68%, black))` }}
-      >
-        <span
-          className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-white/10 blur-2xl"
-          aria-hidden="true"
-        />
-        <div className="relative shrink-0">
-          {agentAvatar ? (
-            <img
-              src={agentAvatar}
-              alt={agentName ?? "Representative"}
-              className="h-9 w-9 rounded-full object-cover ring-2 ring-white/30"
-            />
-          ) : config.website.logoUrl ? (
-            <img src={config.website.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover ring-2 ring-white/30" />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-sm font-bold ring-2 ring-white/25">
-              {config.organization.name.slice(0, 1)}
-            </div>
-          )}
+      {view !== "menu" && (
+        <header
+          className="relative flex items-center gap-3 px-4 py-3.5 text-white"
+          style={{ background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 68%, black))` }}
+        >
           <span
-            className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white/80 ${
-              agentName || config.agentsAvailable ? "bg-emerald-400" : "bg-amber-300"
-            }`}
+            className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-white/10 blur-2xl"
             aria-hidden="true"
           />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold tracking-tight">
-            {agentName ?? config.website.chatbotName}
-          </p>
-          <p className="truncate text-[11px] text-white/80">
-            {agentName
-              ? `${config.organization.name} · live representative`
-              : config.agentsAvailable
-                ? "Live representatives are available"
-                : "AI assistant · leave a message anytime"}
-          </p>
-        </div>
+          <div className="relative shrink-0">
+            {agentAvatar ? (
+              <img
+                src={agentAvatar}
+                alt={agentName ?? "Representative"}
+                className="h-9 w-9 rounded-full object-cover ring-2 ring-white/30"
+              />
+            ) : (
+              <div className="grid h-9 w-9 place-items-center rounded-full bg-white/15 ring-2 ring-white/25">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" />
+                </svg>
+              </div>
+            )}
+            <span
+              className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white/80 ${
+                agentName || config.agentsAvailable ? "bg-emerald-400" : "bg-amber-300"
+              }`}
+              aria-hidden="true"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold tracking-tight">
+              {agentName ?? config.website.chatbotName}
+            </p>
+            <p className="truncate text-[11px] text-white/80">
+              {agentName
+                ? `${config.organization.name} · live representative`
+                : config.agentsAvailable
+                  ? "Live representatives are available"
+                  : "AI assistant · leave a message anytime"}
+            </p>
+          </div>
 
-        <button
-          onClick={closeWidget}
-          aria-label="Close chat"
-          className="grid h-8 w-8 place-items-center rounded-full text-base leading-none transition hover:bg-white/15"
-        >
-          ✕
-        </button>
-      </header>
+          <button
+            onClick={closeWidget}
+            aria-label="Close chat"
+            className="grid h-8 w-8 place-items-center rounded-full text-base leading-none transition hover:bg-white/15"
+          >
+            ✕
+          </button>
+        </header>
+      )}
 
 
-      <div ref={scroller} className="flex-1 overflow-y-auto bg-background px-4 py-4">
+
+      <div
+        ref={scroller}
+        className={`flex-1 overflow-y-auto bg-background ${view === "menu" ? "" : "px-4 py-4"}`}
+      >
         {view === "menu" && (
-          <MenuView
+          <HomeView
             config={config}
             brand={brand}
-            onSelect={(key) => {
-              if (key === "services") setView("services");
-              else if (key === "faq") setView("faq");
-              else if (key === "contact") setView("contact");
-              else if (key === "referral") {
-                setFormKind("referral");
-                setView("form");
-              } else if (key === "enrollment") {
-                setFormKind("enrollment");
-                setView("form");
-              } else setView("chat");
-            }}
-            onLiveAgent={() => {
-              setFormKind(config.agentsAvailable ? "live_agent" : "message");
-              setView("form");
+            logoUrl={config.website.logoUrl || BRAND_LOGO_URL}
+            visitorName={visitorName}
+            topics={homeTopics}
+            onClose={closeWidget}
+            onStartChat={() => setView("chat")}
+            onOpenHelp={() => setView("faq")}
+            onTopic={(topic) => {
+              if (topic.kind === "faq") {
+                setFaqQuery(topic.label);
+                setView("faq");
+              } else {
+                void sendQuestion(`Tell me more about ${topic.label}`);
+              }
             }}
           />
         )}
+
 
         {view === "services" && (
           <div className="space-y-3">
@@ -792,7 +832,7 @@ function WidgetPage() {
 
       </div>
 
-      {(view === "chat" || view === "menu" || view === "waiting") && (
+      {(view === "chat" || view === "waiting") && (
         <form
           className="border-t border-border/70 bg-card px-3 pb-3 pt-2.5"
           onSubmit={(e) => {
@@ -850,14 +890,17 @@ function WidgetPage() {
               </svg>
             </button>
           </div>
-          <p className="mt-2 px-1 text-[10px] leading-tight text-muted-foreground">{config.organization.privacyNotice}</p>
+          <p className="mt-2 line-clamp-2 px-1 text-[10px] leading-tight text-muted-foreground">
+            {config.organization.privacyNotice}
+          </p>
+
 
         </form>
       )}
 
       <nav
         aria-label="Chat sections"
-        className="grid grid-cols-5 border-t border-border/70 bg-card px-1 pb-1.5 pt-1"
+        className="grid shrink-0 grid-cols-5 gap-0.5 border-t border-border/60 bg-card px-1.5 pb-2 pt-1.5"
       >
         {TABS.map((tab) => {
           const active = tabForView(view) === tab.key;
@@ -870,88 +913,208 @@ function WidgetPage() {
                 if (tab.key === "chat" && conversationId && liveStatus) setView("waiting");
                 else setView(tab.view);
               }}
-              className="flex flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-medium transition"
-              style={active ? { color: brand } : { color: "hsl(var(--muted-foreground))" }}
+              className="flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-medium transition hover:bg-muted/60"
+              style={active ? { color: brand } : undefined}
             >
               <svg
-                width="18"
-                height="18"
+                width="19"
+                height="19"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth={active ? 2.2 : 1.7}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 aria-hidden="true"
+                className={active ? undefined : "text-muted-foreground"}
               >
                 <path d={tab.icon} />
               </svg>
-              <span>{tab.label}</span>
+              <span className={active ? undefined : "text-muted-foreground"}>{tab.label}</span>
             </button>
           );
         })}
       </nav>
+
     </div>
 
   );
 }
 
-function MenuView({
+/**
+ * Home = discovery. A large branded hero, one primary "send us a message"
+ * card and a help-discovery card. No menu list, no composer.
+ */
+function HomeView({
   config,
   brand,
-  onSelect,
-  onLiveAgent,
+  logoUrl,
+  visitorName,
+  topics,
+  onClose,
+  onStartChat,
+  onOpenHelp,
+  onTopic,
 }: {
   config: Config;
   brand: string;
-  onSelect: (key: string) => void;
-  onLiveAgent: () => void;
+  logoUrl: string;
+  visitorName: string | null;
+  topics: Array<{ id: string; label: string; kind: "service" | "faq" }>;
+  onClose: () => void;
+  onStartChat: () => void;
+  onOpenHelp: () => void;
+  onTopic: (topic: { id: string; label: string; kind: "service" | "faq" }) => void;
 }) {
+  const team = (config.team ?? []).slice(0, 3);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+
   return (
-    <div className="space-y-4">
-      <p className="text-[15px] leading-relaxed text-foreground">{config.website.welcomeMessage}</p>
-      <div className="grid gap-2">
-        {config.website.menuButtons.map((b) => (
-          <button
-            key={b.key}
-            onClick={() => onSelect(b.key)}
-            className="group flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 text-left text-sm font-medium text-card-foreground shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-transparent hover:shadow-panel"
-          >
-            <span
-              className="h-8 w-1 shrink-0 rounded-full transition-all duration-200 group-hover:h-9"
-              style={{ background: brand }}
-              aria-hidden="true"
-            />
-            <span className="flex-1">{b.label}</span>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              className="shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5"
-            >
-              <path d="M9 6l6 6-6 6" />
-            </svg>
-          </button>
-        ))}
-      </div>
-      <button
-        onClick={onLiveAgent}
-        className="w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-white shadow-panel transition duration-200 hover:-translate-y-0.5 hover:brightness-110"
-        style={{ background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 70%, black))` }}
+    <div className="flex h-full flex-col">
+      {/* ---------------------------- hero ---------------------------- */}
+      <div
+        className="relative shrink-0 overflow-hidden px-5 pb-10 pt-5 text-white"
+        style={{
+          background: `linear-gradient(150deg, color-mix(in oklab, ${brand} 82%, black) 0%, ${brand} 52%, color-mix(in oklab, ${brand} 62%, white) 100%)`,
+        }}
       >
-        Speak with a Live Representative
-      </button>
-      <p className="text-[11px] leading-tight text-muted-foreground">{config.website.privacyDisclaimer}</p>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-white/15 blur-3xl"
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-24 -left-10 h-48 w-48 rounded-full bg-white/10 blur-3xl"
+        />
+
+        <div className="relative flex items-start justify-between gap-3">
+          <img
+            src={logoUrl}
+            alt={config.organization.name || "Pacific Health Group"}
+            className="h-9 w-auto max-w-[170px] object-contain object-left drop-shadow-sm"
+          />
+          <div className="flex items-center gap-2">
+            {team.length > 0 && (
+              <div className="flex -space-x-2" aria-label="Our team">
+                {team.map((m) => (
+                  <img
+                    key={m.id}
+                    src={m.avatarUrl}
+                    alt={m.name}
+                    title={m.name}
+                    className="h-7 w-7 rounded-full object-cover ring-2 ring-white/70"
+                  />
+                ))}
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              aria-label="Close chat"
+              className="grid h-8 w-8 place-items-center rounded-full text-base leading-none transition hover:bg-white/20"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div className="relative mt-7">
+          <h1 className="text-[26px] font-semibold leading-tight tracking-tight text-white/95">
+            {visitorName ? `Hi, ${visitorName}.` : "Hi there."}
+          </h1>
+          <h2 className="text-[26px] font-semibold leading-tight tracking-tight text-white">
+            How can we help?
+          </h2>
+          <p className="mt-2.5 text-[13px] text-white/85">
+            {config.agentsAvailable
+              ? "Our team is here to help."
+              : "CareConnect AI is available anytime."}
+          </p>
+        </div>
+      </div>
+
+      {/* --------------------------- content --------------------------- */}
+      <div className="-mt-6 flex-1 space-y-3 rounded-t-3xl bg-background px-4 pb-5 pt-4">
+        <button
+          onClick={onStartChat}
+          className="group flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card p-4 text-left shadow-panel transition duration-200 hover:-translate-y-0.5"
+        >
+          <span
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white"
+            style={{ background: brand }}
+            aria-hidden="true"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" />
+            </svg>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-card-foreground">Send us a message</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {config.agentsAvailable
+                ? "Typical reply time is a few minutes"
+                : "CareConnect AI can help now, or leave a message"}
+            </span>
+          </span>
+          <svg
+            width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+            className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+          >
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </button>
+
+        <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+          <button
+            onClick={onOpenHelp}
+            className="flex w-full items-center gap-2.5 text-left"
+            aria-label="Search for help"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-muted-foreground">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M21 21l-4.2-4.2" />
+            </svg>
+            <span className="text-[15px] font-semibold text-card-foreground">Search for help</span>
+          </button>
+
+          {topics.length > 0 && (
+            <div className="mt-3 divide-y divide-border/60 border-t border-border/60">
+              {topics.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => onTopic(t)}
+                  className="flex w-full items-center gap-2 py-2.5 text-left transition hover:opacity-80"
+                >
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-card-foreground">{t.label}</span>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-muted-foreground">
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowPrivacy((v) => !v)}
+          className="flex w-full items-center justify-center gap-1.5 pt-1 text-[11px] text-muted-foreground hover:underline"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          Your privacy matters to us.
+        </button>
+        {showPrivacy && (
+          <p className="rounded-xl bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
+            {config.organization.privacyNotice || config.website.privacyDisclaimer}
+          </p>
+        )}
+      </div>
     </div>
   );
-
 }
+
 
 function MessageBubble({
   bubble,
