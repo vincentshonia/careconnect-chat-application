@@ -1,14 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { RequirePermission } from "@/components/admin/RequirePermission";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { useDebounced } from "@/hooks/use-debounced";
+import { Pager } from "@/components/admin/Pager";
+import { exportCsvFn } from "@/lib/exports.functions";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { downloadCsv } from "@/lib/csv";
+import { saveCsv } from "@/lib/csv";
 
 export const Route = createFileRoute("/_authenticated/audit")({
   head: () => ({
@@ -31,27 +36,55 @@ function AuditPageRoute() {
   );
 }
 
+const PAGE_SIZE = 50;
+
+/** Strip characters that would break a PostgREST `or=` expression. */
+const sanitize = (term: string) => term.trim().replace(/[%,()*]/g, "").slice(0, 80);
+
 function AuditPage() {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const debouncedSearch = useDebounced(search, 300);
 
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch]);
+
+  /** Searching and paging both happen in the database. */
   const logs = useQuery({
-    queryKey: ["audit-logs"],
+    queryKey: ["audit-logs", debouncedSearch, page],
     refetchInterval: 60_000,
+    placeholderData: (prev) => prev,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("audit_logs")
-        .select("*")
+      let q = supabase.from("audit_logs").select("*", { count: "exact" });
+      const term = sanitize(debouncedSearch);
+      if (term) {
+        q = q.or(`action.ilike.%${term}%,actor_name.ilike.%${term}%,record_type.ilike.%${term}%`);
+      }
+      const { data, error, count } = await q
         .order("created_at", { ascending: false })
-        .limit(300);
+        .order("id", { ascending: true })
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
       if (error) throw error;
-      return (data ?? []) as AuditRow[];
+      return { rows: (data ?? []) as AuditRow[], total: count ?? 0 };
     },
   });
 
-  const rows = (logs.data ?? []).filter((r) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return [r.action, r.record_type, r.actor_name].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+  const rows = logs.data?.rows ?? [];
+  const total = logs.data?.total ?? 0;
+
+  const runExport = useServerFn(exportCsvFn);
+  const exportCsv = useMutation({
+    mutationFn: async () => runExport({ data: { dataset: "audit", search: debouncedSearch } }),
+    onSuccess: (result) => {
+      if (!result.rows) {
+        toast.info("Nothing to export with this filter.");
+        return;
+      }
+      saveCsv("audit-log", result.csv);
+      toast.success(`Exported ${result.rows.toLocaleString()} entries`);
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not build that export"),
   });
 
   return (
@@ -63,28 +96,11 @@ function AuditPage() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter by action, record, or person"
+            placeholder="Search action, record, or person"
             className="w-72"
           />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              downloadCsv(
-                "audit-log",
-                rows.map((r) => ({
-                  created_at: r.created_at,
-                  actor: r.actor_name ?? "System",
-                  action: r.action,
-                  record_type: r.record_type ?? "",
-                  record_id: r.record_id ?? "",
-                  previous_value: r.previous_value ?? "",
-                  new_value: r.new_value ?? "",
-                })),
-              )
-            }
-          >
-            Export CSV
+          <Button variant="outline" size="sm" disabled={exportCsv.isPending} onClick={() => exportCsv.mutate()}>
+            {exportCsv.isPending ? "Preparing…" : "Export CSV"}
           </Button>
         </>
       }
@@ -126,6 +142,7 @@ function AuditPage() {
           </tbody>
         </table>
       </div>
+      <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} noun="entries" busy={logs.isFetching} />
     </AdminShell>
   );
 }
