@@ -2355,6 +2355,16 @@ export type Database = {
         Args: { _user?: string }
         Returns: Database["public"]["Enums"]["platform_role"]
       }
+      report_ai: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _org: string
+          _to: string
+          _website?: string
+        }
+        Returns: Json
+      }
       report_conv: {
         Args: {
           _dept?: string[]
@@ -2433,7 +2443,33 @@ export type Database = {
         }
         Returns: Json
       }
+      report_intake: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _org: string
+          _staff?: string[]
+          _to: string
+        }
+        Returns: Json
+      }
       report_overview: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _org: string
+          _priority?: string
+          _sla?: number
+          _staff?: string[]
+          _statuses?: string[]
+          _to: string
+          _transfer?: string
+          _type?: string
+          _website?: string
+        }
+        Returns: Json
+      }
+      report_sla: {
         Args: {
           _dept?: string[]
           _from: string
@@ -2467,6 +2503,52 @@ export type Database = {
       }
       report_staff_workload: {
         Args: { _dept?: string[]; _org: string }
+        Returns: Json
+      }
+      report_tickets: {
+        Args: {
+          _dept?: string[]
+          _dir?: string
+          _flag?: string
+          _from: string
+          _limit?: number
+          _offset?: number
+          _org: string
+          _priority?: string
+          _sla?: number
+          _sort?: string
+          _staff?: string[]
+          _statuses?: string[]
+          _to: string
+          _transfer?: string
+          _type?: string
+          _website?: string
+        }
+        Returns: Json
+      }
+      report_transfers: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _limit?: number
+          _org: string
+          _to: string
+        }
+        Returns: Json
+      }
+      report_volume: {
+        Args: {
+          _dept?: string[]
+          _from: string
+          _org: string
+          _priority?: string
+          _staff?: string[]
+          _statuses?: string[]
+          _to: string
+          _transfer?: string
+          _type?: string
+          _website?: string
+        }
         Returns: Json
       }
       role_rank: {
