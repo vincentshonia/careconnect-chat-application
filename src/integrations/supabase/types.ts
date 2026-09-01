@@ -2171,7 +2171,13 @@ export type Database = {
           dev_mode: boolean
           domain: string
           font_family: string
+          help_title: string
           hidden_paths: string[]
+          home_cta_subtitle: string
+          home_cta_title: string
+          home_greeting: string
+          home_headline: string
+          home_subtitle: string
           id: string
           logo_url: string | null
           menu_buttons: Json
@@ -2180,7 +2186,12 @@ export type Database = {
           organization_id: string
           primary_color: string
           privacy_disclaimer: string
+          privacy_footer_text: string
           public_key: string
+          show_help_tab: boolean
+          show_home_tab: boolean
+          show_requests_tab: boolean
+          show_services_tab: boolean
           status: Database["public"]["Enums"]["entity_status"]
           timezone: string
           trigger_delay_seconds: number
@@ -2208,7 +2219,13 @@ export type Database = {
           dev_mode?: boolean
           domain: string
           font_family?: string
+          help_title?: string
           hidden_paths?: string[]
+          home_cta_subtitle?: string
+          home_cta_title?: string
+          home_greeting?: string
+          home_headline?: string
+          home_subtitle?: string
           id?: string
           logo_url?: string | null
           menu_buttons?: Json
@@ -2217,7 +2234,12 @@ export type Database = {
           organization_id: string
           primary_color?: string
           privacy_disclaimer?: string
+          privacy_footer_text?: string
           public_key?: string
+          show_help_tab?: boolean
+          show_home_tab?: boolean
+          show_requests_tab?: boolean
+          show_services_tab?: boolean
           status?: Database["public"]["Enums"]["entity_status"]
           timezone?: string
           trigger_delay_seconds?: number
@@ -2245,7 +2267,13 @@ export type Database = {
           dev_mode?: boolean
           domain?: string
           font_family?: string
+          help_title?: string
           hidden_paths?: string[]
+          home_cta_subtitle?: string
+          home_cta_title?: string
+          home_greeting?: string
+          home_headline?: string
+          home_subtitle?: string
           id?: string
           logo_url?: string | null
           menu_buttons?: Json
@@ -2254,7 +2282,12 @@ export type Database = {
           organization_id?: string
           primary_color?: string
           privacy_disclaimer?: string
+          privacy_footer_text?: string
           public_key?: string
+          show_help_tab?: boolean
+          show_home_tab?: boolean
+          show_requests_tab?: boolean
+          show_services_tab?: boolean
           status?: Database["public"]["Enums"]["entity_status"]
           timezone?: string
           trigger_delay_seconds?: number

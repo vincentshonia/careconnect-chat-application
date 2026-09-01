@@ -48,6 +48,17 @@ type Config = {
     privacyDisclaimer: string;
     consentLanguage: string;
     menuButtons: Array<{ key: string; label: string; icon?: string }>;
+    homeGreeting?: string;
+    homeHeadline?: string;
+    homeSubtitle?: string;
+    homeCtaTitle?: string;
+    homeCtaSubtitle?: string;
+    helpTitle?: string;
+    privacyFooterText?: string;
+    showHomeTab?: boolean;
+    showHelpTab?: boolean;
+    showServicesTab?: boolean;
+    showRequestsTab?: boolean;
   };
   organization: {
     name: string;
@@ -913,9 +924,16 @@ function WidgetPage() {
 
       <nav
         aria-label="Chat sections"
-        className="grid shrink-0 grid-cols-5 gap-0.5 border-t border-border/60 bg-card px-1.5 pb-2 pt-1.5"
+        className="flex shrink-0 items-stretch gap-0.5 border-t border-border/60 bg-card px-1.5 pb-2 pt-1.5 [&>button]:flex-1"
       >
-        {TABS.map((tab) => {
+        {TABS.filter((tab) => {
+          const w = config.website;
+          if (tab.key === "home") return w.showHomeTab !== false;
+          if (tab.key === "help") return w.showHelpTab !== false;
+          if (tab.key === "services") return w.showServicesTab !== false;
+          if (tab.key === "requests") return w.showRequestsTab !== false;
+          return true;
+        }).map((tab) => {
           const active = tabForView(view) === tab.key;
           return (
             <button
@@ -1032,15 +1050,15 @@ function HomeView({
 
         <div className="relative mt-7">
           <h1 className="text-[26px] font-semibold leading-tight tracking-tight text-white/95">
-            {visitorName ? `Hi, ${visitorName}.` : "Hi there."}
+            {visitorName ? `Hi, ${visitorName}.` : (config.website.homeGreeting || "Hi there.")}
           </h1>
           <h2 className="text-[26px] font-semibold leading-tight tracking-tight text-white">
-            How can we help?
+            {config.website.homeHeadline || "How can we help?"}
           </h2>
           <p className="mt-2.5 text-[13px] text-white/85">
             {config.agentsAvailable
               ? "Our team is here to help."
-              : "CareConnect AI is available anytime."}
+              : config.website.homeSubtitle || "CareConnect AI is available anytime."}
           </p>
         </div>
       </div>
@@ -1061,11 +1079,11 @@ function HomeView({
             </svg>
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-card-foreground">Send us a message</span>
+            <span className="block text-[15px] font-semibold text-card-foreground">{config.website.homeCtaTitle || "Send us a message"}</span>
             <span className="block truncate text-xs text-muted-foreground">
               {config.agentsAvailable
                 ? "Typical reply time is a few minutes"
-                : "CareConnect AI can help now, or leave a message"}
+                : config.website.homeCtaSubtitle || "CareConnect AI can help now, or leave a message"}
             </span>
           </span>
           <svg
@@ -1087,7 +1105,7 @@ function HomeView({
               <circle cx="11" cy="11" r="7" />
               <path d="M21 21l-4.2-4.2" />
             </svg>
-            <span className="text-[15px] font-semibold text-card-foreground">Search for help</span>
+            <span className="text-[15px] font-semibold text-card-foreground">{config.website.helpTitle || "Search for help"}</span>
           </button>
 
           {topics.length > 0 && (
@@ -1116,7 +1134,7 @@ function HomeView({
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
-          Your privacy matters to us.
+          {config.website.privacyFooterText || "Your privacy matters to us."}
         </button>
         {showPrivacy && (
           <p className="rounded-xl bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">

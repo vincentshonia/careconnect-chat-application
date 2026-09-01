@@ -45,6 +45,8 @@ function WebsitesPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
   const [domainsText, setDomainsText] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [newSite, setNewSite] = useState({ name: "", domain: "" });
 
   useEffect(() => setOrigin(window.location.origin), []);
 
@@ -58,6 +60,18 @@ function WebsitesPage() {
   });
 
   const websites = listQuery.data ?? [];
+  const servicesQuery = useQuery({
+    queryKey: ["widget-services"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("services")
+        .select("id, name, short_description, status, sort_order")
+        .order("sort_order");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const services = servicesQuery.data ?? [];
   const active = websites.find((w) => w.id === activeId) ?? websites[0] ?? null;
 
   useEffect(() => {
@@ -91,6 +105,17 @@ function WebsitesPage() {
           offline_message: form.offline_message,
           privacy_disclaimer: form.privacy_disclaimer,
           ai_instructions: form.ai_instructions,
+          home_greeting: form.home_greeting,
+          home_headline: form.home_headline,
+          home_subtitle: form.home_subtitle,
+          home_cta_title: form.home_cta_title,
+          home_cta_subtitle: form.home_cta_subtitle,
+          help_title: form.help_title,
+          privacy_footer_text: form.privacy_footer_text,
+          show_home_tab: Boolean(form.show_home_tab),
+          show_help_tab: Boolean(form.show_help_tab),
+          show_services_tab: Boolean(form.show_services_tab),
+          show_requests_tab: Boolean(form.show_requests_tab),
         })
         .eq("id", active.id);
       if (error) throw error;
@@ -107,6 +132,49 @@ function WebsitesPage() {
       queryClient.invalidateQueries({ queryKey: ["websites"] });
     },
     onError: (err) => setNotice(err instanceof Error ? err.message : "Save failed"),
+  });
+
+  const create = useMutation({
+    mutationFn: async () => {
+      let organizationId: string | null = websites[0]?.organization_id ?? null;
+      if (!organizationId) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("organization_id")
+          .maybeSingle();
+        organizationId = prof?.organization_id ?? null;
+      }
+      if (!organizationId) throw new Error("No organization found for this account.");
+      const domain = newSite.domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+      if (!newSite.name.trim() || !domain) throw new Error("Name and domain are required.");
+      const { data, error } = await supabase
+        .from("websites")
+        .insert({
+          organization_id: organizationId,
+          name: newSite.name.trim(),
+          domain,
+          allowed_domains: [domain],
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      await logAudit({
+        action: "website.created",
+        recordType: "websites",
+        recordId: data.id,
+        websiteId: data.id,
+        newValue: { name: newSite.name, domain },
+      });
+      return data.id as string;
+    },
+    onSuccess: async (id) => {
+      setNewSite({ name: "", domain: "" });
+      setCreating(false);
+      setNotice("Website created.");
+      await queryClient.invalidateQueries({ queryKey: ["websites"] });
+      if (id) setActiveId(id);
+    },
+    onError: (err) => setNotice(err instanceof Error ? err.message : "Could not create website"),
   });
 
   const setStatus = useMutation({
@@ -172,6 +240,41 @@ function WebsitesPage() {
     >
       <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="h-fit rounded-xl border border-border">
+          <div className="border-b border-border p-3">
+            {creating ? (
+              <form
+                className="space-y-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setNotice(null);
+                  create.mutate();
+                }}
+              >
+                <Input
+                  placeholder="Site name"
+                  value={newSite.name}
+                  onChange={(e) => setNewSite({ ...newSite, name: e.target.value })}
+                />
+                <Input
+                  placeholder="example.com"
+                  value={newSite.domain}
+                  onChange={(e) => setNewSite({ ...newSite, domain: e.target.value })}
+                />
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" disabled={create.isPending}>
+                    {create.isPending ? "Creating…" : "Create"}
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setCreating(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <Button size="sm" className="w-full" onClick={() => setCreating(true)}>
+                + Add website
+              </Button>
+            )}
+          </div>
           <ul className="divide-y divide-border">
             {websites.map((w) => (
               <li key={w.id}>
@@ -302,6 +405,81 @@ function WebsitesPage() {
                 />
               </Field>
 
+              <div className="rounded-lg border border-border p-4">
+                <h3 className="text-sm font-semibold">Home screen</h3>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Copy shown on the widget home tab.
+                </p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Greeting line">
+                    <Input
+                      value={form.home_greeting ?? ""}
+                      onChange={(e) => setForm({ ...form, home_greeting: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Headline">
+                    <Input
+                      value={form.home_headline ?? ""}
+                      onChange={(e) => setForm({ ...form, home_headline: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Sub-headline">
+                    <Input
+                      value={form.home_subtitle ?? ""}
+                      onChange={(e) => setForm({ ...form, home_subtitle: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Privacy footer text">
+                    <Input
+                      value={form.privacy_footer_text ?? ""}
+                      onChange={(e) => setForm({ ...form, privacy_footer_text: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Message card title">
+                    <Input
+                      value={form.home_cta_title ?? ""}
+                      onChange={(e) => setForm({ ...form, home_cta_title: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Message card subtitle">
+                    <Input
+                      value={form.home_cta_subtitle ?? ""}
+                      onChange={(e) => setForm({ ...form, home_cta_subtitle: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Help section title">
+                    <Input
+                      value={form.help_title ?? ""}
+                      onChange={(e) => setForm({ ...form, help_title: e.target.value })}
+                    />
+                  </Field>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border p-4">
+                <h3 className="text-sm font-semibold">Widget tabs</h3>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Chat is always available. Toggle the other tabs per site.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {([
+                    ["show_home_tab", "Home"],
+                    ["show_help_tab", "Help"],
+                    ["show_services_tab", "Services"],
+                    ["show_requests_tab", "Requests"],
+                  ] as const).map(([key, label]) => (
+                    <div key={key} className="flex items-center gap-3">
+                      <Switch
+                        id={key}
+                        checked={form[key] !== false}
+                        onCheckedChange={(v) => setForm({ ...form, [key]: v })}
+                      />
+                      <Label htmlFor={key}>{label} tab</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-center gap-3">
                 <Switch
                   id="auto-open"
@@ -316,6 +494,8 @@ function WebsitesPage() {
                 {save.isPending ? "Saving…" : "Save settings"}
               </Button>
             </form>
+
+            <ServicesCard organizationId={active.organization_id} />
 
             <div className="rounded-xl border border-border p-4">
               <h2 className="text-sm font-semibold">Embed snippet</h2>
@@ -393,6 +573,20 @@ function WebsitesPage() {
             primaryColor: form.primary_color,
             accentColor: form.accent_color,
             position: form.widget_position,
+            logoUrl: form.logo_url,
+            borderRadius: form.border_radius,
+            homeGreeting: form.home_greeting,
+            homeHeadline: form.home_headline,
+            homeSubtitle: form.home_subtitle,
+            homeCtaTitle: form.home_cta_title,
+            homeCtaSubtitle: form.home_cta_subtitle,
+            helpTitle: form.help_title,
+            privacyFooterText: form.privacy_footer_text,
+            showHomeTab: form.show_home_tab,
+            showHelpTab: form.show_help_tab,
+            showServicesTab: form.show_services_tab,
+            showRequestsTab: form.show_requests_tab,
+            topics: services.map((s) => s.name),
           }}
         />
       ) : null}
@@ -422,6 +616,121 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="space-y-2">
       <Label>{label}</Label>
       {children}
+    </div>
+  );
+}
+
+
+function ServicesCard({ organizationId }: { organizationId: string }) {
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState({ name: "", short_description: "" });
+  const [error, setError] = useState<string | null>(null);
+
+  const list = useQuery({
+    queryKey: ["widget-services"],
+    queryFn: async () => {
+      const { data, error: err } = await supabase
+        .from("services")
+        .select("id, name, short_description, status, sort_order")
+        .order("sort_order");
+      if (err) throw err;
+      return data ?? [];
+    },
+  });
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["widget-services"] });
+
+  const add = useMutation({
+    mutationFn: async () => {
+      if (!draft.name.trim()) throw new Error("Service name is required.");
+      const { error: err } = await supabase.from("services").insert({
+        organization_id: organizationId,
+        name: draft.name.trim(),
+        short_description: draft.short_description.trim() || draft.name.trim(),
+        applies_to_all: true,
+      });
+      if (err) throw err;
+    },
+    onSuccess: () => {
+      setDraft({ name: "", short_description: "" });
+      setError(null);
+      invalidate();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : "Could not add service"),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error: err } = await supabase.from("services").delete().eq("id", id);
+      if (err) throw err;
+    },
+    onSuccess: invalidate,
+    onError: (e) => setError(e instanceof Error ? e.message : "Could not delete service"),
+  });
+
+  const toggle = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: "active" | "inactive" }) => {
+      const { error: err } = await supabase.from("services").update({ status }).eq("id", id);
+      if (err) throw err;
+    },
+    onSuccess: invalidate,
+  });
+
+  return (
+    <div className="rounded-xl border border-border p-4">
+      <h2 className="text-sm font-semibold">Services shown in the widget</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        These appear on the widget Services tab and in home-screen suggestions.
+      </p>
+
+      <ul className="mt-3 divide-y divide-border rounded-lg border border-border">
+        {(list.data ?? []).map((s) => (
+          <li key={s.id} className="flex items-center gap-3 px-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{s.name}</p>
+              <p className="truncate text-xs text-muted-foreground">{s.short_description}</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                toggle.mutate({ id: s.id, status: s.status === "active" ? "inactive" : "active" })
+              }
+            >
+              {s.status === "active" ? "Hide" : "Show"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => remove.mutate(s.id)}>
+              Delete
+            </Button>
+          </li>
+        ))}
+        {(list.data ?? []).length === 0 ? (
+          <li className="px-3 py-2.5 text-sm text-muted-foreground">No services yet.</li>
+        ) : null}
+      </ul>
+
+      <form
+        className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto]"
+        onSubmit={(e) => {
+          e.preventDefault();
+          add.mutate();
+        }}
+      >
+        <Input
+          placeholder="Service name"
+          value={draft.name}
+          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+        />
+        <Input
+          placeholder="Short description"
+          value={draft.short_description}
+          onChange={(e) => setDraft({ ...draft, short_description: e.target.value })}
+        />
+        <Button type="submit" size="sm" disabled={add.isPending}>
+          Add service
+        </Button>
+      </form>
+      {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
     </div>
   );
 }
