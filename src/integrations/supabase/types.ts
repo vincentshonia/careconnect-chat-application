@@ -2702,6 +2702,14 @@ export type Database = {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: number
       }
+      round_robin_candidates: {
+        Args: { _department: string }
+        Returns: {
+          full_name: string
+          membership_id: string
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       app_role:

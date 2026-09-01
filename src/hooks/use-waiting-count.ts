@@ -17,7 +17,9 @@ export function useWaitingCount() {
       const { count, error } = await supabase
         .from("conversations")
         .select("id", { count: "exact", head: true })
-        .in("status", ["new", "waiting", "escalated"])
+        // Same vocabulary as the database's claimable_conversation_statuses().
+        .in("status", ["new", "waiting", "escalated", "follow_up"])
+
         .is("assigned_to", null);
       if (error) throw error;
       return count ?? 0;

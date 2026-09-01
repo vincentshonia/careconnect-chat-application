@@ -95,6 +95,9 @@ function statusTone(status: string) {
   return "default" as const;
 }
 
+const PAGE_SIZE = 25;
+const NO_DEPARTMENT = "00000000-0000-0000-0000-000000000000";
+
 function InboxPage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
@@ -111,6 +114,8 @@ function InboxPage() {
   const statusFilter = search.status ?? null;
 
   const [activeId, setActiveId] = useState<string | null>(search.c ?? null);
+  const [page, setPage] = useState(0);
+  const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -133,60 +138,90 @@ function InboxPage() {
     },
   });
 
+  /**
+   * Queue loading is done by the database, one page at a time: each tab is a
+   * filtered, ordered, ranged query so the browser never holds — or filters —
+   * the whole conversation table.
+   */
   const conversationsQuery = useQuery({
-    queryKey: ["conversations"],
+    queryKey: ["conversations", tab, statusFilter, page, query, userId, departmentIds.join(",")],
     refetchInterval: 60_000,
+    placeholderData: (prev) => prev,
+    queryFn: async () => {
+      let q = supabase
+        .from("conversations")
+        .select(
+          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, organization_id, website_id, visitor_type, contact_id",
+          { count: "exact" },
+        );
+
+      switch (tab) {
+        case "waiting":
+          q = q.is("assigned_to", null).in("status", CLAIMABLE_STATUSES as never[]);
+          break;
+        case "mine":
+          q = q.eq("assigned_to", userId ?? "").not("status", "in", `(${CLOSED_STATUSES.join(",")})`);
+          break;
+        case "department":
+          q = q
+            .in("department_id", departmentIds.length ? departmentIds : [NO_DEPARTMENT])
+            .not("status", "in", `(${CLOSED_STATUSES.join(",")})`);
+          break;
+        case "active":
+          q = q.in("status", ["active", "assigned"]);
+          break;
+        case "closed":
+          q = q.in("status", CLOSED_STATUSES as never[]);
+          break;
+        default:
+          if (!can("conversation.view_all")) q = q.in("status", OPEN_STATUSES as never[]);
+      }
+
+      if (statusFilter) q = q.eq("status", statusFilter as never);
+      if (query.trim()) {
+        const term = query.trim().replace(/[%,()]/g, "");
+        if (term) q = q.or(`reference.ilike.%${term}%,subject.ilike.%${term}%`);
+      }
+
+      const { data, error, count } = await q
+        .order("last_message_at", { ascending: false })
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+      if (error) throw error;
+      return { rows: (data ?? []) as Conversation[], total: count ?? 0 };
+    },
+  });
+
+  const conversations = conversationsQuery.data?.rows ?? [];
+  const total = conversationsQuery.data?.total ?? 0;
+
+  // The open conversation is fetched by id so it survives paging and filtering.
+  const activeQuery = useQuery({
+    queryKey: ["conversation", activeId],
+    enabled: Boolean(activeId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("conversations")
         .select(
           "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, organization_id, website_id, visitor_type, contact_id",
         )
-        .order("last_message_at", { ascending: false })
-        .limit(200);
+        .eq("id", activeId!)
+        .maybeSingle();
       if (error) throw error;
-      return (data ?? []) as Conversation[];
+      return (data ?? null) as Conversation | null;
     },
   });
 
-  const all = useMemo(() => conversationsQuery.data ?? [], [conversationsQuery.data]);
-
-  const conversations = useMemo(() => {
-    const byTab = (() => {
-      switch (tab) {
-        case "waiting":
-          return all.filter((c) => !c.assigned_to && CLAIMABLE_STATUSES.includes(c.status));
-        case "mine":
-          return all.filter((c) => c.assigned_to === userId && !CLOSED_STATUSES.includes(c.status));
-        case "department":
-          return all.filter(
-            (c) =>
-              !CLOSED_STATUSES.includes(c.status) &&
-              c.department_id &&
-              departmentIds.includes(c.department_id),
-          );
-        case "active":
-          return all.filter((c) => c.status === "active" || c.status === "assigned");
-        case "closed":
-          return all.filter((c) => CLOSED_STATUSES.includes(c.status));
-        default:
-          return all.filter((c) => OPEN_STATUSES.includes(c.status) || can("conversation.view_all"));
-      }
-    })();
-    return statusFilter ? byTab.filter((c) => c.status === statusFilter) : byTab;
-  }, [all, tab, userId, departmentIds, statusFilter]);
-
-
-  const active = useMemo(
-    () => all.find((c) => c.id === activeId) ?? null,
-    [all, activeId],
-  );
+  const active = activeQuery.data ?? null;
 
   useEffect(() => {
-    if (conversations.length && !conversations.some((c) => c.id === activeId)) {
-      setActiveId(conversations[0].id);
-    }
+    if (conversations.length && !activeId) setActiveId(conversations[0].id);
   }, [conversations, activeId]);
+
+  // Changing queue or filters always restarts at the first page.
+  useEffect(() => {
+    setPage(0);
+  }, [tab, statusFilter, query]);
+
 
   // Live updates: claims, replies, status changes and new chats push instantly.
   useEffect(() => {
@@ -194,6 +229,7 @@ function InboxPage() {
       .channel("inbox-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => {
         queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        queryClient.invalidateQueries({ queryKey: ["conversation"] });
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
         queryClient.invalidateQueries({ queryKey: ["conversations"] });
@@ -282,6 +318,7 @@ function InboxPage() {
       const claimedId = activeId;
       toast.success("You now own this conversation");
       await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      await queryClient.invalidateQueries({ queryKey: ["conversation"] });
       queryClient.invalidateQueries({ queryKey: ["messages", claimedId] });
       // Stay on the chat you just claimed: it has left the Waiting queue.
       setTab("mine");
@@ -394,7 +431,13 @@ function InboxPage() {
       title="Inbox"
       description="Website chat conversations, AI answers, and live agent replies."
       actions={
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search reference or subject"
+            className="h-8 w-56 rounded-md border border-border bg-background px-2 text-xs"
+          />
           {tabs.map((t) => (
             <Button
               key={t.key}
@@ -444,6 +487,26 @@ function InboxPage() {
               ))}
             </ul>
           )}
+          {total > PAGE_SIZE ? (
+            <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2 text-xs text-muted-foreground">
+              <span>
+                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+              </span>
+              <span className="flex gap-1">
+                <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+                  Prev
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={(page + 1) * PAGE_SIZE >= total}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </span>
+            </div>
+          ) : null}
         </aside>
 
         <section className="flex max-h-[70vh] flex-col rounded-xl border border-border">

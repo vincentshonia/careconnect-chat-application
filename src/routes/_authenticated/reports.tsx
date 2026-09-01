@@ -112,6 +112,11 @@ function ReportsPage() {
 
   const filterSummary = `${new Date(range.from).toLocaleDateString()} – ${new Date(range.to).toLocaleDateString()}`;
 
+  // Sections the server says this caller may run; a hidden tab renders nothing.
+  const sections = options.data?.sections as readonly string[] | undefined;
+  const allowed = (id: TabId) => tab === id && (!sections || sections.includes(id));
+
+
   const resetFilters = () => {
     setDepartmentId("");
     setStaffId("");
@@ -233,7 +238,7 @@ function ReportsPage() {
       </div>
 
       <nav className="mb-4 flex flex-wrap gap-1 border-b border-border pb-2">
-        {TABS.map((t) => (
+        {TABS.filter((t) => !options.data?.sections || options.data.sections.includes(t.id)).map((t) => (
           <button
             key={t.id}
             type="button"
@@ -247,14 +252,16 @@ function ReportsPage() {
         ))}
       </nav>
 
-      {tab === "overview" ? <OverviewTab filters={filters} /> : null}
-      {tab === "departments" ? <DepartmentsTab filters={filters} /> : null}
-      {tab === "staff" ? <StaffTab filters={filters} /> : null}
-      {tab === "tickets" ? <TicketsTab filters={filters} /> : null}
-      {tab === "transfers" ? <TransfersTab filters={filters} /> : null}
-      {tab === "sla" ? <SlaTab filters={filters} /> : null}
-      {tab === "ai" ? <AiTab filters={filters} /> : null}
-      {tab === "intake" ? <IntakeTab filters={filters} /> : null}
+      {/* A tab outside the caller's scope is never rendered. */}
+      {allowed("overview") ? <OverviewTab filters={filters} /> : null}
+      {allowed("departments") ? <DepartmentsTab filters={filters} /> : null}
+      {allowed("staff") ? <StaffTab filters={filters} /> : null}
+      {allowed("tickets") ? <TicketsTab filters={filters} /> : null}
+      {allowed("transfers") ? <TransfersTab filters={filters} /> : null}
+      {allowed("sla") ? <SlaTab filters={filters} /> : null}
+      {allowed("ai") ? <AiTab filters={filters} /> : null}
+      {allowed("intake") ? <IntakeTab filters={filters} /> : null}
+
     </AdminShell>
   );
 }

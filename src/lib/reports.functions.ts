@@ -68,6 +68,20 @@ type Scope = {
   level: "self" | "team" | "organization" | "platform";
 };
 
+/**
+ * Sections a given scope level may run.
+ *
+ * Organization-wide sections (backlog, workload, transfers, AI) have no staff
+ * dimension in SQL, so a self-level caller can never run them: there is no way
+ * to constrain them to that one person's data.
+ */
+const SECTIONS_BY_LEVEL: Record<Scope["level"], readonly string[]> = {
+  platform: REPORT_SECTIONS,
+  organization: REPORT_SECTIONS,
+  team: REPORT_SECTIONS,
+  self: ["overview", "staff", "tickets", "sla", "volume", "intake", "staff_detail"],
+};
+
 /** Resolve what this caller is permitted to report on. Never trusts input. */
 function reportScope(actor: Actor): Scope {
   const organizationId = requireOrganization(actor);
@@ -88,15 +102,25 @@ function reportScope(actor: Actor): Scope {
     };
   }
   if (actor.permissions.has("reports.self")) {
-    return { organizationId, departmentIds: null, staffIds: [actor.userId], level: "self" };
+    return {
+      organizationId,
+      // A self-level caller is also confined to their own departments, so any
+      // department-dimensioned report can never widen to the whole tenant.
+      departmentIds: actor.departmentIds.length ? actor.departmentIds : [],
+      staffIds: [actor.userId],
+      level: "self",
+    };
   }
   throw new ForbiddenError("You don't have access to reporting");
 }
 
+/** A department id that matches nothing, so an empty scope returns zero rows. */
+const NO_DEPARTMENT = "00000000-0000-0000-0000-000000000000";
+
 /** Intersect a requested filter with the caller's scope. */
 function clampDepartments(scope: Scope, requested?: string | null): string[] | null {
   if (scope.departmentIds === null) return requested ? [requested] : null;
-  if (!requested) return scope.departmentIds.length ? scope.departmentIds : ["00000000-0000-0000-0000-000000000000"];
+  if (!requested) return scope.departmentIds.length ? scope.departmentIds : [NO_DEPARTMENT];
   if (!scope.departmentIds.includes(requested)) {
     throw new ForbiddenError("That department is outside your reporting scope");
   }
@@ -110,6 +134,7 @@ function clampStaff(scope: Scope, requested?: string | null): string[] | null {
   }
   return scope.staffIds;
 }
+
 
 function parseRange(filters: ReportFilters) {
   const from = new Date(filters.from);
@@ -127,7 +152,11 @@ export const runReportFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const actor = await resolveActor(context.supabase, context.userId);
     const scope = reportScope(actor);
+    if (!SECTIONS_BY_LEVEL[scope.level].includes(data.section)) {
+      throw new ForbiddenError("That report is outside your reporting scope");
+    }
     const { from, to } = parseRange(data.filters);
+
     const dept = clampDepartments(scope, data.filters.departmentId ?? null);
     const staff = clampStaff(scope, data.filters.staffId ?? null);
     const sla = data.filters.sla ?? 15;
@@ -276,6 +305,8 @@ export const reportFilterOptionsFn = createServerFn({ method: "POST" })
 
     return {
       scope: scope.level,
+      sections: SECTIONS_BY_LEVEL[scope.level] as readonly string[],
+
       selfId: actor.userId,
       departments: (departments.data ?? []).map((d) => ({ id: d.id as string, name: d.name as string })),
       websites: (websites.data ?? []).map((w) => ({ id: w.id as string, name: w.name as string })),
