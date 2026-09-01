@@ -107,6 +107,49 @@ function WebsitesPage() {
     onError: (err) => setNotice(err instanceof Error ? err.message : "Save failed"),
   });
 
+  const setStatus = useMutation({
+    mutationFn: async (status: "active" | "suspended") => {
+      if (!active) return;
+      const { error } = await supabase.from("websites").update({ status }).eq("id", active.id);
+      if (error) throw error;
+      await logAudit({
+        action: `website.${status === "suspended" ? "suspended" : "activated"}`,
+        recordType: "websites",
+        recordId: active.id,
+        websiteId: active.id,
+        newValue: { status },
+      });
+    },
+    onSuccess: (_d, status) => {
+      setNotice(status === "suspended" ? "Website suspended — the widget will stop loading." : "Website reactivated.");
+      queryClient.invalidateQueries({ queryKey: ["websites"] });
+    },
+    onError: (err) => setNotice(err instanceof Error ? err.message : "Update failed"),
+  });
+
+  const remove = useMutation({
+    mutationFn: async () => {
+      if (!active) return;
+      const { error } = await supabase.from("websites").delete().eq("id", active.id);
+      if (error) throw error;
+      await logAudit({
+        action: "website.deleted",
+        recordType: "websites",
+        recordId: active.id,
+        previousValue: { name: active.name, domain: active.domain },
+      });
+    },
+    onSuccess: () => {
+      setActiveId(null);
+      setNotice("Website deleted.");
+      queryClient.invalidateQueries({ queryKey: ["websites"] });
+    },
+    onError: () =>
+      setNotice(
+        "Could not delete this website. It still has conversations or other linked records — suspend it instead.",
+      ),
+  });
+
   // Preview/sandbox origins are auth-gated, so a snippet pointing at them never
   // loads on a customer site. Always emit the public production origin.
   const PUBLIC_EMBED_ORIGIN = "https://chat.mypacifichealth.com";
@@ -118,6 +161,7 @@ function WebsitesPage() {
   const snippet = active
     ? `<script src="${embedOrigin}/api/public/widget.js" data-website-id="${active.id}"></script>`
     : "";
+
 
   return (
     <AdminShell
