@@ -41,6 +41,17 @@ Executed in phases. Each phase ends with typecheck + build + tests.
 - [x] Remaining `.limit(...)` calls audited: only three left — pending invitations (100), the SLA cron batch (500), widget message poll (100). All are bounded background/widget reads, not paginated UI lists.
 - [x] Release gate: 149 tests pass, typecheck clean, production build OK
 
+### Phase 3 gap closure (complete)
+- [x] AI-only **completion** metric: eligible / completed / completion rate / escalated / abandoned, with `conversation_human_touched` proving no historical human involvement
+- [x] Server-side report exports (tickets, transfers, staff, departments, SLA, intake, AI) — chunked, RBAC-scoped, 25k cap, audited
+- [x] Full timezone-aware date presets (today → YTD → custom) with the organization timezone shown in the filter bar
+- [x] Canonical status vocabulary (`src/lib/conversation-status.ts`) incl. archived and spam; pagination resets on any global filter change
+- [x] Report filter state in the URL via TanStack Router search params (no PHI)
+- [x] KPI cards drill down to the exact authorized tickets and reconcile with the overview counts
+- [x] Volume suite (`tests/reporting-reconciliation.test.ts`): 2,000+ seeded conversations, page-boundary/duplicate/stable-order checks, AI completion logic, cross-tenant denial
+- [x] `refresh_report_statistics()` maintenance helper (service-role only) so a bulk load does not leave the planner on stale statistics
+- [x] Release gate: 171 tests pass, typecheck clean
+
 
 ## Phase 4 — Widget & visitor workflows
 - [ ] Visitor first-name personalization persistence
