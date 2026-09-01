@@ -71,8 +71,14 @@ async function agentName(userId: string) {
 }
 
 /**
- * Take ownership of a waiting conversation. Race-safe: the update only lands
- * while `assigned_to` is still null, so a simultaneous claim loses cleanly.
+ * Take ownership of a waiting conversation.
+ *
+ * The entire eligibility check (active membership, active profile, presence,
+ * department access, claimable status, concurrent-chat capacity) and the
+ * assignment happen inside one PostgreSQL transaction via `claim_conversation`.
+ * Concurrent claims therefore cannot double-assign a conversation or push an
+ * agent past their capacity — exactly one caller wins, everyone else gets a
+ * clean message.
  */
 export const claimConversationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -83,51 +89,44 @@ export const claimConversationFn = createServerFn({ method: "POST" })
       throw new ForbiddenError("You are not allowed to claim conversations");
     }
 
-    const conversation = await loadConversation(data.conversationId);
-    if (!canView(actor, conversation)) {
-      throw new ForbiddenError("This conversation is not in one of your departments");
-    }
-    if (CLOSED_STATUSES.includes(conversation.status)) {
-      throw new ForbiddenError("This conversation is already closed");
-    }
-    if (conversation.assigned_to) {
-      const owner = await agentName(conversation.assigned_to);
-      throw new ForbiddenError(`This conversation was just claimed by ${owner}.`);
-    }
-    if (!CLAIMABLE_STATUSES.includes(conversation.status)) {
-      throw new ForbiddenError("This conversation cannot be claimed right now");
-    }
-
     const { admin } = await import("@/lib/public-chat.server");
     const db = admin();
 
-    // Profile eligibility: account must be active.
-    const { data: profile } = await db
-      .from("profiles")
-      .select("full_name, status")
-      .eq("id", actor.userId)
-      .maybeSingle();
-    if (!profile || profile.status !== "active") {
-      throw new ForbiddenError("Your account is not active");
+    const { data: result, error: rpcError } = await db.rpc("claim_conversation", {
+      _conversation: data.conversationId,
+      _user: actor.userId,
+    });
+    if (rpcError) {
+      console.error("[claim] rpc failed", rpcError);
+      throw new Error("Could not claim that conversation. Please try again.");
     }
 
-
-    const now = new Date().toISOString();
-    const { data: updated } = await db
-      .from("conversations")
-      .update({ assigned_to: actor.userId, status: "assigned", claimed_at: now })
-      .eq("id", conversation.id)
-      .is("assigned_to", null)
-      .in("status", CLAIMABLE_STATUSES)
-      .select("id");
-
-    if (!updated || updated.length === 0) {
-      const current = await loadConversation(conversation.id);
-      const owner = current.assigned_to ? await agentName(current.assigned_to) : "another team member";
-      throw new ForbiddenError(`This conversation was just claimed by ${owner}.`);
+    const outcome = (result ?? {}) as {
+      ok?: boolean;
+      message?: string;
+      assigned_name?: string;
+      organization_id?: string;
+      website_id?: string | null;
+      department_id?: string | null;
+      reference?: string | null;
+      previous_status?: string;
+    };
+    if (!outcome.ok) {
+      throw new ForbiddenError(outcome.message || "This conversation could not be claimed.");
     }
 
-    const name = (profile.full_name as string) || actor.fullName || "A team member";
+    const conversation = {
+      id: data.conversationId,
+      organization_id: outcome.organization_id as string,
+      website_id: outcome.website_id ?? null,
+      department_id: outcome.department_id ?? null,
+      reference: outcome.reference ?? null,
+      status: outcome.previous_status ?? "waiting",
+      assigned_to: null,
+    } satisfies ConversationRow;
+
+    const name = outcome.assigned_name || actor.fullName || "A team member";
+
 
     await db.from("conversation_events").insert({
       conversation_id: conversation.id,
