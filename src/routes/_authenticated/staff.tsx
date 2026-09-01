@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useDebounced } from "@/hooks/use-debounced";
+import { Pager } from "@/components/admin/Pager";
+import { listStaffFn, STAFF_PAGE_SIZE, type StaffRow } from "@/lib/directory.functions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,24 +100,42 @@ function StaffPage() {
 
 
 
+  // Directory paging, search and filters all run in the database, so the page
+  // is just as fast for a team of five thousand as for a team of five.
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | AppRole>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "disabled" | "removed">("active");
+  const [deptFilter, setDeptFilter] = useState<string>("all");
+  const [page, setPage] = useState(0);
+  const debouncedSearch = useDebounced(search, 300);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, roleFilter, statusFilter, deptFilter]);
+
+  const listStaff = useServerFn(listStaffFn);
   const staffQuery = useQuery({
-    queryKey: ["staff"],
+    queryKey: ["staff", debouncedSearch, roleFilter, statusFilter, deptFilter, page],
+    placeholderData: (prev) => prev,
+    queryFn: async () =>
+      listStaff({
+        data: {
+          search: debouncedSearch,
+          role: roleFilter === "all" ? null : roleFilter,
+          departmentId: deptFilter === "all" ? null : deptFilter,
+          status: statusFilter,
+          page,
+          pageSize: STAFF_PAGE_SIZE,
+        },
+      }),
+  });
+
+  const departmentsQuery = useQuery({
+    queryKey: ["departments-lite"],
     queryFn: async () => {
-      const [profiles, roles, departments, members] = await Promise.all([
-        supabase.from("profiles").select("*").order("full_name"),
-        supabase
-          .from("organization_memberships")
-          .select("id, user_id, role, organization_id, status"),
-        supabase.from("departments").select("id, name").order("name"),
-        supabase.from("department_members").select("id, user_id, department_id"),
-      ]);
-      if (profiles.error) throw profiles.error;
-      return {
-        profiles: (profiles.data ?? []) as Profile[],
-        roles: roles.data ?? [],
-        departments: departments.data ?? [],
-        members: members.data ?? [],
-      };
+      const { data, error } = await supabase.from("departments").select("id, name").order("name").range(0, 199);
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
@@ -176,13 +197,62 @@ function StaffPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
   });
 
-  const data = staffQuery.data;
+  const rows = (staffQuery.data?.rows ?? []) as StaffRow[];
+  const total = staffQuery.data?.total ?? 0;
+  const departments = departmentsQuery.data ?? [];
 
 
   return (
     <AdminShell
       title="Staff & roles"
       description="Roles control what each teammate can change. Departments drive conversation routing."
+      actions={
+        <>
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, email or title…"
+            className="w-64"
+          />
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value as "all" | AppRole)}
+            aria-label="Filter by role"
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          >
+            <option value="all">All roles</option>
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {ROLE_LABEL[r as OrgRole]}
+              </option>
+            ))}
+          </select>
+          <select
+            value={deptFilter}
+            onChange={(e) => setDeptFilter(e.target.value)}
+            aria-label="Filter by department"
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          >
+            <option value="all">All departments</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "disabled" | "removed")}
+            aria-label="Filter by account status"
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          >
+            <option value="active">Active</option>
+            <option value="disabled">Disabled</option>
+            <option value="removed">Removed</option>
+            <option value="all">All accounts</option>
+          </select>
+        </>
+      }
     >
       {!can("staff.create") ? (
         <p className="mb-4 rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
@@ -311,10 +381,21 @@ function StaffPage() {
         <p className="text-sm text-muted-foreground">Loading team…</p>
       ) : (
         <div className="space-y-3">
-          {(data?.profiles ?? []).map((p) => {
-            const role = (data?.roles ?? []).find((r) => r.user_id === p.id)?.role as
-              | AppRole
-              | undefined;
+          {rows.length === 0 ? (
+            <p className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
+              No teammates match these filters.
+            </p>
+          ) : null}
+          {rows.map((row) => {
+            const p = {
+              id: row.user_id,
+              full_name: row.full_name,
+              email: row.email,
+              presence: row.presence,
+              status: row.profile_status,
+              max_concurrent_chats: row.max_concurrent_chats,
+            };
+            const role = (row.role ?? undefined) as AppRole | undefined;
             const roleLocked = Boolean(
               roleTransitionError({
                 actorRole,
@@ -415,15 +496,14 @@ function StaffPage() {
                     Departments — click to add or remove this teammate
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {(data?.departments ?? []).length === 0 ? (
+                    {departments.length === 0 ? (
                       <p className="text-xs text-muted-foreground">
                         No departments yet — create one under Departments &amp; hours.
                       </p>
                     ) : null}
-                    {(data?.departments ?? []).map((d) => {
-                      const member = (data?.members ?? []).find(
-                        (m) => m.user_id === p.id && m.department_id === d.id,
-                      );
+                    {departments.map((d) => {
+                      const membership = row.departments.find((m) => m.id === d.id);
+                      const member = membership ? { id: membership.membership_id } : undefined;
                       return (
                         <Button
                           key={d.id}
@@ -435,7 +515,7 @@ function StaffPage() {
                             toggleDepartment.mutate({
                               userId: p.id,
                               departmentId: d.id,
-                              member: member ?? undefined,
+                              member,
                             })
                           }
                         >
@@ -498,6 +578,14 @@ function StaffPage() {
               </article>
             );
           })}
+          <Pager
+            page={page}
+            pageSize={STAFF_PAGE_SIZE}
+            total={total}
+            onPage={setPage}
+            noun="teammates"
+            busy={staffQuery.isFetching}
+          />
         </div>
       )}
 
