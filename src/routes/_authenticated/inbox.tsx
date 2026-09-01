@@ -157,7 +157,7 @@ function InboxPage() {
 
       switch (tab) {
         case "waiting":
-          q = q.is("assigned_to", null).in("status", CLAIMABLE_STATUSES);
+          q = q.is("assigned_to", null).in("status", CLAIMABLE_STATUSES as never[]);
           break;
         case "mine":
           q = q.eq("assigned_to", userId ?? "").not("status", "in", `(${CLOSED_STATUSES.join(",")})`);
@@ -171,13 +171,13 @@ function InboxPage() {
           q = q.in("status", ["active", "assigned"]);
           break;
         case "closed":
-          q = q.in("status", CLOSED_STATUSES);
+          q = q.in("status", CLOSED_STATUSES as never[]);
           break;
         default:
-          if (!can("conversation.view_all")) q = q.in("status", OPEN_STATUSES);
+          if (!can("conversation.view_all")) q = q.in("status", OPEN_STATUSES as never[]);
       }
 
-      if (statusFilter) q = q.eq("status", statusFilter);
+      if (statusFilter) q = q.eq("status", statusFilter as never);
       if (query.trim()) {
         const term = query.trim().replace(/[%,()]/g, "");
         if (term) q = q.or(`reference.ilike.%${term}%,subject.ilike.%${term}%`);
