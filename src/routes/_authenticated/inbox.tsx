@@ -488,15 +488,25 @@ function InboxPage() {
 
 
                   {canReply ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => closeConversation.mutate()}
-                      disabled={closeConversation.isPending}
-                    >
-                      Close
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => resolveConversation.mutate()}
+                        disabled={resolveConversation.isPending}
+                      >
+                        Resolve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => closeConversation.mutate()}
+                        disabled={closeConversation.isPending}
+                      >
+                        Close
+                      </Button>
+                    </>
                   ) : null}
+
                 </div>
               </div>
 
