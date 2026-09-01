@@ -589,14 +589,7 @@ function WebsitesPage() {
                 </Button>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Switch
-                  id="auto-open"
-                  checked={Boolean(form.auto_open)}
-                  onCheckedChange={(v) => setForm({ ...form, auto_open: v })}
-                />
-                <Label htmlFor="auto-open">Auto-open the widget after the trigger delay</Label>
-              </div>
+
 
               {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
               <Button type="submit" disabled={save.isPending}>
