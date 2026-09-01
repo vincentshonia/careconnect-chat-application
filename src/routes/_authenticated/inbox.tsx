@@ -20,9 +20,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   // `?c=<id>` lets report drill-downs open a specific conversation.
-  validateSearch: (search: Record<string, unknown>) => ({
-    c: typeof search['c'] === "string" ? (search['c'] as string) : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { c?: string } =>
+    typeof search['c'] === "string" ? { c: search['c'] as string } : {},
+
   head: () => ({
     meta: [
       { title: "Inbox — Pacific Health Group Support Console" },
