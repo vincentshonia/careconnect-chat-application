@@ -84,7 +84,7 @@ function IntakePage() {
       const { data, error } = await supabase.rpc("intake_stage_counts", {
         _org: organizationId!,
         _type: typeFilter,
-        _search: debouncedSearch.trim() || null,
+        _search: debouncedSearch.trim() || undefined,
       });
       if (error) throw error;
       return (data ?? { total: 0, by_stage: {}, by_type: {} }) as {

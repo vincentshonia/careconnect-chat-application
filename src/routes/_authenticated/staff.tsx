@@ -43,7 +43,6 @@ function StaffRoute() {
   );
 }
 
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 const ROLES: AppRole[] = ["agent", "team_lead", "manager", "administrator", "super_admin"];
 const PRESENCE = ["available", "busy", "away", "offline"];
 
