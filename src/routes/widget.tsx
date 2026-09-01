@@ -545,7 +545,7 @@ function WidgetPage() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold tracking-tight">
-              {agentName ?? config.website.chatbotName}
+              {agentName ?? "PHG CareConnect Assistant"}
             </p>
             <p className="truncate text-[11px] text-white/80">
               {agentName
@@ -556,6 +556,18 @@ function WidgetPage() {
             </p>
           </div>
 
+          {!agentName && (
+            <button
+              onClick={() => {
+                setFormKind("live_agent");
+                setView("form");
+              }}
+              className="relative shrink-0 whitespace-nowrap rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white ring-1 ring-white/25 transition hover:bg-white/25"
+            >
+              Talk to an agent
+            </button>
+          )}
+
           <button
             onClick={closeWidget}
             aria-label="Close chat"
@@ -565,6 +577,7 @@ function WidgetPage() {
           </button>
         </header>
       )}
+
 
 
 
