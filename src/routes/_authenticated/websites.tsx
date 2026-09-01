@@ -136,7 +136,7 @@ function WebsitesPage() {
 
   const create = useMutation({
     mutationFn: async () => {
-      let organizationId = websites[0]?.organization_id ?? null;
+      let organizationId: string | null = websites[0]?.organization_id ?? null;
       if (!organizationId) {
         const { data: prof } = await supabase
           .from("profiles")
