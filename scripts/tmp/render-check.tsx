@@ -7,9 +7,10 @@ import { FIGURE_IDS } from "../../src/lib/training/types";
 
 let figCount = 0;
 for (const id of FIGURE_IDS) {
-  const Fig = (FIGURES as any)[id];
-  if (!Fig) throw new Error("missing figure " + id);
-  const html = renderToStaticMarkup(React.createElement(Fig));
+  const fig = (FIGURES as any)[id];
+  if (!fig) throw new Error("missing figure " + id);
+  if (!fig.title || !fig.alt) throw new Error("figure missing metadata " + id);
+  const html = renderToStaticMarkup(<>{fig.render()}</>);
   if (html.length < 50) throw new Error("empty figure " + id);
   figCount++;
 }
