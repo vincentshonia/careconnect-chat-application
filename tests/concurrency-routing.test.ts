@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFile } from "node:fs/promises";
 import { decideTransfer } from "@/lib/transfer-eligibility";
+import { requireTestEnv } from "./helpers/required-env";
 
 /**
  * Concurrency & routing integration tests (Phase 1 gate).
@@ -17,7 +18,7 @@ import { decideTransfer } from "@/lib/transfer-eligibility";
 const url = process.env['SUPABASE_URL'] ?? "";
 const anonKey = process.env['SUPABASE_PUBLISHABLE_KEY'] ?? "";
 const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? "";
-const configured = Boolean(url && anonKey && serviceKey);
+const configured = requireTestEnv({ SUPABASE_URL: url, SUPABASE_PUBLISHABLE_KEY: anonKey, SUPABASE_SERVICE_ROLE_KEY: serviceKey });
 
 const db = configured
   ? createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -155,7 +156,7 @@ async function activeCount(userId: string) {
   return count ?? 0;
 }
 
-describe.runIf(configured)("claim & routing concurrency", () => {
+describe("claim & routing concurrency", () => {
   beforeAll(async () => {
     const { data, error } = await db
       .from("organizations")

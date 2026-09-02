@@ -135,7 +135,7 @@ test("visitor → AI chat → human hand-off → agent claim, reply and resoluti
   await listItem.click();
 
   await agent.getByRole("button", { name: /Claim conversation/ }).click();
-  await expect(agent.getByText("Assigned to you")).toBeVisible({ timeout: 30_000 });
+  await expect(agent.getByText("Assigned to you").first()).toBeVisible({ timeout: 30_000 });
 
   const claimed = await waitForConversation((c) => c.assigned_to === tenant.agent.userId);
   expect(claimed.assigned_to).toBe(tenant.agent.userId);

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { permissionsFor, roleTransitionError, type OrgRole } from "@/lib/permissions";
 import { dashboardScopeFor, reportScopeFor } from "@/lib/report-scope";
+import { requireTestEnv } from "./helpers/required-env";
 
 /**
  * Authenticated RBAC integration tests.
@@ -18,7 +19,7 @@ import { dashboardScopeFor, reportScopeFor } from "@/lib/report-scope";
 const url = process.env['SUPABASE_URL'] ?? "";
 const anonKey = process.env['SUPABASE_PUBLISHABLE_KEY'] ?? "";
 const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? "";
-const configured = Boolean(url && anonKey && serviceKey);
+const configured = requireTestEnv({ SUPABASE_URL: url, SUPABASE_PUBLISHABLE_KEY: anonKey, SUPABASE_SERVICE_ROLE_KEY: serviceKey });
 
 const admin = configured
   ? createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -174,7 +175,7 @@ async function scopeForSignedInUser(key: string) {
   return { actor, report: reportScopeFor(actor), dashboard: dashboardScopeFor(actor) };
 }
 
-describe.runIf(configured)("authenticated RBAC boundaries", () => {
+describe("authenticated RBAC boundaries", () => {
   beforeAll(async () => {
     ctx.users = {};
     ctx.orgA = await createOrg(`RbacA${suffix}`);

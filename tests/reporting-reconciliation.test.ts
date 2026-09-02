@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { reportScopeFor, canRunSection, NO_DEPARTMENT } from "@/lib/report-scope";
+import { requireTestEnv } from "./helpers/required-env";
 
 /**
  * Phase 3 scale & reconciliation tests.
@@ -19,7 +20,7 @@ import { reportScopeFor, canRunSection, NO_DEPARTMENT } from "@/lib/report-scope
  */
 const url = process.env['SUPABASE_URL'] ?? "";
 const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? "";
-const configured = Boolean(url && serviceKey);
+const configured = requireTestEnv({ SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: serviceKey });
 
 const db = configured
   ? createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -143,7 +144,7 @@ async function tickets(overrides: Rpc = {}) {
   });
 }
 
-describe.runIf(configured)("reporting at volume", () => {
+describe("reporting at volume", () => {
   beforeAll(async () => {
     orgA = await makeOrg("ScaleA");
     orgB = await makeOrg("ScaleB");
@@ -333,7 +334,7 @@ describe.runIf(configured)("reporting at volume", () => {
 
 /* ------------------------------ AI completion ------------------------------ */
 
-describe.runIf(configured)("AI-only completion", () => {
+describe("AI-only completion", () => {
   const cases: Record<string, string> = {};
   let aiOrg = "";
   let aiSite = "";

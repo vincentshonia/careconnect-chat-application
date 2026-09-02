@@ -49,6 +49,19 @@ export type E2ETenant = {
   departmentId: string;
   departmentName: string;
   agent: { userId: string; email: string; password: string; fullName: string };
+  /**
+   * Extra synthetic staff created by individual specs (second agent, admin,
+   * ...). Tracked here so teardown deletes every auth account it created.
+   */
+  additionalUsers: E2EStaff[];
+};
+
+export type E2EStaff = {
+  userId: string;
+  email: string;
+  password: string;
+  fullName: string;
+  role: string;
 };
 
 /**
@@ -115,7 +128,12 @@ export async function createE2ETenant(): Promise<E2ETenant> {
       slug: organizationName,
       timezone: "America/Los_Angeles",
       status: "active",
+      // Authenticator enrollment is a separate, org-level policy; these synthetic
+      // tenants exercise conversation workflows, so it stays off here.
+      require_mfa: false,
+      require_mfa_for_admins: false,
     })
+
     .select("id, name")
     .single();
   if (orgError || !org) throw new Error(`E2E fixture: organization insert failed — ${orgError?.message}`);
@@ -209,6 +227,7 @@ export async function createE2ETenant(): Promise<E2ETenant> {
       departmentId: department.id as string,
       departmentName,
       agent: { userId, email, password, fullName },
+      additionalUsers: [],
     };
   } catch (error) {
     // A half-built tenant must never survive: tear down what exists, then rethrow.
@@ -220,6 +239,7 @@ export async function createE2ETenant(): Promise<E2ETenant> {
       departmentId: "",
       departmentName: "",
       agent: { userId: "", email: "", password: "", fullName: "" },
+      additionalUsers: [],
     }).catch(() => undefined);
     throw error;
   }
@@ -249,6 +269,12 @@ export async function destroyE2ETenant(tenant: E2ETenant): Promise<void> {
     if (error) failures.push(`${table}: ${error.message}`);
   }
 
+  for (const staff of tenant.additionalUsers ?? []) {
+    assertSynthetic(staff.email, "staff email");
+    const { error } = await db.auth.admin.deleteUser(staff.userId);
+    if (error && !/not found/i.test(error.message)) failures.push(`auth user ${staff.email}: ${error.message}`);
+  }
+
   if (tenant.agent.userId) {
     assertSynthetic(tenant.agent.email, "agent email");
     const { error } = await db.auth.admin.deleteUser(tenant.agent.userId);
@@ -275,6 +301,11 @@ export async function destroyE2ETenant(tenant: E2ETenant): Promise<void> {
     .maybeSingle();
   if (survivingOrg) failures.push("verify organizations: the synthetic organization survived cleanup");
 
+  for (const staff of tenant.additionalUsers ?? []) {
+    const { data: surviving } = await db.auth.admin.getUserById(staff.userId);
+    if (surviving?.user) failures.push(`verify auth: ${staff.email} survived cleanup`);
+  }
+
   if (tenant.agent.userId) {
     const { data: survivingUser } = await db.auth.admin.getUserById(tenant.agent.userId);
     if (survivingUser?.user) failures.push("verify auth: the synthetic agent account survived cleanup");
@@ -288,4 +319,96 @@ export async function destroyE2ETenant(tenant: E2ETenant): Promise<void> {
 /** Read-only service-role handle for assertions about fixture-owned rows. */
 export function fixtureReader(): Admin {
   return adminClient();
+}
+
+/**
+ * Creates an additional synthetic department inside the tenant.
+ * Setup-only: departments are configuration, not a product action under test.
+ */
+export async function createE2EDepartment(
+  tenant: E2ETenant,
+  options: { label: string; routingMethod?: "shared_queue" | "round_robin" },
+): Promise<{ id: string; name: string }> {
+  const db = adminClient();
+  const name = `${E2E_PREFIX}${options.label}_${tenant.runId}`;
+  assertSynthetic(name, "department");
+  const { data, error } = await db
+    .from("departments")
+    .insert({
+      organization_id: tenant.organizationId,
+      name,
+      routing_method: options.routingMethod ?? "shared_queue",
+      is_default: false,
+      status: "active",
+      timezone: "America/Los_Angeles",
+    })
+    .select("id, name")
+    .single();
+  if (error || !data) throw new Error(`E2E fixture: department insert failed — ${error?.message}`);
+  return { id: data.id as string, name: data.name as string };
+}
+
+/**
+ * Creates an additional synthetic staff account inside the tenant.
+ * Only account *provisioning* happens here; every action the test then performs
+ * goes through the real UI, real authentication and real RLS.
+ */
+export async function createE2EStaff(
+  tenant: E2ETenant,
+  options: {
+    label: string;
+    role: "agent" | "team_lead" | "manager" | "administrator" | "super_admin";
+    departmentIds?: string[];
+    presence?: "available" | "busy" | "away" | "offline";
+    maxConcurrentChats?: number;
+  },
+): Promise<E2EStaff> {
+  const db = adminClient();
+  const suffix = `${options.label}_${randomUUID().replace(/-/g, "").slice(0, 8)}`;
+  const email = `${E2E_PREFIX}${suffix}@example.test`;
+  const fullName = `${E2E_PREFIX}${options.label} ${tenant.runId}`;
+  const password = `E2e!${randomUUID().slice(0, 18)}`;
+  assertSynthetic(email, "staff email");
+
+  const { data: created, error: userError } = await db.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: fullName, e2e: true },
+  });
+  if (userError || !created?.user) throw new Error(`E2E fixture: staff creation failed — ${userError?.message}`);
+  const staff: E2EStaff = { userId: created.user.id, email, password, fullName, role: options.role };
+  tenant.additionalUsers.push(staff);
+
+  const { error: profileError } = await db.from("profiles").upsert({
+    id: staff.userId,
+    organization_id: tenant.organizationId,
+    email,
+    full_name: fullName,
+    status: "active",
+    presence: options.presence ?? "available",
+    max_concurrent_chats: options.maxConcurrentChats ?? 5,
+    timezone: "America/Los_Angeles",
+  });
+  if (profileError) throw new Error(`E2E fixture: staff profile failed — ${profileError.message}`);
+
+  const { error: membershipError } = await db.from("organization_memberships").insert({
+    organization_id: tenant.organizationId,
+    user_id: staff.userId,
+    role: options.role,
+    status: "active",
+    accepted_at: new Date().toISOString(),
+  });
+  if (membershipError) throw new Error(`E2E fixture: staff membership failed — ${membershipError.message}`);
+
+  for (const departmentId of options.departmentIds ?? []) {
+    const { error } = await db.from("department_members").insert({
+      organization_id: tenant.organizationId,
+      department_id: departmentId,
+      user_id: staff.userId,
+    });
+    if (error) throw new Error(`E2E fixture: staff department membership failed — ${error.message}`);
+  }
+
+  return staff;
 }
