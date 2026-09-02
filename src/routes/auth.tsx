@@ -180,6 +180,8 @@ function AuthPage() {
                 <GoogleMark />
                 Continue with Google
               </Button>
+              {/* ARCHIVED — Microsoft sign-in. Re-enable by restoring this button
+                  and the MicrosoftMark icon at the bottom of this file.
               <Button
                 type="button"
                 variant="outline"
@@ -190,6 +192,7 @@ function AuthPage() {
                 <MicrosoftMark />
                 Continue with Microsoft
               </Button>
+              */}
 
               <div className="flex items-center gap-3 pt-2">
                 <span className="h-px flex-1 bg-border" />
@@ -296,6 +299,7 @@ function GoogleMark() {
   );
 }
 
+/* ARCHIVED — Microsoft brand icon, kept for when the provider is re-enabled.
 function MicrosoftMark() {
   return (
     <svg className="h-4 w-4" viewBox="0 0 23 23" aria-hidden="true">
@@ -306,3 +310,4 @@ function MicrosoftMark() {
     </svg>
   );
 }
+*/
