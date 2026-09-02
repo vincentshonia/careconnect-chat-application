@@ -6,7 +6,7 @@
  * the same typed content means the written manual can never drift away from
  * what the console actually shows.
  */
-import { FIGURE_SUMMARIES } from "./figure-summaries";
+import { FIGURES } from "@/components/training/figures";
 import type { Block, Guide } from "./types";
 import { formatReviewDate, TRAINING_APP_BUILD, TRAINING_GUIDE_VERSION } from "./version";
 
@@ -35,9 +35,9 @@ function renderBlock(block: Block): string[] {
     }
 
     case "figure": {
-      const summary = FIGURE_SUMMARIES[block.figure];
+      const summary = FIGURES[block.figure];
       const lines = [`> **Interface illustration — ${block.caption ?? summary.title}**`, ">"];
-      lines.push(`> ${summary.description}`);
+      lines.push(`> ${summary.alt}`);
       if (summary.markers.length) {
         lines.push(">");
         summary.markers.forEach((marker, index) => lines.push(`> ${index + 1}. ${marker}`));
