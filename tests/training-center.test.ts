@@ -179,7 +179,7 @@ describe("section visibility inside a guide", () => {
   it("gives every guide a help chapter and a wrap-up chapter", () => {
     for (const role of GUIDE_ORDER) {
       const ids = GUIDES[role].chapters.map((chapter) => chapter.id);
-      expect(ids).toContain("help");
+      expect(ids).toContain("help-center");
       expect(ids).toContain("wrap-up");
     }
   });
