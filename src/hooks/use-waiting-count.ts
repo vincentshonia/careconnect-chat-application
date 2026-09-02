@@ -12,7 +12,8 @@ export function useWaitingCount() {
 
   const query = useQuery({
     queryKey: ["waiting-conversations-count"],
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
     queryFn: async () => {
       const { count, error } = await supabase
         .from("conversations")
