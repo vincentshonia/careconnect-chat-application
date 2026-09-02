@@ -28,13 +28,22 @@ export function useWaitingCount() {
   });
 
   useEffect(() => {
+    // Busy tenants can emit many conversation changes per second. Coalescing
+    // them into one refresh keeps the badge current without hammering the
+    // database with a count query per event.
+    let timer: ReturnType<typeof setTimeout> | null = null;
     const channel = supabase
       .channel(`waiting-count-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["waiting-conversations-count"] });
+        if (timer) return;
+        timer = setTimeout(() => {
+          timer = null;
+          queryClient.invalidateQueries({ queryKey: ["waiting-conversations-count"] });
+        }, 5_000);
       })
       .subscribe();
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
