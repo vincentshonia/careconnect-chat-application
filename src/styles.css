@@ -274,3 +274,88 @@
     var(--brand-to)
   );
 }
+
+/* ---------------------------------------------------------------------------
+   Print / Save as PDF.
+
+   Used mainly by Help & Training, where a staff member prints their guide as a
+   handout. The console chrome is removed, glass and shadows are flattened so
+   nothing wastes toner, and sections are kept whole across page breaks.
+   Interactive controls opt out individually with Tailwind's `print:hidden`.
+--------------------------------------------------------------------------- */
+@media print {
+  @page {
+    margin: 15mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  body {
+    font-size: 10.5pt;
+    line-height: 1.5;
+  }
+
+  /* Flatten decorative surfaces: gradients and glass print as grey mush. */
+  .app-canvas,
+  .surface-glass,
+  .panel,
+  .sidebar-aurora {
+    background: #ffffff !important;
+    background-image: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+
+  .shadow-panel,
+  .shadow-float,
+  .shadow-glow {
+    box-shadow: none !important;
+  }
+
+  .text-gradient-brand {
+    background-image: none !important;
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+  }
+
+  /* Keep numbered markers legible when colour printing is off. */
+  .gradient-brand {
+    background-image: none !important;
+    background-color: #4b4b4b !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+
+  figure,
+  table,
+  li,
+  blockquote {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Scrollable regions must print in full, not clipped to their viewport box. */
+  .overflow-y-auto,
+  .overflow-auto,
+  .overflow-hidden {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+}
