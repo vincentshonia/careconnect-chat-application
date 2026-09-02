@@ -5,7 +5,7 @@
  * different version of "how to claim a conversation" than a Standard User) and
  * a role-specific welcome, day-one checklist and knowledge check.
  */
-import type { Chapter, Guide, GuideRole } from "./types";
+import type { Chapter, Guide, GuideRole, QuizItem } from "./types";
 import {
   accessChapter,
   consoleChapter,
@@ -458,7 +458,6 @@ const ADMINISTRATOR_GUIDE: Guide = {
         "Document who covers administration when you are away",
       ],
     }),
-    welcomeChapterSpacer(),
     accessChapter,
     consoleChapter,
     dashboardChapter("organization"),
@@ -538,7 +537,7 @@ const ADMINISTRATOR_GUIDE: Guide = {
         why: "The audit log is append-only for everyone, which is exactly what makes it trustworthy.",
       },
     ]),
-  ].filter(Boolean) as Chapter[],
+  ],
 };
 
 const SUPER_ADMIN_GUIDE: Guide = {
@@ -757,11 +756,6 @@ const PLATFORM_GUIDE: Guide = {
     ]),
   ],
 };
-
-/** Placeholder removed at composition time; keeps the administrator list readable. */
-function welcomeChapterSpacer(): Chapter | null {
-  return null;
-}
 
 export const GUIDES: Record<GuideRole, Guide> = {
   agent: AGENT_GUIDE,
