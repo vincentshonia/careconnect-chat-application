@@ -197,7 +197,10 @@ describe("claim & routing concurrency", () => {
       await db.auth.admin.deleteUser(id);
     }
     await db.from("organizations").delete().eq("id", orgId);
-  }, 120_000);
+    // Teardown deletes dozens of auth users one call at a time; under load the
+    // sandbox needs more than the default hook budget to finish, and a hook
+    // that is cut short leaves synthetic rows behind for the next run.
+  }, 300_000);
 
   describe("1. manual claim — many agents, one conversation", () => {
     for (const agents of [2, 10, 20]) {

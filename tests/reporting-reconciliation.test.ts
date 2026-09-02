@@ -50,7 +50,11 @@ type Rpc = Record<string, unknown>;
  * transient infrastructure noise rather than product defects, so every call
  * retries with backoff before it is allowed to fail the suite.
  */
-const TRANSIENT = /connection pool|timeout|timed out|fetch failed|socket|502|503|504/i;
+// "Could not query the database for the schema cache" is PostgREST reporting
+// that it momentarily lost its own connection to Postgres under bulk-write
+// load — the same transient class as a pool timeout, not a product defect.
+const TRANSIENT =
+  /connection pool|timeout|timed out|fetch failed|socket|schema cache|502|503|504/i;
 
 async function attempt<T>(label: string, run: () => Promise<{ data: unknown; error: { message: string } | null }>) {
   let last = "";
