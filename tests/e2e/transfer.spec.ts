@@ -141,19 +141,22 @@ test("an availability override requires an administrator and is audited", async 
     visitorName: `E2E Override ${tenant.runId}`,
   });
 
+  /* The first-line agent takes it first, so the unavailable teammate is provably
+     not the current owner when the override is exercised. */
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await signIn(owner, tenant.agent);
+  await openConversation(owner, conversation.reference, "Waiting");
+  await owner.getByRole("button", { name: /Claim conversation/ }).click();
+  await waitForConversation(tenant.websiteId, (c) => c.assigned_to === tenant.agent.userId, {
+    conversationId: conversation.id,
+    timeoutMs: 45_000,
+  });
+
   const supervisorContext = await browser.newContext();
   const supervisorPage = await supervisorContext.newPage();
   await signIn(supervisorPage, supervisor);
   await openConversation(supervisorPage, conversation.reference, "All conversations");
-
-  /* The supervisor takes it first, so the unavailable teammate is provably not
-     the current owner when the override is exercised. */
-  const claim = supervisorPage.getByRole("button", { name: /Claim conversation/ });
-  if (await claim.count()) await claim.click();
-  await waitForConversation(tenant.websiteId, (c) => c.assigned_to === supervisor.userId, {
-    conversationId: conversation.id,
-    timeoutMs: 45_000,
-  });
 
   await supervisorPage.getByRole("button", { name: "Reassign" }).click();
   const dialog = supervisorPage.getByRole("dialog");
@@ -168,7 +171,6 @@ test("an availability override requires an administrator and is audited", async 
   await dialog.getByPlaceholder("Reason for overriding availability").fill("E2E escalation coverage");
   await dialog.getByRole("button", { name: "Confirm override" }).click();
 
-
   const overridden = await waitForConversation(
     tenant.websiteId,
     (c) => c.assigned_to === busyAgent.userId,
@@ -176,20 +178,22 @@ test("an availability override requires an administrator and is audited", async 
   );
   expect(overridden.assigned_to).toBe(busyAgent.userId);
 
+  /* The assignment lands before the audit write, so poll for the record instead
+     of reading once and racing the server. */
   const db = fixtureReader();
-  const { data: overrideAudit } = await db
-    .from("audit_logs")
-    .select("action, actor_id, record_id, new_value")
-    .eq("organization_id", tenant.organizationId)
-    .eq("action", "conversation.transfer_override");
-  const { data: allAudit } = await db
-    .from("audit_logs")
-    .select("action, new_value, record_id")
-    .eq("organization_id", tenant.organizationId);
-  const entry = (overrideAudit ?? []).find((row: any) => row.record_id === conversation.id);
-  expect(entry, `an override must be audited — saw ${JSON.stringify(allAudit)}`).toBeTruthy();
-  expect((entry as any).actor_id).toBe(supervisor.userId);
+  let entry: { actor_id: string } | undefined;
+  await expect(async () => {
+    const { data: overrideAudit } = await db
+      .from("audit_logs")
+      .select("action, actor_id, record_id, new_value")
+      .eq("organization_id", tenant.organizationId)
+      .eq("action", "conversation.transfer_override");
+    entry = (overrideAudit ?? []).find((row: any) => row.record_id === conversation.id) as any;
+    expect(entry, "an override must be audited").toBeTruthy();
+  }).toPass({ timeout: 30_000 });
+  expect(entry!.actor_id).toBe(supervisor.userId);
 
   await supervisorContext.close();
+  await ownerContext.close();
   await visitorContext.close();
 });
