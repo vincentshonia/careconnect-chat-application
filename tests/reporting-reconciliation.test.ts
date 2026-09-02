@@ -244,7 +244,10 @@ describe("reporting at volume", () => {
     const a = await tickets({ _limit: 100, _offset: 300, _sort: "status", _dir: "asc" });
     const b = await tickets({ _limit: 100, _offset: 300, _sort: "status", _dir: "asc" });
     expect(a.rows.map((r) => r['id'])).toEqual(b.rows.map((r) => r['id']));
-  });
+    // Same sandbox allowance as the other volume reads in this suite; the
+    // assertions are unchanged — only the wall-clock budget matches its peers.
+  }, 240_000);
+
 
   it("combines a filter with pagination without losing rows", async () => {
     const expected = VOLUME / STATUS_CYCLE.length; // one status in five

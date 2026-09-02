@@ -69,6 +69,7 @@ await stage("Playwright E2E", "bunx", ["playwright", "test", "--reporter=json"],
   PLAYWRIGHT_JSON_OUTPUT_NAME: PLAYWRIGHT_JSON,
   PLAYWRIGHT_JSON_OUTPUT_FILE: PLAYWRIGHT_JSON,
 });
+await stage("E2E cleanup verification", "node", ["scripts/e2e-cleanup-verify.mjs"]);
 
 /* ------------------------------------------------------------------ *
  * Result extraction (best effort — absence of a report is itself a FAIL
@@ -130,7 +131,31 @@ const suiteResults = [
     "Browser E2E suite (Playwright)",
     stages.find((s) => s.name === "Playwright E2E")?.status ?? "NOT RUN",
   ],
+  [
+    "E2E cleanup verification",
+    stages.find((s) => s.name === "E2E cleanup verification")?.status ?? "NOT RUN",
+  ],
 ];
+
+/** Build identification — best effort, never fatal. */
+function buildIdentity() {
+  const fromEnv =
+    process.env["LOVABLE_COMMIT_SHA"] ??
+    process.env["GIT_COMMIT"] ??
+    process.env["COMMIT_SHA"] ??
+    null;
+  if (fromEnv) return fromEnv;
+  try {
+    const head = readFileSync(path.join(ROOT, ".git", "HEAD"), "utf8").trim();
+    if (head.startsWith("ref: ")) {
+      const ref = head.slice(5).trim();
+      return `${ref} @ ${readFileSync(path.join(ROOT, ".git", ref), "utf8").trim()}`;
+    }
+    return head;
+  } catch {
+    return "unavailable (no VCS metadata in this environment)";
+  }
+}
 
 /* ------------------------------------------------------------------ *
  * Verdict — computed from exit codes only
@@ -162,6 +187,8 @@ const lines = [
   "",
   `**Executed (UTC):** ${startedAt}`,
   `**Completed (UTC):** ${new Date().toISOString()}`,
+  `**Build identification:** ${buildIdentity()}`,
+  `**Node:** ${process.version}`,
   "",
   `## Overall: ${passed ? "PASS" : "FAIL"}`,
   "",
