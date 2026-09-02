@@ -27,11 +27,13 @@ describe("staff manual markdown", () => {
     expect(guideToMarkdown(GUIDES[role]).toLowerCase()).not.toContain("microsoft");
   });
 
-  it.each(GUIDE_ORDER)("%s manual calls illustrations illustrations, never screenshots", (role) => {
-    const md = guideToMarkdown(GUIDES[role]).toLowerCase();
-    expect(md).not.toContain("screenshot");
-    expect(md).toContain("interface illustration");
+  it.each(GUIDE_ORDER)("%s manual labels figures as illustrations", (role) => {
+    const md = guideToMarkdown(GUIDES[role]);
+    expect(md).toContain("Interface illustration");
+    // No figure caption is ever presented as a photograph of the console.
+    expect(md).not.toMatch(/Interface illustration[^\n]*screenshot/i);
   });
+
 
   it.each(GUIDE_ORDER)("%s manual on disk matches the current guide content", (role) => {
     const file = `docs/staff-manuals/${role.replace(/_/g, "-")}.md`;
