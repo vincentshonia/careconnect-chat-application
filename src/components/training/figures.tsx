@@ -43,7 +43,7 @@ const AGENT_NAV = [
   "Notifications",
   "My settings",
   "Knowledge",
-  "Training",
+  "Help & Training",
 ] as const;
 
 const LEAD_NAV = [

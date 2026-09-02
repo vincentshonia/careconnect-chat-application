@@ -52,7 +52,7 @@ const navGroups = [
       { to: "/intake", label: "Intake", icon: ClipboardList, perms: ["workflow.view_assigned"] },
       { to: "/contacts", label: "Contacts", icon: Contact, perms: ["contact.view_related"] },
       { to: "/notifications", label: "Notifications", icon: Bell, perms: undefined },
-      { to: "/training", label: "Training", icon: GraduationCap, perms: undefined },
+      { to: "/training", label: "Help & Training", icon: GraduationCap, perms: undefined },
       { to: "/profile", label: "My settings", icon: UserCog, perms: undefined },
 
     ],
@@ -308,7 +308,7 @@ export function AdminShell({
 
   return (
     <div className="app-canvas flex min-h-screen w-full text-foreground">
-      <div className="sticky top-0 hidden h-screen shrink-0 md:block">{sidebar}</div>
+      <div className="sticky top-0 hidden h-screen shrink-0 md:block print:hidden">{sidebar}</div>
 
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
@@ -322,7 +322,7 @@ export function AdminShell({
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 border-b border-border surface-glass">
+        <header className="sticky top-0 z-30 border-b border-border surface-glass print:hidden">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-4 sm:px-8">
             <div className="flex min-w-0 items-center gap-3">
               <Button
@@ -364,7 +364,7 @@ export function AdminShell({
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 px-5 py-6 sm:px-8">{children}</main>
+        <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 print:px-0 print:py-0">{children}</main>
       </div>
     </div>
   );

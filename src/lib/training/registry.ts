@@ -10,9 +10,11 @@ import {
   accessChapter,
   consoleChapter,
   glossaryChapter,
+  helpChapter,
   privacyChapter,
   troubleshootingChapter,
 } from "./content/common";
+import { TRAINING_APP_BUILD, formatReviewDate } from "./version";
 import {
   contactsChapter,
   dashboardChapter,
@@ -99,6 +101,59 @@ function knowledgeCheck(id: string, items: QuizItem[]): Chapter {
   };
 }
 
+type WrapUpInput = {
+  /** Prefix for the section ids, unique per guide. */
+  id: string;
+  mistakes: string[];
+  dos: string[];
+  donts: string[];
+  checklist: string[];
+};
+
+/** Common mistakes plus the "am I ready?" checklist that closes every guide. */
+function wrapUpChapter(input: WrapUpInput): Chapter {
+  return {
+    id: "wrap-up",
+    title: "Common mistakes and your final checklist",
+    intro: "What goes wrong most often, and how to prove to yourself that you are ready.",
+    sections: [
+      {
+        id: `${input.id}-mistakes`,
+        title: "Common mistakes to avoid",
+        summary: "Recognise the five habits that cause most of the rework.",
+        blocks: [
+          {
+            kind: "bullets",
+            title: "Seen most often in the first few weeks",
+            items: input.mistakes,
+          },
+          { kind: "doDont", dos: input.dos, donts: input.donts },
+          {
+            kind: "callout",
+            tone: "warning",
+            title: "A mistake is only a problem if you hide it",
+            text: "Every action is recorded with your name against it. If you send the wrong information, reply again with the correction and tell your team lead — do not try to make the record look tidier than it is.",
+          },
+        ],
+      },
+      {
+        id: `${input.id}-final-checklist`,
+        title: "Final checklist",
+        summary: "Tick every line before you work unsupervised.",
+        blocks: [
+          { kind: "checklist", title: "I can do all of this without help", items: input.checklist },
+          {
+            kind: "callout",
+            tone: "note",
+            title: "Keeping this guide honest",
+            text: `This material was last reviewed on ${formatReviewDate()} against application build ${TRAINING_APP_BUILD}. If a screen in the console no longer matches what you read here, tell an administrator so the guide can be corrected.`,
+          },
+        ],
+      },
+    ],
+  };
+}
+
 const AGENT_GUIDE: Guide = {
   role: "agent",
   label: "Standard User",
@@ -139,6 +194,7 @@ const AGENT_GUIDE: Guide = {
     }),
     accessChapter,
     consoleChapter,
+    helpChapter,
     dashboardChapter("self"),
     inboxChapter,
     intakeChapter,
@@ -150,6 +206,40 @@ const AGENT_GUIDE: Guide = {
     privacyChapter,
     troubleshootingChapter,
     glossaryChapter,
+    wrapUpChapter({
+      id: "agent",
+      mistakes: [
+        "Typing a reply before claiming — an unclaimed conversation has no reply box, and the visitor waits while you look for it.",
+        "Leaving your availability on Away after a break, so routing skips you and the queue builds up.",
+        "Closing a conversation that was actually solved: Resolve means the need was met, Close means it ended without one.",
+        "Writing member details into a personal note, spreadsheet or chat app instead of the contact record.",
+        "Promising an outcome — approval, coverage or a date — instead of explaining the next step.",
+      ],
+      dos: [
+        "Claim, reply within your first-response target, then resolve or close deliberately.",
+        "Record what you learn on the contact record while the conversation is still open.",
+        "Say “let me check that for you” and use the knowledge base rather than guessing.",
+        "Repeat the emergency guidance and escalate immediately when a visitor describes danger.",
+      ],
+      donts: [
+        "Do not copy transcripts, attachments or member details out of CareConnect.",
+        "Do not give clinical advice, diagnoses or eligibility decisions.",
+        "Do not use a transfer to end your shift early — hand over with a note instead.",
+        "Do not write anything in a staff note you would not want the member to read.",
+      ],
+      checklist: [
+        "Sign in, complete two-step verification and change my temporary password",
+        "Set my availability and understand how it affects routing",
+        "Claim a waiting conversation and reply inside the target time",
+        "Send and open an attachment safely",
+        "Transfer or escalate correctly when the request is not mine to answer",
+        "Resolve and close conversations for the right reasons",
+        "Create and update a contact record with a useful staff note",
+        "Move an intake request to its next stage",
+        "Explain what I must never promise a visitor",
+        "Say who I escalate to and how I raise a privacy concern",
+      ],
+    }),
     knowledgeCheck("agent", [
       {
         question: "A conversation is in the Waiting tab and you want to reply. What must you do first?",
@@ -238,6 +328,7 @@ const TEAM_LEAD_GUIDE: Guide = {
     }),
     accessChapter,
     consoleChapter,
+    helpChapter,
     dashboardChapter("team"),
     inboxChapter,
     intakeChapter,
@@ -252,6 +343,39 @@ const TEAM_LEAD_GUIDE: Guide = {
     privacyChapter,
     troubleshootingChapter,
     glossaryChapter,
+    wrapUpChapter({
+      id: "team-lead",
+      mistakes: [
+        "Reassigning to whoever is at the top of the list instead of reading the eligibility reasons next to each name.",
+        "Overriding an ineligible target without a written reason, when the reason is what protects you later.",
+        "Watching the waiting count climb instead of claiming the oldest conversation yourself.",
+        "Coaching someone about a low rating in a shared channel rather than privately.",
+        "Transferring a conversation without telling the visitor what is about to happen.",
+      ],
+      dos: [
+        "Check queue age, not just queue size — the oldest waiting figure is the visitor's experience.",
+        "Transfer between departments, reassign within one, and explain the difference to your team.",
+        "Use the department view to spot a teammate who is at capacity before they ask.",
+        "Review one high and one low satisfaction transcript every week.",
+      ],
+      donts: [
+        "Do not reply inside a conversation you do not own — claim or assign it first.",
+        "Do not use reassignment to punish or reward; capacity and skills decide.",
+        "Do not discuss an individual's numbers with the rest of the team.",
+        "Do not leave a department without an available owner during published hours.",
+      ],
+      checklist: [
+        "Everything on the Standard User checklist",
+        "Read a department queue and say what needs action first",
+        "Transfer a conversation to another department and explain why",
+        "Reassign within my department using the eligibility list",
+        "Explain what makes a teammate ineligible and when an override is justified",
+        "Run the 60-second team check on my dashboard",
+        "Open Quality & QA and review a transcript with a rating attached",
+        "Produce a report for my departments and export it",
+        "Coach one person privately using evidence from the platform",
+      ],
+    }),
     knowledgeCheck("team-lead", [
       {
         question: "A conversation belongs to the wrong team. What is the correct action?",
@@ -345,6 +469,7 @@ const MANAGER_GUIDE: Guide = {
     }),
     accessChapter,
     consoleChapter,
+    helpChapter,
     dashboardChapter("team"),
     inboxChapter,
     intakeChapter,
@@ -360,6 +485,38 @@ const MANAGER_GUIDE: Guide = {
     privacyChapter,
     troubleshootingChapter,
     glossaryChapter,
+    wrapUpChapter({
+      id: "manager",
+      mistakes: [
+        "Publishing an article to “get it live” and correcting it later — publishing is immediate and the assistant starts quoting it at once.",
+        "Fixing a wrong AI answer by telling staff to correct visitors, instead of correcting the article behind it.",
+        "Putting one-off exceptions, internal ticket numbers or direct phone numbers into published knowledge.",
+        "Comparing report figures with a colleague without checking that both used the same date range and scope.",
+        "Reviewing quality only when something goes wrong, so nobody hears what good looks like.",
+      ],
+      dos: [
+        "Draft, read aloud, then publish — assume every published sentence will be quoted word for word.",
+        "Reproduce a reported bad answer in the AI console before changing anything.",
+        "Retire outdated articles rather than leaving two versions of the truth.",
+        "Share report findings with the team, not just the numbers.",
+      ],
+      donts: [
+        "Do not paste member details into an article, a template or a test question.",
+        "Do not change published guidance that belongs to compliance without checking first.",
+        "Do not treat the dashboard as the record — Reports is the record.",
+        "Do not leave an article published when you know it is wrong; unpublish it now, fix it next.",
+      ],
+      checklist: [
+        "Everything on the Team Lead checklist",
+        "Create, edit, publish and unpublish a knowledge article",
+        "Explain what happens to the assistant the moment I publish",
+        "Test a real visitor question in the AI console and read the sources it used",
+        "Reorder the widget FAQs to match real demand",
+        "Run a quality review cycle and record the outcome",
+        "Build a report with department and date filters and export it",
+        "Explain why two roles can legitimately see different totals",
+      ],
+    }),
     knowledgeCheck("manager", [
       {
         question: "The assistant gave a confident but wrong answer. What is the fix?",
@@ -460,6 +617,7 @@ const ADMINISTRATOR_GUIDE: Guide = {
     }),
     accessChapter,
     consoleChapter,
+    helpChapter,
     dashboardChapter("organization"),
     inboxChapter,
     intakeChapter,
@@ -480,6 +638,39 @@ const ADMINISTRATOR_GUIDE: Guide = {
     privacyChapter,
     troubleshootingChapter,
     glossaryChapter,
+    wrapUpChapter({
+      id: "administrator",
+      mistakes: [
+        "Creating an account and closing the dialog without copying the temporary password — it cannot be shown again.",
+        "Disabling a leaver's account before reassigning their open conversations and intake requests.",
+        "Publishing a website without a catch-all routing rule, so unmatched escalations wait with nobody to answer them.",
+        "Changing the organization timezone quietly — every report, “today” figure and business-hours calculation moves with it.",
+        "Giving someone a higher role “temporarily” and never reviewing it.",
+      ],
+      dos: [
+        "Prefer an invitation link over a temporary password when the person has a working mailbox.",
+        "Give the lowest role that lets someone do their job, and review roles when duties change.",
+        "Keep every department staffed, with hours and holidays that match reality.",
+        "Read the audit log weekly and ask about anything you cannot explain.",
+      ],
+      donts: [
+        "Do not share one account between several people — attribution is what makes the audit log useful.",
+        "Do not remove the last administrator of an organization; the system will refuse, and for good reason.",
+        "Do not test routing changes during a busy period without telling the team.",
+        "Do not store credentials or member details in department names, notes or website copy.",
+      ],
+      checklist: [
+        "Everything on the Manager checklist",
+        "Create a staff account and send an invitation, and know when to use each",
+        "Change a role, department membership and capacity, and explain the effect",
+        "Disable and re-enable an account, in the right order relative to their open work",
+        "Configure a website: branding, welcome copy, tabs and the embed snippet",
+        "Create a department with business hours and a holiday closure",
+        "Write routing rules with a working catch-all and test the order",
+        "Set organization details, timezone, guardrails and compliance notices",
+        "Filter and read the audit log, and explain why it cannot be edited",
+      ],
+    }),
     knowledgeCheck("administrator", [
       {
         question: "You create a staff account directly. What happens to the temporary password?",
@@ -577,6 +768,7 @@ const SUPER_ADMIN_GUIDE: Guide = {
     }),
     accessChapter,
     consoleChapter,
+    helpChapter,
     dashboardChapter("organization"),
     inboxChapter,
     intakeChapter,
@@ -599,6 +791,38 @@ const SUPER_ADMIN_GUIDE: Guide = {
     privacyChapter,
     troubleshootingChapter,
     glossaryChapter,
+    wrapUpChapter({
+      id: "super-admin",
+      mistakes: [
+        "Leaving an organization with a single administrator, which turns one lost phone into a lockout.",
+        "Requiring two-step verification for everyone without announcing it, so staff arrive to a screen they cannot pass.",
+        "Appointing an administrator without agreeing who reviews their changes.",
+        "Opening tenant data because you can, rather than because a task requires it.",
+        "Assuming platform actions are invisible — every one is attributed in that tenant's audit log.",
+      ],
+      dos: [
+        "Keep at least two administrators in every organization and check it regularly.",
+        "Announce authentication policy changes in advance and staff the lockout path.",
+        "Review role and security changes in the audit log as a routine, not an investigation.",
+        "Document who covers access emergencies when you are unavailable.",
+      ],
+      donts: [
+        "Do not bypass conversation ownership rules for convenience.",
+        "Do not move or copy data between organizations; isolation is enforced beneath the interface.",
+        "Do not grant a platform role to solve a tenant-level access problem.",
+        "Do not make an operational decision that belongs to a tenant's administrator.",
+      ],
+      checklist: [
+        "Everything on the Administrator checklist",
+        "Appoint and remove an administrator, and explain the last-administrator rule",
+        "Set the organization's two-step verification policy and plan the rollout",
+        "Help someone recover from a lost authenticator device",
+        "Create an organization or brand and configure its first website",
+        "Confirm every tenant has a timezone, staffed departments and a catch-all rule",
+        "Read the security screen and explain what each control changes",
+        "Describe exactly what is recorded when I act inside another organization",
+      ],
+    }),
     knowledgeCheck("super-admin", [
       {
         question: "Who may create or change another administrator?",
@@ -683,6 +907,7 @@ const PLATFORM_GUIDE: Guide = {
     }),
     accessChapter,
     consoleChapter,
+    helpChapter,
     dashboardChapter("organization"),
     platformChapter,
     websitesChapter,
@@ -697,6 +922,37 @@ const PLATFORM_GUIDE: Guide = {
     privacyChapter,
     troubleshootingChapter,
     glossaryChapter,
+    wrapUpChapter({
+      id: "platform",
+      mistakes: [
+        "Handing over a new organization before it has a staffed department and a catch-all routing rule.",
+        "Fixing a tenant's operational setting without their administrator's agreement.",
+        "Browsing tenant conversations for context instead of asking the tenant.",
+        "Comparing one tenant's figures with another's in front of either of them.",
+        "Forgetting that support access is attributed in the tenant's own audit log.",
+      ],
+      dos: [
+        "Run the same health check for every tenant: timezone, website, departments, hours, routing, administrators.",
+        "Record why you entered a tenant before you do it.",
+        "Fix configuration faults; escalate operational decisions to the tenant.",
+        "Confirm each new organization has two working administrators before go-live.",
+      ],
+      donts: [
+        "Do not treat tenant data as browsable, demo material or benchmarking input.",
+        "Do not edit or attempt to reorder any tenant's audit trail.",
+        "Do not leave a platform role assigned to someone who no longer needs it.",
+        "Do not use a platform role to work around a tenant's own access rules.",
+      ],
+      checklist: [
+        "Explain what my platform role grants and what it does not",
+        "Onboard an organization end to end, including its first website",
+        "Complete a per-tenant health check and record the result",
+        "State the rule for when tenant data may be opened",
+        "Describe how tenant isolation is enforced beneath the interface",
+        "Show where my actions appear in a tenant's audit log",
+        "Hand a configuration decision back to the right tenant administrator",
+      ],
+    }),
     knowledgeCheck("platform", [
       {
         question: "What is the first thing a new organization needs after it is created?",

@@ -219,7 +219,7 @@ export const consoleChapter: Chapter = {
             ["Organization settings", "Contact details, chatbot guardrails, compliance notices", "Administrator and above"],
             ["Security", "Organization MFA policy and your authenticator", "Super Admin and platform administrators"],
             ["Audit log", "Append-only history of who changed what", "Administrator and above"],
-            ["Training", "This Training Center", "Everyone"],
+            ["Help & Training", "This training center: guides, checklists and knowledge checks", "Everyone"],
           ],
         },
         {
@@ -565,6 +565,88 @@ export const glossaryChapter: Chapter = {
             ["denied", "Not accepted"],
             ["withdrawn", "The person no longer wants to proceed"],
           ],
+        },
+      ],
+    },
+  ],
+};
+
+export const helpChapter: Chapter = {
+  id: "help-center",
+  title: "Using Help & Training",
+  intro: "How this training center works, and where to go when the guide does not answer your question.",
+  sections: [
+    {
+      id: "help-how-to-use",
+      title: "How to use this guide",
+      summary: "Find, read, tick off and print the parts you need.",
+      blocks: [
+        {
+          kind: "lead",
+          text: "Help & Training is always in the Workspace group of the left sidebar. It opens on the guide for your own role, and everything you see here matches what your account can actually do.",
+        },
+        {
+          kind: "steps",
+          title: "The controls at the top of the page",
+          items: [
+            "Guide selector — if your role supervises other roles you can also read their guides. Standard Users see only their own.",
+            "Start here / Continue — jumps to the first section you have not finished.",
+            "Print or save as PDF — opens your browser's print dialog with the whole guide expanded. Choose “Save as PDF” as the destination to keep a copy.",
+            "Restart guide — clears your ticks for the guide you are reading. It never affects anyone else.",
+          ],
+        },
+        {
+          kind: "steps",
+          title: "Reading and tracking",
+          items: [
+            "Use the Search this guide box to filter both the contents list and the page. Try a word you saw on screen, such as claim, transfer, holiday or password.",
+            "Select any entry in Contents to jump to that section.",
+            "Select Mark complete when you have actually done the thing the section describes — not just read it.",
+            "Use Collapse all to skim the headings, then Expand all when you want the detail back.",
+            "Previous and Next at the bottom of each section move you through the guide in order.",
+          ],
+        },
+        {
+          kind: "callout",
+          tone: "note",
+          title: "Your progress is saved on this device",
+          text: "Ticks are stored in this browser against your own account, so a shared workstation never mixes two people's progress. Sign in on a different computer and you will start with an empty checklist there.",
+        },
+        {
+          kind: "callout",
+          tone: "tip",
+          title: "Illustrations, not screenshots",
+          text: "Every picture in this guide is a drawn diagram of the console using the real labels and colours, with numbered markers explained underneath. They contain invented names and numbers on purpose, so no real member or colleague data is ever shown in training material.",
+        },
+      ],
+    },
+    {
+      id: "help-need-help",
+      title: "Need help beyond this guide?",
+      summary: "Get an answer quickly, without putting member data at risk.",
+      blocks: [
+        {
+          kind: "steps",
+          title: "In this order",
+          items: [
+            "Search this guide — most questions are answered in the chapter for the screen you are on.",
+            "Check the “When something looks wrong” chapter for the common problems and their fixes.",
+            "Ask your team lead for anything about the day's work: queues, transfers, priorities.",
+            "Ask an administrator for anything about access, roles, departments, routing, hours or settings.",
+            "Report anything that looks like a privacy or security problem to an administrator immediately, and follow your internal policy.",
+          ],
+        },
+        {
+          kind: "callout",
+          tone: "privacy",
+          title: "Never paste member details into a help request",
+          text: "Use the reference number instead — for example PHG-2041 or INT-1042 — and describe what you expected and what happened. Names, dates of birth, member numbers and health details stay inside CareConnect.",
+        },
+        {
+          kind: "callout",
+          tone: "note",
+          title: "Something in this guide looks out of date?",
+          text: "Tell an administrator. Administrators and Super Admins can flag the guide for review from the top of this page, which leaves a visible note for the rest of the organization until the material is corrected.",
         },
       ],
     },
