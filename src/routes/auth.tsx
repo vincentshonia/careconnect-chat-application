@@ -299,6 +299,7 @@ function GoogleMark() {
   );
 }
 
+/* ARCHIVED — Microsoft brand icon, kept for when the provider is re-enabled.
 function MicrosoftMark() {
   return (
     <svg className="h-4 w-4" viewBox="0 0 23 23" aria-hidden="true">
@@ -309,3 +310,4 @@ function MicrosoftMark() {
     </svg>
   );
 }
+*/
