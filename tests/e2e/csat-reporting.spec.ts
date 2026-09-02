@@ -81,15 +81,14 @@ test("a resolved conversation is rated and shows up in authorized reporting", as
   await expect(reply).toBeVisible({ timeout: 30_000 });
   await reply.fill("Thanks for reaching out — here is how enrollment works.");
   await reply.press("Enter");
-  // Assert the message landed in the transcript — not in the composer, whose
-  // retained draft text would otherwise satisfy a bare text match.
+  // The composer clears only once the send succeeds; a rejected reply would
+  // otherwise leave its draft text on the page and satisfy a bare text match.
+  await expect(adminPage.getByPlaceholder(/Reply to the visitor/)).toHaveValue("", {
+    timeout: 30_000,
+  });
   await expect(
-    adminPage
-      .getByText("Thanks for reaching out — here is how enrollment works.")
-      .locator("visible=true")
-      .first(),
+    adminPage.getByText("Thanks for reaching out — here is how enrollment works.").first(),
   ).toBeVisible({ timeout: 30_000 });
-  await expect(adminPage.getByPlaceholder(/Reply to the visitor/)).toHaveValue("");
 
   /* The reply also flips the conversation to active server-side; resolving before
      that write lands would be clobbered by it. */
