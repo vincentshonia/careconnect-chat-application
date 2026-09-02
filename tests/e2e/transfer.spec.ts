@@ -146,17 +146,28 @@ test("an availability override requires an administrator and is audited", async 
   await signIn(supervisorPage, supervisor);
   await openConversation(supervisorPage, conversation.reference, "All conversations");
 
+  /* The supervisor takes it first, so the unavailable teammate is provably not
+     the current owner when the override is exercised. */
+  const claim = supervisorPage.getByRole("button", { name: /Claim conversation/ });
+  if (await claim.count()) await claim.click();
+  await waitForConversation(tenant.websiteId, (c) => c.assigned_to === supervisor.userId, {
+    conversationId: conversation.id,
+    timeoutMs: 45_000,
+  });
+
   await supervisorPage.getByRole("button", { name: "Reassign" }).click();
   const dialog = supervisorPage.getByRole("dialog");
   await expect(dialog.getByText(busyAgent.fullName)).toBeVisible({ timeout: 30_000 });
 
   const offlineCard = dialog.locator("div.rounded-lg").filter({ hasText: busyAgent.fullName }).first();
   // An unavailable teammate is never directly assignable — only overridable.
+  await expect(offlineCard.getByText("Current owner")).toHaveCount(0);
   await expect(offlineCard.getByRole("button", { name: "Assign" })).toHaveCount(0);
 
   await offlineCard.getByRole("button", { name: "Override…" }).click();
   await dialog.getByPlaceholder("Reason for overriding availability").fill("E2E escalation coverage");
   await dialog.getByRole("button", { name: "Confirm override" }).click();
+
 
   const overridden = await waitForConversation(
     tenant.websiteId,
