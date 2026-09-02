@@ -37,7 +37,6 @@ import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedAiConsoleRouteImport } from './routes/_authenticated/ai-console'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
-import { Route as ApiPublicTmpSeedTestAccountsRouteImport } from './routes/api/public/tmp-seed-test-accounts'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as ApiPublicStaffAvatarSplatRouteImport } from './routes/api/public/staff-avatar/$'
 import { Route as ApiPublicHooksSlaCheckRouteImport } from './routes/api/public/hooks/sla-check'
@@ -193,12 +192,6 @@ const ApiPublicWidgetDotjsRoute = ApiPublicWidgetDotjsRouteImport.update({
   path: '/api/public/widget.js',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicTmpSeedTestAccountsRoute =
-  ApiPublicTmpSeedTestAccountsRouteImport.update({
-    id: '/api/public/tmp-seed-test-accounts',
-    path: '/api/public/tmp-seed-test-accounts',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const LovableEmailTransactionalPreviewRoute =
   LovableEmailTransactionalPreviewRouteImport.update({
     id: '/lovable/email/transactional/preview',
@@ -289,7 +282,6 @@ export interface FileRoutesByFullPath {
   '/staff': typeof AuthenticatedStaffRoute
   '/training': typeof AuthenticatedTrainingRoute
   '/websites': typeof AuthenticatedWebsitesRoute
-  '/api/public/tmp-seed-test-accounts': typeof ApiPublicTmpSeedTestAccountsRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/branding/$': typeof ApiPublicBrandingSplatRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
@@ -331,7 +323,6 @@ export interface FileRoutesByTo {
   '/staff': typeof AuthenticatedStaffRoute
   '/training': typeof AuthenticatedTrainingRoute
   '/websites': typeof AuthenticatedWebsitesRoute
-  '/api/public/tmp-seed-test-accounts': typeof ApiPublicTmpSeedTestAccountsRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/branding/$': typeof ApiPublicBrandingSplatRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
@@ -375,7 +366,6 @@ export interface FileRoutesById {
   '/_authenticated/staff': typeof AuthenticatedStaffRoute
   '/_authenticated/training': typeof AuthenticatedTrainingRoute
   '/_authenticated/websites': typeof AuthenticatedWebsitesRoute
-  '/api/public/tmp-seed-test-accounts': typeof ApiPublicTmpSeedTestAccountsRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/branding/$': typeof ApiPublicBrandingSplatRoute
   '/api/public/chat/config': typeof ApiPublicChatConfigRoute
@@ -419,7 +409,6 @@ export interface FileRouteTypes {
     | '/staff'
     | '/training'
     | '/websites'
-    | '/api/public/tmp-seed-test-accounts'
     | '/api/public/widget.js'
     | '/api/public/branding/$'
     | '/api/public/chat/config'
@@ -461,7 +450,6 @@ export interface FileRouteTypes {
     | '/staff'
     | '/training'
     | '/websites'
-    | '/api/public/tmp-seed-test-accounts'
     | '/api/public/widget.js'
     | '/api/public/branding/$'
     | '/api/public/chat/config'
@@ -504,7 +492,6 @@ export interface FileRouteTypes {
     | '/_authenticated/staff'
     | '/_authenticated/training'
     | '/_authenticated/websites'
-    | '/api/public/tmp-seed-test-accounts'
     | '/api/public/widget.js'
     | '/api/public/branding/$'
     | '/api/public/chat/config'
@@ -529,7 +516,6 @@ export interface RootRouteChildren {
   NoAccessRoute: typeof NoAccessRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   WidgetRoute: typeof WidgetRoute
-  ApiPublicTmpSeedTestAccountsRoute: typeof ApiPublicTmpSeedTestAccountsRoute
   ApiPublicWidgetDotjsRoute: typeof ApiPublicWidgetDotjsRoute
   ApiPublicBrandingSplatRoute: typeof ApiPublicBrandingSplatRoute
   ApiPublicChatConfigRoute: typeof ApiPublicChatConfigRoute
@@ -743,13 +729,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWidgetDotjsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/tmp-seed-test-accounts': {
-      id: '/api/public/tmp-seed-test-accounts'
-      path: '/api/public/tmp-seed-test-accounts'
-      fullPath: '/api/public/tmp-seed-test-accounts'
-      preLoaderRoute: typeof ApiPublicTmpSeedTestAccountsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/lovable/email/transactional/preview': {
       id: '/lovable/email/transactional/preview'
       path: '/lovable/email/transactional/preview'
@@ -893,7 +872,6 @@ const rootRouteChildren: RootRouteChildren = {
   NoAccessRoute: NoAccessRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   WidgetRoute: WidgetRoute,
-  ApiPublicTmpSeedTestAccountsRoute: ApiPublicTmpSeedTestAccountsRoute,
   ApiPublicWidgetDotjsRoute: ApiPublicWidgetDotjsRoute,
   ApiPublicBrandingSplatRoute: ApiPublicBrandingSplatRoute,
   ApiPublicChatConfigRoute: ApiPublicChatConfigRoute,
