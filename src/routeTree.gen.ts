@@ -18,6 +18,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedWebsitesRouteImport } from './routes/_authenticated/websites'
+import { Route as AuthenticatedTrainingRouteImport } from './routes/_authenticated/training'
 import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSecurityRouteImport } from './routes/_authenticated/security'
@@ -91,6 +92,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedWebsitesRoute = AuthenticatedWebsitesRouteImport.update({
   id: '/websites',
   path: '/websites',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTrainingRoute = AuthenticatedTrainingRouteImport.update({
+  id: '/training',
+  path: '/training',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedStaffRoute = AuthenticatedStaffRouteImport.update({
@@ -274,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/security': typeof AuthenticatedSecurityRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/staff': typeof AuthenticatedStaffRoute
+  '/training': typeof AuthenticatedTrainingRoute
   '/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/branding/$': typeof ApiPublicBrandingSplatRoute
@@ -314,6 +321,7 @@ export interface FileRoutesByTo {
   '/security': typeof AuthenticatedSecurityRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/staff': typeof AuthenticatedStaffRoute
+  '/training': typeof AuthenticatedTrainingRoute
   '/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/branding/$': typeof ApiPublicBrandingSplatRoute
@@ -356,6 +364,7 @@ export interface FileRoutesById {
   '/_authenticated/security': typeof AuthenticatedSecurityRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/staff': typeof AuthenticatedStaffRoute
+  '/_authenticated/training': typeof AuthenticatedTrainingRoute
   '/_authenticated/websites': typeof AuthenticatedWebsitesRoute
   '/api/public/widget.js': typeof ApiPublicWidgetDotjsRoute
   '/api/public/branding/$': typeof ApiPublicBrandingSplatRoute
@@ -398,6 +407,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/settings'
     | '/staff'
+    | '/training'
     | '/websites'
     | '/api/public/widget.js'
     | '/api/public/branding/$'
@@ -438,6 +448,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/settings'
     | '/staff'
+    | '/training'
     | '/websites'
     | '/api/public/widget.js'
     | '/api/public/branding/$'
@@ -479,6 +490,7 @@ export interface FileRouteTypes {
     | '/_authenticated/security'
     | '/_authenticated/settings'
     | '/_authenticated/staff'
+    | '/_authenticated/training'
     | '/_authenticated/websites'
     | '/api/public/widget.js'
     | '/api/public/branding/$'
@@ -582,6 +594,13 @@ declare module '@tanstack/react-router' {
       path: '/websites'
       fullPath: '/websites'
       preLoaderRoute: typeof AuthenticatedWebsitesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/training': {
+      id: '/_authenticated/training'
+      path: '/training'
+      fullPath: '/training'
+      preLoaderRoute: typeof AuthenticatedTrainingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/staff': {
@@ -815,6 +834,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSecurityRoute: typeof AuthenticatedSecurityRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStaffRoute: typeof AuthenticatedStaffRoute
+  AuthenticatedTrainingRoute: typeof AuthenticatedTrainingRoute
   AuthenticatedWebsitesRoute: typeof AuthenticatedWebsitesRoute
 }
 
@@ -836,6 +856,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSecurityRoute: AuthenticatedSecurityRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStaffRoute: AuthenticatedStaffRoute,
+  AuthenticatedTrainingRoute: AuthenticatedTrainingRoute,
   AuthenticatedWebsitesRoute: AuthenticatedWebsitesRoute,
 }
 
