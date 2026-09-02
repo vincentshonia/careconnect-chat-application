@@ -788,6 +788,17 @@ function WidgetPage() {
               const data = await res.json();
               if (!res.ok) throw new Error(data.error ?? "Submission failed");
               setConversationId(data.conversationId);
+              // Remember who this visitor is so a return visit greets them by
+              // name (the greeting already reads this key).
+              const givenName = String(payload['fullName'] ?? "").trim();
+              if (givenName) {
+                try {
+                  window.localStorage.setItem(`${storageKey}-name`, givenName);
+                } catch {
+                  /* storage unavailable */
+                }
+                setVisitorName(givenName.split(" ")[0] ?? null);
+              }
               setLiveStatus(
                 formKind === "live_agent"
                   ? data.assignedAgent
@@ -819,7 +830,12 @@ function WidgetPage() {
               .map((m) => (
                 <MessageBubble key={m.id} bubble={m} brand={brand} onRate={rateAnswer} onAction={() => {}} />
               ))}
+            {/* A visitor who reached a human must still be able to rate the chat. */}
+            {conversationId && !sending && (
+              <SatisfactionPrompt conversationId={conversationId} brand={brand} chatPost={chatPost} />
+            )}
           </div>
+
         )}
 
         {view === "chat" && (

@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
+import { requireTestEnv } from "./helpers/required-env";
 
 /**
  * Tenant isolation tests.
@@ -11,7 +12,7 @@ import { createClient } from "@supabase/supabase-js";
  */
 const url = process.env.SUPABASE_URL ?? "";
 const key = process.env.SUPABASE_PUBLISHABLE_KEY ?? "";
-const configured = Boolean(url && key);
+const configured = requireTestEnv({ SUPABASE_URL: url, SUPABASE_PUBLISHABLE_KEY: key });
 
 const anon = configured
   ? createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
@@ -37,7 +38,7 @@ const PRIVATE_TABLES = [
   "websites",
 ];
 
-describe.runIf(configured)("anonymous access is denied to tenant data", () => {
+describe("anonymous access is denied to tenant data", () => {
   beforeAll(() => {
     if (!anon) throw new Error("Supabase env not configured for isolation tests");
   });
