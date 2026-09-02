@@ -180,6 +180,8 @@ function AuthPage() {
                 <GoogleMark />
                 Continue with Google
               </Button>
+              {/* ARCHIVED — Microsoft sign-in. Re-enable by restoring this button
+                  and the MicrosoftMark icon at the bottom of this file.
               <Button
                 type="button"
                 variant="outline"
@@ -190,6 +192,7 @@ function AuthPage() {
                 <MicrosoftMark />
                 Continue with Microsoft
               </Button>
+              */}
 
               <div className="flex items-center gap-3 pt-2">
                 <span className="h-px flex-1 bg-border" />
