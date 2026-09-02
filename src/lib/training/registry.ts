@@ -83,14 +83,7 @@ function welcomeChapter(input: WelcomeInput): Chapter {
   };
 }
 
-function knowledgeCheck(id: string, items: NonNullable<Parameters<typeof buildQuiz>[0]>): Chapter {
-  return buildQuiz(items, id);
-}
-
-function buildQuiz(
-  items: { question: string; options: string[]; answer: number; why: string }[],
-  id: string,
-): Chapter {
+function knowledgeCheck(id: string, items: QuizItem[]): Chapter {
   return {
     id: "knowledge-check",
     title: "Knowledge check",
