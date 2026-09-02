@@ -3,8 +3,8 @@
 > Generated automatically by `bun run release:gate`. PASS/FAIL is derived
 > from process exit codes only. No credentials or secrets are recorded.
 
-**Executed (UTC):** 2026-09-02T03:48:48.271Z
-**Completed (UTC):** 2026-09-02T04:04:34.644Z
+**Executed (UTC):** 2026-09-02T04:04:50.255Z
+**Completed (UTC):** 2026-09-02T04:21:12.539Z
 **Build identification:** unavailable (no VCS metadata in this environment)
 **Node:** v22.22.0
 
