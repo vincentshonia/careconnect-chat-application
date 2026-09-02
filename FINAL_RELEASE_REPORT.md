@@ -3,8 +3,8 @@
 > Generated automatically by `bun run release:gate`. PASS/FAIL is derived
 > from process exit codes only. No credentials or secrets are recorded.
 
-**Executed (UTC):** 2026-09-02T02:55:37.402Z
-**Completed (UTC):** 2026-09-02T03:05:57.314Z
+**Executed (UTC):** 2026-09-02T03:06:29.909Z
+**Completed (UTC):** 2026-09-02T03:18:15.897Z
 **Build identification:** unavailable (no VCS metadata in this environment)
 **Node:** v22.22.0
 
@@ -24,8 +24,8 @@
 ## Vitest
 
 - Test files: 9
-- Passed: 170
-- Failed: 1
+- Passed: 161
+- Failed: 10
 - Skipped: 0
 - Total: 171
 
@@ -44,7 +44,7 @@
 | Permissions suite (tests/permissions.test.ts) | PASS |
 | Tenant-isolation suite (tests/tenant-isolation.test.ts) | PASS |
 | Report/dashboard scope suite (tests/report-scope.test.ts) | PASS |
-| Concurrency/routing suite (tests/concurrency-routing.test.ts) | PASS |
+| Concurrency/routing suite (tests/concurrency-routing.test.ts) | FAIL |
 | Scale/data-volume suite (tests/reporting-reconciliation.test.ts) | FAIL |
 | Widget regression suite (tests/widget-session.test.ts) | PASS |
 | Browser E2E suite (Playwright) | NOT RUN |
