@@ -138,6 +138,28 @@ for (const file of walk(path.join(ROOT, "tests")).filter((f) => /\.(test|spec)\.
   );
 }
 
+/**
+ * Playwright must not be allowed to retry a failing spec into a green run, and
+ * `forbidOnly` must be on so an accidental `.only` cannot narrow the suite.
+ */
+const pwConfig = path.join(ROOT, "playwright.config.ts");
+if (!existsSync(pwConfig)) {
+  record("playwright:config present", false, "playwright.config.ts is absent");
+} else {
+  const source = readFileSync(pwConfig, "utf8");
+  const retries = source.match(/retries\s*:\s*([^,\n]+)/);
+  record(
+    "playwright:retries do not conceal failures",
+    retries != null && retries[1].trim() === "0",
+    `retries must be exactly 0, found ${retries?.[1]?.trim() ?? "no retries setting"}`,
+  );
+  record(
+    "playwright:forbidOnly enabled",
+    /forbidOnly\s*:\s*true/.test(source),
+    "forbidOnly must be true",
+  );
+}
+
 /* ------------------------------------------------------------------ *
  * 4. Roadmap must have no unchecked production-hardening item
  * ------------------------------------------------------------------ */

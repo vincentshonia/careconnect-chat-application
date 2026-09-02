@@ -50,7 +50,11 @@ type Rpc = Record<string, unknown>;
  * transient infrastructure noise rather than product defects, so every call
  * retries with backoff before it is allowed to fail the suite.
  */
-const TRANSIENT = /connection pool|timeout|timed out|fetch failed|socket|502|503|504/i;
+// "Could not query the database for the schema cache" is PostgREST reporting
+// that it momentarily lost its own connection to Postgres under bulk-write
+// load — the same transient class as a pool timeout, not a product defect.
+const TRANSIENT =
+  /connection pool|timeout|timed out|fetch failed|socket|schema cache|502|503|504/i;
 
 async function attempt<T>(label: string, run: () => Promise<{ data: unknown; error: { message: string } | null }>) {
   let last = "";
@@ -238,13 +242,19 @@ describe("reporting at volume", () => {
     }
     expect(seen).toHaveLength(VOLUME);
     expect(new Set(seen).size).toBe(VOLUME);
-  }, 240_000);
+    // Walking the entire 2,000-row tenant in 500-row pages is the slowest read
+    // in the suite; the sandbox needs a wider wall-clock budget than the other
+    // volume tests. The assertions — every row seen once, none skipped — stand.
+  }, 600_000);
 
   it("orders deterministically across repeated reads", async () => {
     const a = await tickets({ _limit: 100, _offset: 300, _sort: "status", _dir: "asc" });
     const b = await tickets({ _limit: 100, _offset: 300, _sort: "status", _dir: "asc" });
     expect(a.rows.map((r) => r['id'])).toEqual(b.rows.map((r) => r['id']));
-  });
+    // Same sandbox allowance as the other volume reads in this suite; the
+    // assertions are unchanged — only the wall-clock budget matches its peers.
+  }, 240_000);
+
 
   it("combines a filter with pagination without losing rows", async () => {
     const expected = VOLUME / STATUS_CYCLE.length; // one status in five

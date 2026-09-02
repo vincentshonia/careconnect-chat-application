@@ -70,20 +70,24 @@ test("a resolved conversation is rated and shows up in authorized reporting", as
   await openConversation(adminPage, conversation.reference, "Waiting");
 
   const claim = adminPage.getByRole("button", { name: /Claim conversation/ });
-  if (await claim.count()) {
-    await claim.click();
-    await waitForConversation(tenant.websiteId, (c) => c.assigned_to === admin.userId, {
-      conversationId: conversation.id,
-      timeoutMs: 45_000,
-    });
-  }
+  await expect(claim).toBeVisible({ timeout: 30_000 });
+  await claim.click();
+  await waitForConversation(tenant.websiteId, (c) => c.assigned_to === admin.userId, {
+    conversationId: conversation.id,
+    timeoutMs: 45_000,
+  });
 
   const reply = adminPage.getByPlaceholder(/Reply to the visitor/);
   await expect(reply).toBeVisible({ timeout: 30_000 });
   await reply.fill("Thanks for reaching out — here is how enrollment works.");
   await reply.press("Enter");
+  // The composer clears only once the send succeeds; a rejected reply would
+  // otherwise leave its draft text on the page and satisfy a bare text match.
+  await expect(adminPage.getByPlaceholder(/Reply to the visitor/)).toHaveValue("", {
+    timeout: 30_000,
+  });
   await expect(
-    adminPage.getByText("Thanks for reaching out — here is how enrollment works."),
+    adminPage.getByText("Thanks for reaching out — here is how enrollment works.").first(),
   ).toBeVisible({ timeout: 30_000 });
 
   /* The reply also flips the conversation to active server-side; resolving before
