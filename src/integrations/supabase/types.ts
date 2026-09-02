@@ -2027,6 +2027,91 @@ export type Database = {
           },
         ]
       }
+      training_progress: {
+        Row: {
+          completed_at: string
+          guide_role: string
+          id: string
+          organization_id: string
+          section_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          guide_role: string
+          id?: string
+          organization_id: string
+          section_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          guide_role?: string
+          id?: string
+          organization_id?: string
+          section_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_progress_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_review_flags: {
+        Row: {
+          flagged_at: string | null
+          flagged_by: string | null
+          guide_role: string
+          guide_version: string | null
+          id: string
+          note: string | null
+          organization_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          flagged_at?: string | null
+          flagged_by?: string | null
+          guide_role: string
+          guide_version?: string | null
+          id?: string
+          note?: string | null
+          organization_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          flagged_at?: string | null
+          flagged_by?: string | null
+          guide_role?: string
+          guide_version?: string | null
+          id?: string
+          note?: string | null
+          organization_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_review_flags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usage_counters: {
         Row: {
           metric: string
