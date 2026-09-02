@@ -86,6 +86,13 @@ test("a resolved conversation is rated and shows up in authorized reporting", as
     adminPage.getByText("Thanks for reaching out — here is how enrollment works."),
   ).toBeVisible({ timeout: 30_000 });
 
+  /* The reply also flips the conversation to active server-side; resolving before
+     that write lands would be clobbered by it. */
+  await waitForConversation(tenant.websiteId, (c) => c.status === "active", {
+    conversationId: conversation.id,
+    timeoutMs: 45_000,
+  });
+
   await adminPage.getByRole("button", { name: "Resolve", exact: true }).click();
   const resolved = await waitForConversation(tenant.websiteId, (c) => c.status === "resolved", {
     conversationId: conversation.id,

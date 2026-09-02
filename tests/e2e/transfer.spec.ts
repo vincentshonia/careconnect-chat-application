@@ -171,8 +171,12 @@ test("an availability override requires an administrator and is audited", async 
     .select("action, actor_id, record_id, new_value")
     .eq("organization_id", tenant.organizationId)
     .eq("action", "conversation.transfer_override");
+  const { data: allAudit } = await db
+    .from("audit_logs")
+    .select("action, new_value, record_id")
+    .eq("organization_id", tenant.organizationId);
   const entry = (overrideAudit ?? []).find((row: any) => row.record_id === conversation.id);
-  expect(entry, "an override must be audited").toBeTruthy();
+  expect(entry, `an override must be audited — saw ${JSON.stringify(allAudit)}`).toBeTruthy();
   expect((entry as any).actor_id).toBe(supervisor.userId);
 
   await supervisorContext.close();
