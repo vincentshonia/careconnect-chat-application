@@ -59,5 +59,5 @@ Executed in phases. Each phase ends with typecheck + build + tests.
 - [x] `show_in_widget_team` staff flag for public avatars — default false; gates the widget team list, the in-chat agent photo, and `/api/public/staff-avatar/*`
 - [x] Regression pass over website/widget config + visitor flows (widget-session, tenant-isolation, rbac suites green)
 - [x] E2E golden path (visitor → AI → escalation → agent claim → reply → resolution) on a disposable `__e2e_` tenant
-- [ ] Remaining E2E coverage: transfer, claim exclusivity, authorization, CSAT/reporting, visitor persistence
+- [x] Remaining E2E coverage: transfer, claim exclusivity, authorization, CSAT/reporting, visitor persistence (14 specs, 3 consecutive green runs, synthetic `__e2e_` tenants purged)
 
