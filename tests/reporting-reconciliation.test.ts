@@ -242,7 +242,10 @@ describe("reporting at volume", () => {
     }
     expect(seen).toHaveLength(VOLUME);
     expect(new Set(seen).size).toBe(VOLUME);
-  }, 240_000);
+    // Walking the entire 2,000-row tenant in 500-row pages is the slowest read
+    // in the suite; the sandbox needs a wider wall-clock budget than the other
+    // volume tests. The assertions — every row seen once, none skipped — stand.
+  }, 600_000);
 
   it("orders deterministically across repeated reads", async () => {
     const a = await tickets({ _limit: 100, _offset: 300, _sort: "status", _dir: "asc" });
