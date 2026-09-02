@@ -92,10 +92,8 @@ describe("guides never teach a screen the reader cannot open", () => {
       expect(chapter.sections.length).toBeGreaterThan(0);
       for (const section of chapter.sections) {
         for (const gate of [chapter.gate, section.gate]) {
-          for (const permission of gate?.anyOf ?? []) {
-            // anyOf only needs one hit; assert at least one is held.
-          }
           if (gate?.anyOf) {
+            // anyOf only needs one hit.
             expect(gate.anyOf.some((permission) => permissions.has(permission))).toBe(true);
           }
           for (const permission of gate?.allOf ?? []) {
@@ -106,12 +104,14 @@ describe("guides never teach a screen the reader cannot open", () => {
     }
   });
 
-  it("standard users never see administration chapters", () => {
+  it("standard users never see administration instructions", () => {
     const visible = visibleGuide(GUIDES.agent, permissionsFor("agent", null));
-    const text = JSON.stringify(visible).toLowerCase();
-    expect(text).not.toContain("create a staff account");
-    expect(text).not.toContain("routing rule");
+    const ids = sectionIds(visible);
+    for (const prefix of ["staff-", "routing-", "websites-", "security-", "audit-", "platform-"]) {
+      expect(ids.some((id) => id.startsWith(prefix))).toBe(false);
+    }
   });
+
 
   it("administrators do see staff administration", () => {
     const visible = visibleGuide(GUIDES.administrator, permissionsFor("administrator", null));
