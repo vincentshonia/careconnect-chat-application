@@ -438,7 +438,13 @@ function InboxPage() {
     !isClosed &&
     CLAIMABLE_STATUSES.includes(active!.status) &&
     can("conversation.claim");
-  const canReply = Boolean(active) && !isClosed && (isOwner || isSupervisor);
+  // Mirror the server contract exactly: an unassigned conversation must be
+  // claimed before anyone — supervisors included — can reply. Offering the
+  // reply box earlier produced a message the server then refused to send.
+  const canReply =
+    Boolean(active) &&
+    !isClosed &&
+    (isOwner || (isSupervisor && Boolean(active!.assigned_to)));
   const readOnly = Boolean(active) && !canReply && !canClaim;
 
   const tabs: Array<{ key: Tab; label: string }> = [
