@@ -61,3 +61,9 @@ Executed in phases. Each phase ends with typecheck + build + tests.
 - [x] E2E golden path (visitor → AI → escalation → agent claim → reply → resolution) on a disposable `__e2e_` tenant
 - [x] Remaining E2E coverage: transfer, claim exclusivity, authorization, CSAT/reporting, visitor persistence (14 specs, 3 consecutive green runs, synthetic `__e2e_` tenants purged)
 
+
+## Phase 5 — Training & staff documentation
+- [x] In-app Training Center (`/training`, "Help & Training") with role-gated guides, search, progress, print
+- [x] Annotated interface illustrations (never screenshots, no real member data)
+- [x] Written staff manuals generated from the same typed guides (`docs/staff-manuals/`, `bun scripts/export-training-docs.ts`)
+- [x] Tests: guide access/defaulting/progress isolation, content gating, manual rendering + on-disk sync

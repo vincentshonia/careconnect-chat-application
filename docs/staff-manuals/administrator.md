@@ -1,0 +1,1779 @@
+# CareConnect staff manual — Administrator
+
+_Configure the platform, run staff access, keep the audit trail clean._
+
+**Who this is for:** Administrators responsible for an organization's CareConnect setup.
+
+**Reading time:** About 70 minutes
+
+**Guide version 1.1.0 · Last reviewed 2 September 2026 · App build 2927660**
+
+Illustrations in this manual are drawings of the console, not photographs of it, and every name or number in them is invented.
+
+## Contents
+
+1. Start here
+2. Getting into CareConnect
+3. Finding your way around
+4. Using Help & Training
+5. Your dashboard
+6. The Inbox
+7. Referrals & enrollments
+8. Contacts
+9. What the visitor sees
+10. Knowledge base
+11. AI console
+12. Quality & QA
+13. Reports
+14. Websites & the chat widget
+15. Departments & hours
+16. Routing & templates
+17. Staff administration
+18. Organization settings
+19. Audit log
+20. Notifications
+21. My settings
+22. Privacy, safety and the audit trail
+23. When something looks wrong
+24. Words CareConnect uses
+25. Common mistakes and your final checklist
+26. Knowledge check
+
+---
+
+## 1. Start here
+
+What your role is responsible for, and what to do on day one.
+
+### 1.1 Your role in CareConnect
+
+_Know exactly what you own — and what you do not._
+
+**You decide how CareConnect behaves for everyone else in your organization: who has access, where work is routed, what the widget looks like and what the assistant is allowed to say.**
+
+**You are responsible for**
+
+- Creating, editing, disabling and removing staff accounts
+- Assigning roles, departments and capacity
+- Websites, widget branding and the embed snippet
+- Departments, business hours, holidays and routing rules
+- Organization settings, guardrails and compliance notices
+- Reviewing the audit log
+
+**You are not responsible for**
+
+- Creating or changing other administrators — that requires the highest level
+- Two-step verification policy and cross-organization management
+- Editing history: the audit log is append-only for you too
+
+> **Tip — How to use this guide**
+>
+> Read Start here and Getting into CareConnect before your first shift. Keep the rest open beside you and work through a chapter whenever you meet that screen for real.
+
+### 1.2 Day one and week one
+
+_Finish onboarding without needing to be chased._
+
+**Before your first shift**
+
+- [ ] Complete the Manager day-one list
+- [ ] Confirm the organization timezone and first-response target
+- [ ] Review every website's branding and welcome copy
+- [ ] Check that each website has a catch-all routing rule
+- [ ] Confirm every department has hours and members
+
+**By the end of your first week**
+
+- [ ] Create one staff account and one invitation, and watch both sign in
+- [ ] Add next quarter's holiday closures
+- [ ] Review the audit log for unexpected changes
+- [ ] Run a full go-live checklist against a live website
+- [ ] Document who covers administration when you are away
+
+---
+
+## 2. Getting into CareConnect
+
+Everything between your invitation email and your first look at the console.
+
+### 2.1 How staff accounts are created
+
+_Understand where your account comes from and why there is no public sign-up._
+
+**CareConnect has no public sign-up. Only an administrator in your organization can create staff access, which is why nobody outside your team can reach the console.**
+
+**There are exactly two ways you get an account**
+
+- Direct creation — an administrator creates the account and gives you a work email and a one-time temporary password.
+- Invitation link — an administrator sends you a single-use link that expires in 7 days and only works for the email address it was issued to.
+
+> **Note — Your access comes from your membership**
+>
+> Signing in is not the same as belonging to an organization. If you sign in with an account that has no active membership, CareConnect shows a “no access” page instead of the console. Ask your administrator to add you.
+
+### 2.2 Signing in for the first time
+
+_Get from the sign-in screen into the console._
+
+> **Interface illustration — The CareConnect sign-in screen**
+>
+> Sign-in card with a Continue with Google button, email and password fields, a Sign in button and a Forgot your password link.
+>
+> 1. Continue with Google — the fastest route if your work account is a Google account.
+> 2. Work email and password — the details an administrator gave you.
+> 3. Sign in — submits the form.
+> 4. Forgot your password? — emails you a reset link.
+
+**If you were given an invitation link**
+
+1. Open the invitation link from your email. It looks like /invite?t=… and only works once.
+2. Sign in with the email address the invitation was sent to. Use Continue with Google if that address is a Google account, otherwise use the email and password fields.
+3. The invitation is accepted automatically and you land in the console.
+
+**If you were given a temporary password**
+
+1. Go to the console address your administrator gave you and stay on the /auth screen.
+2. Enter your work email and the temporary password exactly as provided.
+3. Select Sign in.
+4. Change the password straight away: open My settings, then Send password reset email, and follow the link.
+
+> **Warning — Temporary passwords are shown once**
+>
+> Your administrator cannot see the temporary password again after it is created. If you lose it before your first sign-in, use Forgot your password? on the sign-in screen or ask for a new invitation.
+
+### 2.3 Two-step verification
+
+_Set up an authenticator app and know what to expect when your organization requires it._
+
+Two-step verification adds a 6-digit code from an authenticator app on top of your password. Your organization can leave it optional, require it for administrators, or require it for everyone. When it is required for you, CareConnect sends you to the verification screen before the console loads.
+
+**Turn it on**
+
+1. Open the /mfa screen — either by following the prompt after sign-in, or from My settings, then Two-step verification.
+2. Choose to add an authenticator app. CareConnect shows a QR code.
+3. Scan the code with Google Authenticator, 1Password, Authy or a similar app. If you cannot scan, type the setup key shown under the code.
+4. Enter the 6-digit code your app displays and confirm.
+
+**Every sign-in after that**
+
+1. Sign in with your email and password (or Google).
+2. Open your authenticator app and read the current 6-digit code.
+3. Enter the code. Codes change roughly every 30 seconds — if it is about to expire, wait for the next one.
+
+> **Warning — Lost your phone?**
+>
+> Nobody can read your codes for you. Contact an administrator: they can remove the enrolled factor from your account so you can enrol a new device.
+
+### 2.4 Resetting your password
+
+_Recover access without waiting for an administrator._
+
+1. On the sign-in screen, select Forgot your password?
+2. Enter your work email address and submit.
+3. Open the email and follow the reset link — it opens the reset-password screen.
+4. Enter a new password twice and save. You are signed in automatically.
+
+> **Note — Already signed in?**
+>
+> You can send yourself the same reset email from My settings, under Notifications & security.
+
+### 2.5 Signing out and shared computers
+
+_Leave a workstation safely._
+
+1. Select Sign out at the bottom of the left sidebar.
+2. On a shared or public computer, also close the browser window.
+3. If you suspect someone else used your account, open Security (when your role includes it) and use Sign out other devices, then tell an administrator.
+
+> **Privacy — Why this matters**
+>
+> Conversations can contain protected health information. An unattended, signed-in console is a privacy incident waiting to happen.
+
+---
+
+## 3. Finding your way around
+
+The console layout is the same on every screen. Learn it once.
+
+### 3.1 The layout
+
+_Name every part of the screen you are looking at._
+
+> **Interface illustration — The console at a glance**
+>
+> Console layout showing the branded sidebar with grouped navigation, a page header with title and description, an alert bell and the main content area.
+>
+> 1. Your organization's logo or name. Selecting it returns you to the console home.
+> 2. Navigation groups: Workspace, Content & AI, and Configuration. You only see items your role allows.
+> 3. Red count badges: Inbox shows conversations waiting for a response, Notifications shows your unread alerts.
+> 4. Page title and one-line description of the screen you are on.
+> 5. Alert bell — opens Notifications from anywhere.
+> 6. Bottom of the sidebar: theme switch, Collapse, and Sign out.
+
+- Left sidebar — your organization's logo or name at the top, navigation in the middle, and theme, Collapse and Sign out at the bottom.
+- Page header — the screen's title and a one-line description of what it does, plus the alert bell.
+- Main area — the screen itself.
+
+**Try it now**
+
+1. Select Collapse at the bottom of the sidebar. The sidebar shrinks to icons; hover an icon to see its name.
+2. Select it again to expand.
+3. Select the theme item (Dark mode / Light mode) to switch appearance. Your choice is remembered on your account.
+
+> **Tip — On a phone or tablet**
+>
+> The sidebar is hidden. Use the menu button at the top-left of the header to open navigation, and it closes again as soon as you pick a screen.
+
+### 3.2 What each menu item does
+
+_Know where to go before you start clicking._
+
+Navigation is grouped into Workspace (day-to-day work), Content & AI (what the assistant knows and how well the team performs) and Configuration (how the platform behaves). You only see items your role allows — the list below marks who sees what.
+
+*Every navigation item in CareConnect*
+
+| Menu item | What it is for | Who sees it |
+| --- | --- | --- |
+| Dashboard | Your live workload, what needs attention, and your numbers | Everyone |
+| Inbox | Website chat conversations: claim, reply, resolve, close | Everyone with chat access |
+| Intake | Referral and enrollment requests from first contact to a decision | Everyone with chat access |
+| Contacts | The directory of visitors, leads and referral contacts | Everyone with chat access |
+| Notifications | Your alerts and how you want to receive them | Everyone |
+| My settings | Your profile, availability, appearance and security | Everyone |
+| Knowledge | Articles that power the assistant, and widget FAQs | Everyone (editing needs Manager and above) |
+| AI console | Test the assistant's answer to a question before visitors see it | Manager and above |
+| Quality & QA | Satisfaction scores, transcript review and agent scorecards | Team Lead and above |
+| Reports | Operational reporting and CSV exports | Team Lead and above |
+| Websites | Widget branding, copy, tabs and the embed snippet | Administrator and above |
+| Departments | Departments, business hours and holiday closures | Administrator and above |
+| Routing | Rules that send escalations to a department, plus reply templates | Administrator and above |
+| Staff | Add teammates, set roles, departments and capacity | Team Lead can view; Administrator can change |
+| Organizations | Tenants, brands and their websites | Super Admin and platform administrators |
+| Organization settings | Contact details, chatbot guardrails, compliance notices | Administrator and above |
+| Security | Organization MFA policy and your authenticator | Super Admin and platform administrators |
+| Audit log | Append-only history of who changed what | Administrator and above |
+| Help & Training | This training center: guides, checklists and knowledge checks | Everyone |
+
+> **Note — Missing an item you were told about?**
+>
+> Nothing is broken: your role does not include it. Menu items, page guards and the database all enforce the same rules. Ask an administrator if you need access.
+
+### 3.3 Badges, counts and alerts
+
+_Tell the two red numbers apart._
+
+| Where | What the number means |
+| --- | --- |
+| Red badge on Inbox | Conversations waiting for a response right now, in the queues you can see |
+| Red badge on Notifications | Your unread alerts |
+| Red dot on the bell in the header | The same unread alert count, available from any screen |
+
+Both update live — you do not need to refresh the page. A number that stays high usually means work is genuinely waiting, not that the badge is stuck.
+
+---
+
+## 4. Using Help & Training
+
+How this training center works, and where to go when the guide does not answer your question.
+
+### 4.1 How to use this guide
+
+_Find, read, tick off and print the parts you need._
+
+**Help & Training is always in the Workspace group of the left sidebar. It opens on the guide for your own role, and everything you see here matches what your account can actually do.**
+
+**The controls at the top of the page**
+
+1. Guide selector — if your role supervises other roles you can also read their guides. Standard Users see only their own.
+2. Start here / Continue — jumps to the first section you have not finished.
+3. Print or save as PDF — opens your browser's print dialog with the whole guide expanded. Choose “Save as PDF” as the destination to keep a copy.
+4. Restart guide — clears your ticks for the guide you are reading. It never affects anyone else.
+
+**Reading and tracking**
+
+1. Use the Search this guide box to filter both the contents list and the page. Try a word you saw on screen, such as claim, transfer, holiday or password.
+2. Select any entry in Contents to jump to that section.
+3. Select Mark complete when you have actually done the thing the section describes — not just read it.
+4. Use Collapse all to skim the headings, then Expand all when you want the detail back.
+5. Previous and Next at the bottom of each section move you through the guide in order.
+
+> **Note — Your progress is saved on this device**
+>
+> Ticks are stored in this browser against your own account, so a shared workstation never mixes two people's progress. Sign in on a different computer and you will start with an empty checklist there.
+
+> **Tip — Illustrations, not screenshots**
+>
+> Every picture in this guide is a drawn diagram of the console using the real labels and colours, with numbered markers explained underneath. They contain invented names and numbers on purpose, so no real member or colleague data is ever shown in training material.
+
+### 4.2 Need help beyond this guide?
+
+_Get an answer quickly, without putting member data at risk._
+
+**In this order**
+
+1. Search this guide — most questions are answered in the chapter for the screen you are on.
+2. Check the “When something looks wrong” chapter for the common problems and their fixes.
+3. Ask your team lead for anything about the day's work: queues, transfers, priorities.
+4. Ask an administrator for anything about access, roles, departments, routing, hours or settings.
+5. Report anything that looks like a privacy or security problem to an administrator immediately, and follow your internal policy.
+
+> **Privacy — Never paste member details into a help request**
+>
+> Use the reference number instead — for example PHG-2041 or INT-1042 — and describe what you expected and what happened. Names, dates of birth, member numbers and health details stay inside CareConnect.
+
+> **Note — Something in this guide looks out of date?**
+>
+> Tell an administrator. Administrators and Super Admins can flag the guide for review from the top of this page, which leaves a visible note for the rest of the organization until the material is corrected.
+
+---
+
+## 5. Your dashboard
+
+The first screen after sign-in, showing the whole organization's live position.
+
+### 5.1 What the dashboard is for
+
+_Read the screen in the order it is designed to be read._
+
+> **Interface illustration — Dashboard — Administrator and Super Admin view**
+>
+> Organization-scoped dashboard showing organization-wide live counters, department performance, agent workload and the organization overview panel.
+>
+> 1. Right now — organization-wide live counters: Open, Waiting, Unassigned, Active, Agent requested, Completed today, SLA risk, Open intakes.
+> 2. Every counter is a link: selecting one opens the Inbox or Intake already filtered to those records.
+> 3. Department performance — all departments in the tenant, not just yours.
+> 4. Organization overview and AI vs human assistance — historical totals for the selected period.
+
+The dashboard answers three questions in order: what is happening right now, what needs me next, and how am I (or my team) doing. Work top to bottom and you will not miss anything urgent.
+
+**Start of shift, every day**
+
+1. Set your availability in the header — Available, Busy, Away or Offline. Routing only sends new work to people who are available and under capacity.
+2. Read Right now for the live position.
+3. Work through Needs my attention from the top; it is already ordered by urgency.
+4. Check Available conversations for waiting visitors you can claim.
+
+> **Tip — Availability is not cosmetic**
+>
+> Leaving yourself Available while you are away holds work in a queue nobody is watching. Set Away when you step out, and Offline at the end of your shift.
+
+### 5.2 Right now
+
+_Interpret every live counter correctly._
+
+*Organization-wide live counters*
+
+| Counter | What it counts |
+| --- | --- |
+| Open | Every conversation not yet resolved or closed |
+| Waiting | Conversations needing a person that nobody owns |
+| Unassigned | Open conversations with no owner |
+| Active | Conversations in live back-and-forth |
+| Agent requested | Visitors who explicitly asked for a human |
+| Completed today | Resolved or closed today, in your organization's timezone |
+| SLA risk | Conversations at risk of missing the first-response target |
+| Open intakes | Referral and enrollment requests still open |
+
+Every counter is a link. Selecting Waiting opens the Inbox already filtered to the waiting queue; selecting Open intakes opens Intake. Use them as shortcuts rather than filtering by hand.
+
+### 5.3 Needs my attention
+
+_Clear the urgent list without guesswork._
+
+This panel lists work in urgency order: visitors waiting, conversations at SLA risk, escalations, then follow-ups. Each row shows the visitor or contact name, the subject, why it is listed, how long it has been waiting and the department.
+
+1. Select a row to open that conversation in the Inbox.
+2. Deal with it — claim it, reply, or resolve it.
+3. Return to the dashboard; the row disappears once the reason no longer applies.
+
+> **Note — An empty panel is a good sign**
+>
+> Nothing urgent is outstanding in your scope. Use the time for follow-ups and intake work.
+
+### 5.4 My performance
+
+_Understand your own numbers before anyone else discusses them._
+
+Choose a period — Today, This week, Last 7 days, This month or Last 30 days — and the panel recalculates. Arrows compare the current period with the one before it.
+
+| Metric | What it means |
+| --- | --- |
+| Conversations claimed | How many you took ownership of |
+| Conversations handled | How many you actually worked |
+| Resolved / Closed | Finished with the need met / finished without a resolution |
+| Completion rate | Completed conversations divided by conversations you handled |
+| Avg. first response | How long visitors waited for your first reply |
+| Median first response | Your typical reply speed, shown once you have enough volume |
+| Avg. time to claim | How quickly you pick work up |
+| Avg. handle time | From claim to resolution or closure |
+| SLA compliance | Share of eligible conversations answered inside the target |
+| Visitor satisfaction | Your average star rating, once visitors have rated you |
+| Department average response | A privacy-safe benchmark — the department average, never an individual colleague |
+
+> **Privacy — You cannot see a colleague's individual numbers here**
+>
+> Comparisons are against the department average by design. Individual performance is only visible to roles responsible for coaching.
+
+### 5.5 Available conversations
+
+_Pick up waiting work safely._
+
+This panel lists waiting visitors you are eligible to claim, with how long they have been waiting, the department, and an “Agent requested” badge when the visitor asked for a person by name.
+
+1. Read the oldest waiting item first.
+2. Select Claim on that row.
+3. You are now the owner; open it in the Inbox and reply.
+
+> **Warning — Claiming can fail — and that is fine**
+>
+> If a colleague claimed it a second earlier, or you are at capacity, the claim is refused. Nothing is lost; move to the next item.
+
+When the panel says “The queue is clear.”, nobody is waiting.
+
+### 5.6 Department and staff panels
+
+_Use the team view to spot trouble before it becomes a complaint._
+
+- Staff availability — live counts of who is Available, Busy, Away, Offline and who is at capacity.
+- Department performance — every department: open, waiting, active, completed today, oldest waiting, SLA risk, average response, SLA % , CSAT and available staff.
+- Agent workload — presence, active against capacity, waiting replies, completed today, average response and SLA % for staff in your scope.
+- Requests — referral and enrollment workload, including anything overdue.
+
+**The 60-second team check**
+
+1. Look at Waiting and Oldest waiting per department — anything growing needs a person now.
+2. Compare available staff against waiting work; if nobody is available, reassign or step in yourself.
+3. Scan for teammates at capacity and rebalance before the queue backs up.
+4. Select any row to open the full report for that department or person.
+
+### 5.7 Organization overview and AI vs human assistance
+
+_Read the tenant-level trend without opening Reports._
+
+- Organization overview — totals for the selected period: conversations, human assistance requests, claimed, completed, resolved, closed without resolution, reopened, transfer rate, average first response, average resolution, SLA compliance, satisfaction and escalations.
+- AI vs human assistance — how much the assistant deflects: AI handled, human assisted and the escalation rate.
+
+> **Note — Dashboard is live; Reports is the record**
+>
+> Use the dashboard to run the day. Use Reports when you need filters, drill-downs or an export to share.
+
+---
+
+## 6. The Inbox
+
+Where every website conversation is claimed, answered and finished.
+
+### 6.1 How the Inbox is laid out
+
+_Find any conversation in three moves._
+
+> **Interface illustration — Inbox — three-column layout**
+>
+> Inbox with queue tabs and search in the header, a conversation list on the left, the transcript in the middle with action buttons, the reply box at the bottom and visitor details on the right.
+>
+> 1. Queue tabs: Waiting, Mine, Department, Active, Closed — plus All conversations for roles that can see everything.
+> 2. Search by reference or subject.
+> 3. Conversation list: subject, status badge, who owns it, reference and last activity.
+> 4. Header actions: Claim conversation, Resolve, Close — and Transfer to… for roles that can transfer.
+> 5. Transcript: visitor messages on the left, AI answers as outlined cards, your replies on the right.
+> 6. Reply box. Enter sends, Shift+Enter starts a new line.
+> 7. Visitor details captured by the widget for this conversation.
+
+- Header — a search box for reference or subject, and the queue tabs.
+- Left column — the conversation list for the selected queue, newest activity first.
+- Middle column — the transcript, with action buttons across the top and the reply box at the bottom.
+- Right column — visitor details captured by the widget.
+
+*Queue tabs*
+
+| Tab | What it shows |
+| --- | --- |
+| Waiting | Conversations needing a person that nobody owns yet |
+| Mine | Conversations you own |
+| Department | Everything in your departments |
+| Active | Live conversations happening now |
+| Closed | Finished conversations |
+| All conversations | Every conversation in the organization — only for roles that may see everything |
+
+Long queues are paged. Use Prev and Next under the list; the counter shows which records you are looking at out of the total.
+
+### 6.2 Claiming a conversation
+
+_Take ownership so you can reply._
+
+**Unassigned conversations have no reply box. Claiming is what makes you the owner, and only one person can own a conversation at a time.**
+
+1. Open the Waiting tab.
+2. Select a conversation to read what the visitor and the assistant have already said.
+3. Select Claim conversation in the header. The button briefly reads “Claiming…”.
+4. A confirmation appears — “You now own this conversation” — the badge changes to Assigned to you and the reply box appears.
+
+> **Warning — If the claim fails**
+>
+> Claims are first-come, first-served and capacity-aware. “Could not claim this conversation” means a colleague got there first or you are at your maximum simultaneous chats. Pick another item.
+
+**You can only claim conversations that are**
+
+- waiting for a human, newly escalated, or marked for follow-up,
+- in a department you can see,
+- not already owned by someone else.
+
+### 6.3 Replying to a visitor
+
+_Answer clearly, quickly and safely._
+
+1. Read the whole transcript first — the assistant has usually already answered part of the question.
+2. Type in the reply box at the bottom.
+3. Press Enter to send. Press Shift+Enter for a new line inside the same message.
+4. The visitor sees your message immediately; you do not need to refresh.
+
+**Reading the transcript**
+
+- Visitor messages sit on the left with a plain background.
+- Your replies sit on the right in the brand color.
+- Assistant messages are outlined cards, labelled with the assistant's name.
+- Every message shows who sent it and the time.
+
+**Do**
+
+- Open with the visitor's actual question, in their words.
+- Say what happens next and who will do it.
+- Keep sentences short — most visitors are on a phone.
+- Use approved response templates when one fits.
+
+**Don't**
+
+- Do not promise eligibility, approval, coverage or a payment amount.
+- Do not give clinical or legal advice.
+- Do not paste internal notes, ticket numbers or system messages into the chat.
+- Do not leave a claimed conversation without a reply — that is what an abandoned conversation is.
+
+### 6.4 Files a visitor sends
+
+_Open and save attachments correctly._
+
+Attachments appear inside the transcript as a small card with the file name, type and size, and two buttons.
+
+1. Select View to open the file in a new browser tab.
+2. Select Save to download a copy to your computer.
+3. If the file will not open, return to the transcript and select the button again — access links are generated fresh each time and expire quickly.
+
+> **Privacy — Downloads leave the platform**
+>
+> A saved file is no longer protected by CareConnect's access rules. Only download when you genuinely need to, and delete local copies when you are done.
+
+### 6.5 Finishing a conversation
+
+_Close out with the right status._
+
+| Button | Use it when | What it means in reporting |
+| --- | --- | --- |
+| Resolve | The visitor's need was met | Counts as a completed, resolved conversation |
+| Close | The chat is over without a resolution — abandoned, duplicate or out of scope | Counts as completed but not resolved |
+
+1. Confirm the visitor has what they need, or that nothing more can be done.
+2. Select Resolve or Close in the header.
+3. The status badge updates and the conversation moves to the Closed tab.
+
+> **Note — Closing is not deleting**
+>
+> Everything stays readable in the Closed tab and in reports. If the visitor writes again, the conversation reopens.
+
+### 6.6 Sending work to the right team
+
+_Transfer to a department, or reassign to a person._
+
+> **Interface illustration — Moving a conversation to the right person**
+>
+> Inbox header showing the Transfer to department selector next to the Reassign button, and the Reassign dialog listing eligible teammates with presence, capacity and an Assign button.
+>
+> 1. Transfer to… — moves the conversation to another department queue and notifies that department.
+> 2. Reassign — opens the teammate picker for the conversation's current department.
+> 3. Each candidate shows presence, current load against capacity and their departments.
+> 4. Assign hands the conversation over. Ineligible teammates show the reason instead.
+> 5. Return to the department queue releases the conversation so anyone eligible can claim it.
+
+**Transfer to another department**
+
+1. Open the conversation.
+2. Use the Transfer to… selector in the header and choose the destination department.
+3. The conversation moves to that department's queue and the department's members are notified.
+4. Tell the visitor what you are doing before you transfer — “I'm passing you to our Enrollment team, they'll pick this up here.”
+
+**Reassign to a specific person**
+
+1. Select Reassign in the header.
+2. Read the candidate list: only teammates in this conversation's department with a chat-handling role are shown, each with presence, current load against capacity and their departments.
+3. Select Assign next to an eligible teammate.
+4. If someone is ineligible, the reason is shown next to them. Where an override is allowed, select Override…, type a reason of at least a few words, and confirm — the reason is recorded.
+5. To hand the conversation back to the queue instead, select “Return to the department queue”.
+
+> **Warning — Do not transfer as a way of ending your shift**
+>
+> Transferring an unanswered conversation restarts the clock for the visitor. If your shift is ending, reply first, then hand over with context.
+
+### 6.7 Ownership, view-only and supervision
+
+_Know why you can see a conversation but not reply to it._
+
+| What you see | What it means |
+| --- | --- |
+| Assigned to you | You own it; you can reply, resolve and close |
+| Assigned to <name> | A colleague owns it |
+| View only | You may read this conversation but not act on it |
+| “Claim this conversation to reply.” | It is unassigned — claim it first |
+| “<name> is currently handling this conversation.” | Someone else owns it; ask them, or reassign if your role allows |
+| “This conversation is closed.” | It is finished; reopen happens automatically if the visitor writes again |
+
+> **Note — Supervisors follow the same rule**
+>
+> Even a supervisor cannot reply to an unassigned conversation. It must be claimed or assigned to someone first — the console and the server agree on this deliberately.
+
+---
+
+## 7. Referrals & enrollments
+
+Requests captured by the widget, tracked to a decision.
+
+### 7.1 What an intake request is
+
+_Tell an intake apart from a conversation._
+
+> **Interface illustration — Referrals & enrollments**
+>
+> Intake screen with search, type chips, stage tiles, a table of requests and a detail panel with stage, owner, due date, notes and activity.
+>
+> 1. Search by name, reference or email, and Export CSV for the current filters.
+> 2. Type chips: All, referral, enrollment, general, callback.
+> 3. Stage tiles with live counts — selecting one filters the table.
+> 4. Request table: Reference, Name, Type, Stage, Created.
+> 5. Detail panel: Stage and Assigned to selectors, Due date, Add note and the Activity history.
+
+A conversation is a chat. An intake request is a piece of work with a lifecycle: a referral, an enrollment, a callback request or a general request. It has a reference such as INT-1042, an owner, a stage, an optional due date and a full activity history.
+
+**Request types**
+
+- referral — someone is being referred into a service
+- enrollment — someone wants to join a program
+- callback — someone asked to be phoned
+- general — anything else captured through the widget
+
+### 7.2 Finding the right request
+
+_Filter a long list down to the work in front of you._
+
+1. Type into the search box to match a name, reference, email or phone number.
+2. Select a type chip — All, referral, enrollment, general or callback — to narrow by type. Each chip shows its count.
+3. Select a stage tile (New, In review, Contacted, Eligibility check, Submitted) to show only that stage. Select it again to clear.
+4. Use Prev and Next below the table for long lists.
+
+> **Tip — Filters combine**
+>
+> Search, type and stage apply together, and the counts always reflect the whole filtered set — not just the page you are looking at.
+
+### 7.3 Working a request
+
+_Move a request forward and leave a clean trail._
+
+1. Select the row to open the detail panel: email, phone, county, health plan, interest and language.
+2. Change the Stage selector as the work progresses. Every change is recorded in the activity history with the previous and new stage.
+3. Set Assigned to so it is clear who owns it. Choose Unassigned to hand it back.
+4. Set a Due date when a follow-up is promised — overdue requests appear on dashboards.
+5. Add a note describing what you did or what you are waiting for, then select Save note.
+
+*Stage ladder*
+
+| Stage | Move here when |
+| --- | --- |
+| new | The request has just arrived |
+| in review | You are assessing it |
+| contacted | You have reached the person |
+| eligibility check | You are verifying qualification |
+| submitted | It has gone onward for a decision |
+| approved | The decision is yes |
+| denied | The decision is no |
+| withdrawn | The person no longer wants to proceed |
+
+**Do**
+
+- Write notes a colleague could act on without calling you.
+- Move the stage the moment reality changes, not at the end of the day.
+- Set a due date whenever you promise a callback.
+
+**Don't**
+
+- Do not park a request in “new” while working it — the queue then lies to everyone.
+- Do not record clinical judgements; record what was said and what happens next.
+- Do not leave a request assigned to someone who has left the team.
+
+### 7.4 Exporting requests
+
+_Take the filtered list into a spreadsheet._
+
+1. Set the filters you want to export.
+2. Select Export CSV. The button reads “Preparing…” while the file is built on the server.
+3. The file downloads. A message tells you how many rows were exported, and warns you if the export hit its cap so you can narrow the filters.
+
+> **Privacy — An export is member data**
+>
+> Store it only where your organization permits, share it only with people who already have access in CareConnect, and delete it when the task is done.
+
+---
+
+## 8. Contacts
+
+The person behind the conversations.
+
+### 8.1 What a contact record holds
+
+_Know what is stored and where it came from._
+
+> **Interface illustration — Contacts directory**
+>
+> Contacts screen with search and status filter, a contact list, and a record panel showing details, lead status buttons, staff notes and linked conversations.
+>
+> 1. Search across name, email, phone, county, health plan and service interest.
+> 2. Lead status filter: All statuses, new, working, qualified, converted, closed.
+> 3. Contact list with the current lead status on each row.
+> 4. Record details captured by the widget — only fields the visitor actually provided appear.
+> 5. Lead status buttons and Staff notes (internal only — visitors never see them).
+> 6. Linked conversations and intake requests for this person.
+
+Contacts are built from what visitors tell the widget: name, email, phone, county, ZIP, health plan, service interest, language, preferred contact method, visitor type and whether consent was recorded. Fields the visitor never provided are simply not shown.
+
+Each record also lists the conversations and intake requests linked to that person, so you can see their whole history at a glance.
+
+### 8.2 Finding a person
+
+_Search and filter the directory._
+
+1. Type a name, email, phone number, county, health plan or service interest into the search box.
+2. Optionally set the Lead status filter: All statuses, new, working, qualified, converted or closed.
+3. Select a row to open the full record.
+4. Use Prev and Next to move through long lists.
+
+### 8.3 Updating a contact
+
+_Keep the record honest._
+
+1. Open the record.
+2. Select the lead status that matches reality — new, working, qualified, converted or closed. The change saves immediately and is written to the audit log.
+3. Add Staff notes for internal context and select Save notes.
+
+> **Privacy — Staff notes are internal, not secret**
+>
+> Visitors never see them, but colleagues, supervisors and auditors can. Write them as if they will be read out in a review — because they can be.
+
+---
+
+## 9. What the visitor sees
+
+You cannot support a conversation well without knowing the other side of it.
+
+### 9.1 The chat widget
+
+_Describe the visitor's screen accurately when you are helping them._
+
+> **Interface illustration — What the visitor sees**
+>
+> Chat widget on a public website showing the assistant header, a Talk to an agent button, the conversation and the bottom navigation tabs.
+>
+> 1. Header: the assistant name configured for that website.
+> 2. Talk to an agent — this is what puts a conversation in your Waiting queue.
+> 3. AI answers appear immediately, drawn from published knowledge articles.
+> 4. Visitors can attach a file; it appears in your transcript with View and Save.
+> 5. Bottom tabs: Home, Chat, Services and Requests, exactly as configured in Websites.
+> 6. After a chat ends the visitor is asked to rate it — that rating becomes CSAT.
+
+- A launcher button sits in the corner of the public website. Selecting it opens the chat panel.
+- The Home tab greets the visitor with your organization's welcome message and quick-start buttons.
+- The Chat tab is the conversation itself, headed by the assistant's name — for Pacific Health Group, “PHG CareConnect Assistant”.
+- A Talk to an agent button lets the visitor ask for a human at any moment.
+- Extra tabs — for example services or FAQs — appear when an administrator has switched them on for that website.
+- Visitors can attach a file, and after a chat ends they are invited to leave a star rating.
+
+> **Note — The visitor keeps their thread**
+>
+> The widget remembers the visitor on that browser, so returning visitors see their earlier messages and you get their history.
+
+### 9.2 From visitor question to your Inbox
+
+_Follow the path a message takes._
+
+1. The visitor opens the widget and asks a question.
+2. The assistant searches your published knowledge articles and answers, staying inside the guardrails set for that website.
+3. If the visitor asks for a person, or the assistant judges a person is needed, the conversation is escalated.
+4. Routing rules decide the department. Members of that department are notified and it appears in the Waiting queue.
+5. A member of staff claims it and replies. The visitor sees the reply in the same window.
+6. When the work is done the conversation is resolved or closed, and the visitor may leave a rating.
+
+> **Warning — Crisis language jumps the queue**
+>
+> If the visitor describes an emergency, the assistant shows your organization's emergency message first. Treat any such conversation as your top priority.
+
+---
+
+## 10. Knowledge base
+
+The articles and FAQs the assistant answers from.
+
+### 10.1 Reading the knowledge base
+
+_Find the approved answer before you write your own._
+
+> **Interface illustration — Knowledge base**
+>
+> Knowledge screen with Articles and FAQs tabs, an article list with statuses and an editor with title, summary, status, content and Save and re-index.
+>
+> 1. Tabs: Articles power the AI assistant's answers, FAQs appear in the widget.
+> 2. New article creates a draft called “Untitled article”.
+> 3. Article list with the current status badge and last update.
+> 4. Editor fields: Title, Summary, Status, Content.
+> 5. Save & re-index rewrites the AI's search index for that article. Delete removes the article and its indexed chunks.
+
+1. Open Knowledge from the sidebar.
+2. Search by title or content, and filter by status — All, Published or Draft.
+3. Select an article to read it exactly as the assistant sees it.
+4. Use Prev and Next for long lists.
+
+> **Tip — Reuse beats rewriting**
+>
+> If an approved article answers the visitor's question, quote it. Consistent answers are what make an assistant trustworthy.
+
+### 10.2 Writing and publishing an article
+
+_Add knowledge the assistant can actually use._
+
+1. Select New article.
+2. Give it a plain-language title that matches how visitors ask the question.
+3. Write the body. Short paragraphs, one idea each, no internal jargon.
+4. Set the category and add tags so related questions find it.
+5. Choose the website it applies to, or leave it available to all of your websites.
+6. Save as a draft while you work; publish when it is correct.
+
+**Do**
+
+- Answer the question in the first sentence.
+- State eligibility and requirements as conditions — “if… then…”.
+- Say what the next step is and who to contact.
+- Review anything time-sensitive on a schedule.
+
+**Don't**
+
+- Do not publish anything you would not want quoted verbatim to a member.
+- Do not include staff names, direct numbers or internal system references.
+- Do not put policy exceptions in an article — they belong in a conversation with a person.
+- Do not leave contradictory articles published; fix or unpublish the old one.
+
+> **Warning — Publishing changes what visitors are told**
+>
+> The assistant only uses published articles, and it uses them immediately. Publish deliberately, and unpublish rather than leaving something wrong in place.
+
+### 10.3 Widget FAQs
+
+_Curate the short answers shown directly in the widget._
+
+FAQs are question-and-answer pairs displayed in the widget itself, separate from full articles. They are best for the handful of questions almost every visitor asks.
+
+1. Open the FAQs area of the Knowledge screen.
+2. Add a question in the visitor's words and a two-or-three-sentence answer.
+3. Order them so the most common question is first.
+4. Save. The widget picks the change up for new visitors.
+
+---
+
+## 11. AI console
+
+Test the assistant's answer before a visitor gets it.
+
+### 11.1 Running a test question
+
+_Reproduce and diagnose an answer._
+
+> **Interface illustration — AI console**
+>
+> AI console with a website selector, test question box, Run test button and a result panel showing confidence, escalation decision, the answer and the knowledge sources used.
+>
+> 1. Website — answers use that site's instructions and knowledge.
+> 2. Test question — type exactly what a visitor would ask.
+> 3. Run test sends the question through the live retrieval and guardrails.
+> 4. Result badges: confidence score, whether the assistant would offer a live agent, and a crisis flag when triggered.
+> 5. Sources — the knowledge articles the answer was built from. Empty means a knowledge gap.
+
+1. Open AI console from the sidebar.
+2. Choose the website you are testing — each website can have different instructions and knowledge.
+3. Type the question exactly as the visitor asked it.
+4. Run it and read the answer together with the knowledge it drew on.
+
+**Reading the result**
+
+- A good answer cites the article you expected — the knowledge base is doing its job.
+- A vague answer usually means no article covers the question. Write one.
+- A confident but wrong answer means an article is wrong or out of date. Fix or unpublish it.
+- A refusal is often correct: guardrails stop the assistant from giving clinical or eligibility promises.
+
+> **Note — Testing is not visitor-facing**
+>
+> Nothing you type here reaches a visitor and it does not create a conversation. Test as much as you like.
+
+---
+
+## 12. Quality & QA
+
+Satisfaction, transcript review and coaching evidence.
+
+### 12.1 The quality summary
+
+_See how the team is actually performing._
+
+> **Interface illustration — Quality & QA**
+>
+> Quality screen with CSAT and QA metric cards, a conversation list, transcript panel and a scoring form with criteria, coaching notes and a supervisor flag.
+>
+> 1. Metric cards: CSAT, positive ratings, average QA score and how many reviews are flagged for coaching.
+> 2. Recent conversations — reviewed items are marked so two people do not score the same chat twice.
+> 3. Transcript of the selected conversation.
+> 4. Score this conversation: Accuracy, Tone & empathy, Compliance and Resolution, each 1 to 5.
+> 5. Coaching notes and Flag for supervisor follow-up, then Save review.
+
+- Average satisfaction and the number of ratings received.
+- The share of low ratings, which is where coaching starts.
+- First-response and resolution times against target.
+- Volume handled per person in your scope.
+
+All figures are calculated on the server for the period you select, so they match Reports exactly.
+
+### 12.2 Reviewing transcripts
+
+_Turn a rating into concrete feedback._
+
+1. Filter to the period and, if available, the rating band you want to review.
+2. Open a conversation to read the full transcript.
+3. Judge it on the things staff control: speed of first response, accuracy, tone, and whether the next step was clear.
+4. Record your finding, then coach the individual privately.
+
+**Do**
+
+- Review a sample of good conversations too — that is where you find what to teach.
+- Separate a bad outcome from bad handling; some answers are simply “no”.
+- Be specific: quote the sentence you would change and offer a better one.
+
+**Don't**
+
+- Do not discuss an individual's scores in a group channel.
+- Do not use a single low rating as evidence of a pattern.
+- Do not edit or delete a transcript — records are immutable and must stay that way.
+
+> **Privacy — Review inside the platform**
+>
+> Read transcripts in CareConnect. Do not copy them into documents or messaging tools for review.
+
+---
+
+## 13. Reports
+
+The operational record, with filters, drill-downs and exports.
+
+### 13.1 What you can report on
+
+_Know your reach before you read a number._
+
+> **Interface illustration — Reporting & analytics**
+>
+> Reports screen with a scope badge, filter bar, report tabs, KPI cards that drill into the ticket explorer, and an export button.
+>
+> 1. Scope badge — the data you are allowed to see: self, team, organization or platform.
+> 2. Filter bar: date range preset, department, staff, website, conversation type, transfers, status, priority and SLA target.
+> 3. Tabs: Overview, Departments, Staff, Tickets, Transfers, Response & SLA, AI assistant, Requests. You only see the tabs your scope allows.
+> 4. KPI cards. Selecting one opens the Tickets tab filtered to exactly those conversations.
+> 5. Export CSV downloads the current view with all filters applied.
+
+| Your reach | What Reports covers |
+| --- | --- |
+| Own work | Your own conversations and outcomes |
+| Team | Your departments, including every member's work |
+| Organization | Every department, website and staff member in the organization |
+| Platform | Across organizations, for platform roles |
+
+Reports never show data outside your reach. Two people running the same report at the same time can legitimately see different totals.
+
+### 13.2 Filtering and date ranges
+
+_Ask the question precisely._
+
+1. Pick a date preset — today, yesterday, this week, last 7 days, this month, last 30 days, last month, this quarter and so on — or set a custom range.
+2. Narrow by department, website or status as needed.
+3. Read the KPI row: volume, first response, resolution time, SLA compliance, satisfaction and escalation rate.
+4. Select a KPI to drill into the conversations behind it — your filters are carried through.
+
+> **Note — Dates follow the organization's timezone**
+>
+> “Today” means today where the organization operates, not in your browser's timezone. This is why a late-evening conversation can land on the next day's report.
+
+> **Tip — Share the exact view**
+>
+> Filters are written into the page address. Copy the URL and a colleague with the same reach sees precisely what you see.
+
+### 13.3 The report sections
+
+_Choose the right tab for the question._
+
+| Section | Answers |
+| --- | --- |
+| Overview | How did we do overall this period? |
+| Volume | When does demand arrive — by day and by hour? |
+| SLA | Are we answering inside the first-response target? |
+| Staff | Who handled what, how fast, with what outcome? |
+| Tickets / conversations | Which specific conversations sit behind a number? |
+| Intake | How are referrals and enrollments flowing, and what is overdue? |
+| AI | How much is the assistant handling, how often does it escalate, and was it helpful? |
+
+### 13.4 Exporting
+
+_Get a shareable file without breaking privacy rules._
+
+1. Set the filters exactly as you want them.
+2. Select the export action for that section.
+3. Wait while the file is built on the server, then save it.
+4. Check the row count in the confirmation. If the export was capped, narrow the date range and export again.
+
+> **Privacy — Exports carry member data**
+>
+> Treat every CSV as protected health information: approved storage only, no personal drives, no external sharing, and delete it when the task is done.
+
+---
+
+## 14. Websites & the chat widget
+
+Branding, copy, tabs and the code that puts the widget on a public site.
+
+### 14.1 Websites in your organization
+
+_Understand what a website record controls._
+
+> **Interface illustration — Websites & widget settings**
+>
+> Website settings with a site list, grouped settings cards for basics, home screen, chat copy and bottom navigation, the embed snippet and a live widget preview.
+>
+> 1. Website list, plus + Add website.
+> 2. Site basics: names, domains, allowed embed domains, colors, position and trigger delay.
+> 3. Home screen and Chat & messaging: the exact words visitors read.
+> 4. Bottom navigation buttons: rename, reorder, re-icon or hide tabs. Chat always stays visible.
+> 5. Live preview updates as you type — nothing is saved until you select Save settings.
+> 6. Embed snippet to paste before the closing body tag, plus Suspend and Delete controls.
+
+Each website record represents one public site running the widget. It owns that site's branding, welcome copy, tabs, assistant instructions and embed snippet — so two brands can behave completely differently.
+
+1. Open Websites from the sidebar.
+2. Select a website to edit it, or create a new one for a new brand or domain.
+3. Work through the setting groups: Basics, Home, Chat and Navigation.
+4. Watch the live preview beside the settings — it renders exactly what a visitor will see.
+
+### 14.2 The setting groups
+
+_Change the right setting the first time._
+
+| Group | Controls |
+| --- | --- |
+| Basics | Website name, domain, brand colors, logo and the assistant's display name |
+| Home | The greeting shown when the widget opens, plus quick-start buttons |
+| Chat | Chat header text, the “Talk to an agent” option, attachments and the satisfaction prompt |
+| Navigation | Which tabs the widget shows and what each one contains |
+
+**Choosing colors**
+
+1. Use the color picker to set the brand color, or type an exact hex value.
+2. Check the preview in both light and dark surroundings.
+3. Keep text and background contrast high enough to read on a phone in daylight.
+
+> **Warning — Changes are public immediately**
+>
+> Saving updates the live widget on that website. Preview first, then save, then load the public page to confirm.
+
+### 14.3 Installing the widget
+
+_Hand a working snippet to whoever runs the website._
+
+1. Open the website record and copy the embed snippet.
+2. Send it to the person who maintains the site, asking them to paste it before the closing </body> tag on every page.
+3. Load the public site and confirm the launcher appears.
+4. Send a test message and confirm it arrives in the Inbox.
+
+**Go-live checklist for a new website**
+
+- [ ] Branding, logo and assistant name match the brand
+- [ ] Welcome message and quick-start buttons reviewed
+- [ ] Published knowledge articles cover that brand's common questions
+- [ ] A routing rule sends escalations to a real department
+- [ ] That department has business hours and members
+- [ ] A test conversation was escalated, claimed, answered and resolved
+
+---
+
+## 15. Departments & hours
+
+The teams that receive work, and when they are open.
+
+### 15.1 Creating and editing departments
+
+_Set up a team that can actually receive conversations._
+
+> **Interface illustration — Departments & hours**
+>
+> Departments screen with tabs for Departments, Business hours and Holidays, a department list with routing and status controls, and the add-department form.
+>
+> 1. Tabs: Departments, Business hours, Holidays.
+> 2. New department — name it after the work, not the person.
+> 3. Each row shows routing method, member count and timezone.
+> 4. Controls: Make default, switch routing method, Deactivate and Delete.
+> 5. Business hours per weekday, and holiday closures.
+
+1. Open Departments from the sidebar.
+2. Create a department with a name staff will recognise on a transfer menu.
+3. Set its business hours per weekday, in the organization's timezone.
+4. Add holiday closures for dates the team is unavailable.
+5. Add members — a department with no members cannot be routed to sensibly.
+
+> **Warning — Hours change visitor expectations**
+>
+> Outside business hours the widget sets a different expectation for a reply. Keep hours truthful rather than optimistic.
+
+### 15.2 Keeping departments healthy
+
+_Prevent the queue nobody watches._
+
+**Monthly review**
+
+- [ ] Every department still has an owner and enough members
+- [ ] Members' capacity settings reflect real workload
+- [ ] Holiday closures for the next quarter are entered
+- [ ] No department is receiving work it never resolves
+- [ ] Departments that no longer exist have been retired and their routing rules updated
+
+---
+
+## 16. Routing & templates
+
+Where escalations go, and the approved wording staff reuse.
+
+### 16.1 Routing rules
+
+_Send each escalation to the team that can resolve it._
+
+> **Interface illustration — Routing & templates**
+>
+> Routing screen with rule creation fields, a list of rules with enable and delete controls, and the response templates tab.
+>
+> 1. Tabs: Routing rules and Response templates.
+> 2. Rule fields: name, what to match on, the value to match and the destination department.
+> 3. Rule list shows the match, the destination and the priority.
+> 4. Disable keeps a rule for later; Delete removes it immediately.
+> 5. Templates: name, shortcut, category and message, with Approve for the ones agents may send.
+
+1. Open Routing from the sidebar.
+2. Create a rule that matches on the website and the conversation's topic or intent.
+3. Choose the destination department.
+4. Set the order — rules are evaluated in order, and the first match wins.
+5. Save, then send a test message through the widget to confirm it lands in the right queue.
+
+**How assignment then works**
+
+- Members of the destination department are notified that work is waiting.
+- Round-robin assignment offers work fairly to available staff who are under capacity.
+- Anyone eligible can claim from the queue; the first successful claim wins.
+- If nobody is available, the conversation waits in the queue and appears as SLA risk on dashboards.
+
+> **Warning — Always keep a catch-all**
+>
+> Make sure a final, broad rule sends anything unmatched to a staffed department. Without it a conversation can sit unclaimed.
+
+### 16.2 Response templates
+
+_Give staff approved wording for repeated situations._
+
+1. Open the templates area of the Routing screen.
+2. Create a template with a name staff will search for, and body text they can send with minimal edits.
+3. Keep the wording compliant — no eligibility promises, no clinical advice.
+4. Review templates whenever a program or policy changes.
+
+---
+
+## 17. Staff administration
+
+Accounts, roles, departments and capacity.
+
+### 17.1 The staff directory
+
+_Read the roster at a glance._
+
+> **Interface illustration — Staff & roles**
+>
+> Staff screen with search and filters, the add-staff form, invitation card and a teammate row showing role, presence, capacity, departments and account access controls.
+>
+> 1. Search and filters: role, department and account status (Active, Disabled, Removed, All accounts).
+> 2. Add a staff member — creates the account immediately and shows a one-time temporary password.
+> 3. Invite a teammate — a single-use link that expires in 7 days.
+> 4. Per-teammate controls: role, presence and maximum simultaneous chats.
+> 5. Departments — select a name to add or remove that person; this is what drives routing.
+> 6. Account access: Disable, Re-enable and Remove. History is always kept.
+
+The directory lists everyone in the organization with their role, departments, presence, capacity and status. Search by name or email, filter by role or status, and page through with Prev and Next.
+
+### 17.2 Adding a teammate
+
+_Create access safely._
+
+**Create the account directly**
+
+1. Select Add staff.
+2. Enter their work email and full name.
+3. Choose the role — grant the lowest role that lets them do the job.
+4. Assign departments and set maximum simultaneous chats.
+5. Create the account. A temporary password is shown once — copy it and deliver it through a channel your organization approves.
+6. Tell them to change it immediately after signing in.
+
+**Or send an invitation**
+
+1. Select the invitation option and enter the email and role.
+2. Send the link. It is single-use, tied to that email, and expires after 7 days.
+3. If it expires, issue a new one — old links stop working.
+
+> **Privacy — Never share a temporary password insecurely**
+>
+> Do not send it by SMS, personal email or a public channel. If in doubt, use an invitation link instead.
+
+### 17.3 Roles, departments and capacity
+
+_Change access as people change jobs._
+
+1. Open the person's record from the directory.
+2. Change their role, departments or maximum simultaneous chats.
+3. Save. The change takes effect on their next page load and is written to the audit log.
+
+**Rules the system enforces**
+
+- Roles are cumulative — each level includes everything below it.
+- You cannot grant a role above your own.
+- Only the highest level of administration may create or change other administrators.
+- You cannot remove the last administrator of an organization.
+- Nobody can raise their own role, even by editing their own profile.
+
+### 17.4 Disabling and removing access
+
+_Close access the moment someone leaves._
+
+1. Reassign their open conversations and intake requests first — disabling does not hand work over.
+2. Open their record and disable the account. They can no longer sign in; their history is retained.
+3. Remove the membership only when the separation is permanent and your retention policy allows it.
+
+**Offboarding checklist**
+
+- [ ] Open conversations reassigned
+- [ ] Open intake requests reassigned
+- [ ] Account disabled the same day access ends
+- [ ] Departments and routing updated if they were the only member
+- [ ] Change confirmed in the audit log
+
+---
+
+## 18. Organization settings
+
+Contact details, timezone, assistant guardrails and compliance notices.
+
+### 18.1 Organization profile and timezone
+
+_Set the values everything else depends on._
+
+> **Interface illustration — Organization settings**
+>
+> Settings screen with brand logo upload, organization contact fields, chatbot instructions, emergency message and privacy notice.
+>
+> 1. Brand logo — PNG, JPG or SVG up to 2 MB. It replaces the organization name in the sidebar.
+> 2. Organization name, timezone, phone, email and address. Timezone drives every “today” number.
+> 3. Chatbot instructions — tone and rules layered on top of the built-in safety guardrails.
+> 4. Emergency / crisis message and Privacy notice shown to visitors.
+> 5. Save settings — nothing takes effect until you select it.
+
+- Organization name and public contact details used in visitor-facing copy.
+- Timezone — every report, “today” and business-hours calculation uses it.
+- Default first-response target, which drives SLA figures across the platform.
+
+> **Warning — Changing the timezone moves the numbers**
+>
+> Reports recalculate against the new timezone, so historical daily totals can shift. Change it once, deliberately, and tell the team.
+
+### 18.2 Assistant guardrails and compliance notices
+
+_Control what the assistant is allowed to say._
+
+- Assistant instructions — the tone and boundaries applied to every answer.
+- Emergency message — shown immediately when crisis language is detected.
+- Compliance notices — the disclaimers displayed to visitors.
+
+**Do**
+
+- State clearly that the assistant cannot give clinical advice or confirm eligibility.
+- Keep the emergency message short, direct and actionable.
+- Review the wording with whoever owns compliance before saving.
+
+**Don't**
+
+- Do not weaken guardrails to make the assistant more helpful.
+- Do not put program specifics here — those belong in knowledge articles.
+
+---
+
+## 19. Audit log
+
+The append-only record of who changed what.
+
+### 19.1 Reading the log
+
+_Answer “who did this, and when?”._
+
+> **Interface illustration — Audit log**
+>
+> Audit log with search, CSV export and a table of timestamped actions with actor, action and affected record.
+>
+> 1. Search across action, record and person.
+> 2. Export CSV of the entries matching your search.
+> 3. Columns: When, Actor, Action, Record. Entries can never be edited or deleted.
+
+1. Open Audit log from the sidebar.
+2. Filter by action, actor or date range.
+3. Read the entry: who acted, what changed, and the values before and after.
+4. Page through results with Prev and Next.
+
+**What is recorded**
+
+- Sign-ins and security changes
+- Staff creation, role changes, disabling and removal
+- Conversation claims, transfers, reassignments and closures
+- Contact and intake record changes
+- Website, department, routing and organization setting changes
+
+> **Note — Nothing here can be edited**
+>
+> The log is append-only for everyone, including administrators. That is what makes it usable as evidence.
+
+---
+
+## 20. Notifications
+
+How CareConnect gets your attention, and how to tune it.
+
+### 20.1 Reading your alerts
+
+_Clear the alert list efficiently._
+
+> **Interface illustration — Notifications and alert preferences**
+>
+> Notifications screen with a waiting-conversations banner, desktop alert card, alert feed and a preferences grid of in-app and email toggles.
+>
+> 1. Waiting banner — how many chats are unclaimed right now, with a link to the Inbox.
+> 2. Desktop & device alerts — turn on browser pop-ups so you hear about escalations in the background.
+> 3. Alert feed. Unread items are highlighted; each has Open and Mark read.
+> 4. Alert preferences: in-app and email toggles for escalations, new referrals, SLA breaches and low ratings.
+> 5. First-response target in minutes — drives the SLA breach warnings you see.
+
+1. Open Notifications from the sidebar or the bell in the header.
+2. Unread alerts are highlighted. Critical alerts carry a red badge.
+3. Select Open on an alert to jump straight to the conversation or request it refers to.
+4. Select Mark read on an individual alert, or Mark all read to clear the list.
+
+At the top, a banner shows how many conversations are waiting for a human right now, with a link to the Inbox. It tracks the same number as the red badge on the Inbox menu item.
+
+### 20.2 Desktop and device alerts
+
+_Hear about escalations when the tab is in the background._
+
+1. On the Notifications screen, find Desktop & device alerts.
+2. Select Enable notifications and accept your browser's permission prompt.
+3. The card then reads “Enabled”, and new escalations pop up even when CareConnect is not the tab you are looking at.
+
+**If the button will not enable**
+
+- “Blocked by your browser” — you previously declined. Re-enable notifications for this site in your browser settings.
+- “Open the console in its own browser tab” — you are viewing an embedded preview; open CareConnect in a normal tab.
+- “This browser does not support desktop notifications” — use a current desktop browser.
+
+### 20.3 Choosing what reaches you
+
+_Set your alert preferences and response target._
+
+*Each alert can be delivered in the console, by email, or both*
+
+| Alert | Fires when |
+| --- | --- |
+| Live-agent escalations | A visitor asks for a human |
+| New referrals & enrollments | A new intake request arrives |
+| First-response SLA breaches | A waiting conversation passes your first-response target |
+| Low satisfaction ratings | A visitor leaves a poor rating |
+
+1. Tick the In app and Email boxes you want for each alert.
+2. Set First-response target (minutes) — the default is 15. Waiting conversations older than this show as SLA breaches on your dashboard.
+3. Select Save preferences.
+
+> **Note — Email delivery**
+>
+> Email alerts activate once a sending domain has been verified for your workspace. Until then, rely on in-app and desktop alerts.
+
+---
+
+## 21. My settings
+
+Your profile, availability, appearance and account security.
+
+### 21.1 Your profile
+
+_Set what teammates and visitors see._
+
+> **Interface illustration — My settings**
+>
+> Personal settings page with profile photo controls, visitor visibility checkbox, personal detail fields, appearance buttons and security shortcuts.
+>
+> 1. Profile photo — PNG or JPG up to 5 MB, with Replace and Remove.
+> 2. Show my name and photo to website visitors — off by default.
+> 3. Display name is what visitors see during a live chat.
+> 4. Availability — the same status the dashboard header sets.
+> 5. Appearance: Match device, Light, Dark.
+> 6. Notification preferences, Two-step verification and Send password reset email.
+
+1. Open My settings from the sidebar.
+2. Upload a profile photo (PNG or JPG up to 5 MB). Use Replace photo to change it or Remove to delete it.
+3. Fill in Full name, Display name (visitor-facing), Job title, Phone, Languages spoken and Time zone.
+4. Select Save changes.
+
+> **Privacy — Visitor visibility is opt-in**
+>
+> Your name and photo are only shown to website visitors when you tick “Show my name and photo to website visitors”. Leave it off if you would rather appear as your display name alone.
+
+Your email is read-only here. Your role, organization, departments and maximum simultaneous chats are managed by an administrator — ask them if any of those are wrong.
+
+### 21.2 Availability and appearance
+
+_Control routing and how the console looks._
+
+**Availability**
+
+- Available — routing may send you new conversations.
+- Busy — you are working but not taking new work.
+- Away — you are temporarily off the floor.
+- Offline — you are done for the day.
+
+You can change availability here or from the dashboard header — it is the same setting.
+
+**Appearance**
+
+1. Choose Match device to follow your computer's light or dark setting.
+2. Choose Light or Dark to fix it.
+3. The choice saves immediately and follows your account to any computer.
+
+### 21.3 Security shortcuts
+
+_Reach the security controls you own._
+
+- Notification preferences — opens the Notifications screen.
+- Two-step verification — opens the authenticator setup.
+- Send password reset email — emails you a reset link for your own account.
+
+---
+
+## 22. Privacy, safety and the audit trail
+
+The rules that apply to every role, every day.
+
+### 22.1 Handling protected health information
+
+_Know what you may write, where, and to whom._
+
+**Visitors tell CareConnect real things about their health, coverage and living situation. Treat every conversation, contact record and intake request as protected health information.**
+
+**Do**
+
+- Keep member details inside CareConnect, where access is controlled and every change is logged.
+- Use Staff notes on a contact for internal context — visitors never see them.
+- Verify who you are speaking to before discussing specifics of someone's coverage.
+- Share only what the visitor needs for the next step.
+
+**Don't**
+
+- Never paste member details into external tools, personal notes, spreadsheets or chat apps.
+- Never take screenshots of transcripts to share outside the platform.
+- Never email or text member information from your own account.
+- Never leave the console open on an unattended screen.
+
+> **Privacy — Your photo and name are private by default**
+>
+> Website visitors only see your name and photo if you switch on “Show my name and photo to website visitors” in My settings. It is off unless you turn it on.
+
+### 22.2 Emergencies and crisis language
+
+_React correctly when someone is in danger._
+
+The assistant recognises crisis language and replies with your organization's emergency message before anything else. That message is configured in Organization settings and shown to the visitor immediately.
+
+**If a visitor describes an emergency or self-harm**
+
+1. Stay in the conversation. Do not transfer and walk away.
+2. Repeat the emergency guidance in plain words: if there is immediate danger, they should call 911.
+3. Do not attempt clinical advice, triage or diagnosis — CareConnect is not a clinical tool.
+4. Escalate to a supervisor immediately and note what happened in the conversation.
+
+> **Warning — Never promise an outcome**
+>
+> Do not promise eligibility, coverage, approval, timelines or payment. Say what the next step is and who will follow up.
+
+### 22.3 What gets recorded
+
+_Understand the audit trail that sits behind your work._
+
+- Sign-ins, role changes, staff changes, settings changes and record edits are written to an append-only audit log.
+- Conversation events — claims, transfers, reassignments, resolutions and closures — are recorded with who did them and when.
+- Audit entries cannot be edited or deleted by anyone, including administrators.
+
+> **Note — This protects you too**
+>
+> When a decision is questioned weeks later, the log shows exactly what happened and who acted. Work normally; the trail is there to support good work, not to catch you out.
+
+---
+
+## 23. When something looks wrong
+
+Fix the everyday problems yourself, and know when to ask.
+
+### 23.1 Common problems and their fixes
+
+_Work through the usual suspects before raising a ticket._
+
+**I signed in but I see a “no access” page.**
+
+Your account exists but has no active membership in an organization. Ask an administrator to add you, or to re-enable your account if it was disabled.
+
+**A menu item my colleague has is missing for me.**
+
+Your role does not include it. Roles are cumulative — a Manager sees everything a Team Lead sees, and so on. Ask an administrator if the work you have been given needs a different role.
+
+**I opened a conversation but there is no reply box.**
+
+Either the conversation is closed, or it is unassigned, or a colleague owns it. Unassigned chats must be claimed first — that is what the Claim conversation button is for. A “View only” badge means you may read but not reply.
+
+**I pressed Claim and got an error.**
+
+Someone claimed it a moment before you, or you are already at your maximum simultaneous chats. Refresh the queue: if the conversation now shows another owner, it is handled.
+
+**The Inbox badge shows waiting chats, but my Waiting tab is empty.**
+
+The badge counts what is waiting across the queues you can see, including departments you are not a member of if your role can view them. Check the Department and All conversations tabs when your role has them.
+
+**My dashboard numbers look different from a colleague's.**
+
+Dashboards are scoped to what you may see: your own work, your departments, or the whole organization. Different roles legitimately see different totals for the same day.
+
+**“Today” does not match my clock.**
+
+Every date calculation uses your organization's timezone, not your browser's. An administrator sets it in Organization settings.
+
+**I cannot open a visitor's attachment.**
+
+Attachment links are generated on demand and expire. Return to the transcript and select View or Save again rather than reusing an old link.
+
+**The AI answered something incorrect.**
+
+Note the exact question. Anyone with knowledge editing rights can reproduce it in the AI console and fix the underlying article. Do not correct the visitor's record of what the assistant said — reply with the right answer instead.
+
+**The page will not load or looks broken.**
+
+Refresh once. If it persists, sign out and back in. If it still fails, tell an administrator what screen you were on and what you were doing.
+
+### 23.2 Who to ask
+
+_Send the question to the right person the first time._
+
+| Question | Who can resolve it |
+| --- | --- |
+| I need access to a screen | An administrator in your organization |
+| My role or departments are wrong | An administrator (roles) or your team lead (departments) |
+| A conversation is with the wrong team | Your team lead — they can transfer or reassign it |
+| The assistant needs better information | A manager or administrator with knowledge editing rights |
+| Business hours, holidays or routing are wrong | An administrator |
+| Something on the widget looks wrong on the public site | An administrator (Websites) |
+| A possible privacy or security incident | An administrator immediately, then follow your internal policy |
+
+> **Tip — Make the ask easy to answer**
+>
+> Include the screen you were on, the reference number (for example PHG-2041 or INT-1042), what you expected and what happened instead.
+
+---
+
+## 24. Words CareConnect uses
+
+The vocabulary on screen, in plain English.
+
+### 24.1 Glossary
+
+_Decode any label you meet in the console._
+
+- **Organization (tenant)** — One customer of the platform. Conversations, knowledge, staff and settings never cross between organizations.
+- **Website** — A public site where the chat widget is embedded. Each website has its own branding, copy and assistant instructions.
+- **Widget** — The chat panel a visitor sees on the public website.
+- **Conversation** — One chat thread with a visitor, identified by a reference such as PHG-2041.
+- **Claim** — Taking ownership of a waiting conversation. Only the owner (or a supervisor) may reply.
+- **Escalation** — The moment a visitor asks for a human, or the assistant decides a person is needed.
+- **Transfer** — Moving a conversation to a different department queue.
+- **Reassignment** — Moving a conversation to a different person in the same department.
+- **Department** — A routing target — the team that receives certain escalations, with its own hours and members.
+- **Capacity** — The maximum simultaneous chats a person may own. Routing respects it.
+- **Presence** — Your availability: Available, Busy, Away or Offline.
+- **SLA** — The first-response target in minutes. A conversation that waits longer counts as a breach.
+- **CSAT** — Visitor satisfaction, from the star rating a visitor gives after a chat.
+- **Intake request** — A referral, enrollment, callback or general request captured from the widget, identified by a reference such as INT-1042.
+- **Contact** — The person record behind conversations and intake requests.
+- **Knowledge article** — Approved content the assistant searches when answering. Published articles are the assistant's source of truth.
+- **FAQ** — A short question and answer pair shown directly in the widget.
+- **Audit log** — The append-only record of who changed what, and when.
+
+### 24.2 Conversation and request statuses
+
+_Read any status badge correctly._
+
+*Conversation statuses, exactly as the Inbox labels them*
+
+| Badge | Meaning |
+| --- | --- |
+| AI handling | The assistant is answering; no person is needed yet |
+| Waiting for human | A person is needed and nobody has claimed it |
+| Claimed | Someone owns it but the conversation is not active yet |
+| Active | A live back-and-forth is happening |
+| Waiting for visitor | The ball is in the visitor's court |
+| Internal follow-up | Waiting on internal work before the visitor hears back |
+| Follow-up | Scheduled to be picked up again |
+| Escalated | Explicitly raised for human help |
+| Resolved | Finished with the visitor's need met |
+| Closed | Finished without a resolution |
+| Spam | Junk, excluded from reporting |
+| Archived | Removed from active queues, retained for the record |
+
+*Intake stages, in the order work normally moves*
+
+| Stage | Meaning |
+| --- | --- |
+| new | Just arrived, nobody has looked at it |
+| in review | Being assessed by staff |
+| contacted | The person has been reached |
+| eligibility check | Verifying qualification |
+| submitted | Sent onward for a decision |
+| approved | Accepted |
+| denied | Not accepted |
+| withdrawn | The person no longer wants to proceed |
+
+---
+
+## 25. Common mistakes and your final checklist
+
+What goes wrong most often, and how to prove to yourself that you are ready.
+
+### 25.1 Common mistakes to avoid
+
+_Recognise the five habits that cause most of the rework._
+
+**Seen most often in the first few weeks**
+
+- Creating an account and closing the dialog without copying the temporary password — it cannot be shown again.
+- Disabling a leaver's account before reassigning their open conversations and intake requests.
+- Publishing a website without a catch-all routing rule, so unmatched escalations wait with nobody to answer them.
+- Changing the organization timezone quietly — every report, “today” figure and business-hours calculation moves with it.
+- Giving someone a higher role “temporarily” and never reviewing it.
+
+**Do**
+
+- Prefer an invitation link over a temporary password when the person has a working mailbox.
+- Give the lowest role that lets someone do their job, and review roles when duties change.
+- Keep every department staffed, with hours and holidays that match reality.
+- Read the audit log weekly and ask about anything you cannot explain.
+
+**Don't**
+
+- Do not share one account between several people — attribution is what makes the audit log useful.
+- Do not remove the last administrator of an organization; the system will refuse, and for good reason.
+- Do not test routing changes during a busy period without telling the team.
+- Do not store credentials or member details in department names, notes or website copy.
+
+> **Warning — A mistake is only a problem if you hide it**
+>
+> Every action is recorded with your name against it. If you send the wrong information, reply again with the correction and tell your team lead — do not try to make the record look tidier than it is.
+
+### 25.2 Final checklist
+
+_Tick every line before you work unsupervised._
+
+**I can do all of this without help**
+
+- [ ] Everything on the Manager checklist
+- [ ] Create a staff account and send an invitation, and know when to use each
+- [ ] Change a role, department membership and capacity, and explain the effect
+- [ ] Disable and re-enable an account, in the right order relative to their open work
+- [ ] Configure a website: branding, welcome copy, tabs and the embed snippet
+- [ ] Create a department with business hours and a holiday closure
+- [ ] Write routing rules with a working catch-all and test the order
+- [ ] Set organization details, timezone, guardrails and compliance notices
+- [ ] Filter and read the audit log, and explain why it cannot be edited
+
+> **Note — Keeping this guide honest**
+>
+> This material was last reviewed on 2 September 2026 against application build 2927660. If a screen in the console no longer matches what you read here, tell an administrator so the guide can be corrected.
+
+---
+
+## 26. Knowledge check
+
+Five questions. Answer them from memory before you take your first live conversation.
+
+### 26.1 Check yourself
+
+_Confirm you can act correctly without looking anything up._
+
+1. You create a staff account directly. What happens to the temporary password?
+
+   A. It is emailed automatically
+   B. It is shown once and cannot be retrieved later
+   C. It never expires
+   D. It is stored in the audit log
+
+   *Answer: B — Copy it at creation and deliver it through an approved channel — or send an invitation link instead.*
+
+2. Someone leaves the organization today. What is the correct order?
+
+   A. Disable the account, then reassign their work
+   B. Reassign their open conversations and intakes, then disable the account the same day
+   C. Delete the account immediately
+   D. Wait until their work closes naturally
+
+   *Answer: B — Disabling does not hand work over. Move the work first, then close access without delay.*
+
+3. Why must every website have a catch-all routing rule?
+
+   A. To improve AI accuracy
+   B. So an unmatched escalation still lands in a staffed department instead of waiting unclaimed
+   C. To enable exports
+   D. To satisfy the widget preview
+
+   *Answer: B — Rules are evaluated in order and the first match wins. Without a final broad rule, some conversations have nowhere to go.*
+
+4. You change the organization timezone. What else changes?
+
+   A. Nothing
+   B. Reports, “today” calculations and business hours all recalculate against the new timezone
+   C. Only the widget
+   D. Staff passwords reset
+
+   *Answer: B — The timezone is the basis for every date calculation. Change it deliberately and tell the team.*
+
+5. You spot an audit entry you cannot explain. What can you do?
+
+   A. Edit it to add context
+   B. Delete it
+   C. Investigate and add your findings elsewhere — the log itself cannot be changed
+   D. Ask support to rewrite it
+
+   *Answer: C — The audit log is append-only for everyone, which is exactly what makes it trustworthy.*
