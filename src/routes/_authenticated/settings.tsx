@@ -45,6 +45,7 @@ function SettingsPage() {
     email: "",
     address: "",
     timezone: "",
+    sla_first_response_minutes: "15",
     ai_instructions: "",
     emergency_message: "",
     privacy_notice: "",
@@ -68,6 +69,9 @@ function SettingsPage() {
         email: org.data.email ?? "",
         address: org.data.address ?? "",
         timezone: org.data.timezone ?? "",
+        sla_first_response_minutes: String(
+          (org.data as { sla_first_response_minutes?: number | null }).sla_first_response_minutes ?? 15,
+        ),
         ai_instructions: org.data.ai_instructions ?? "",
         emergency_message: org.data.emergency_message ?? "",
         privacy_notice: org.data.privacy_notice ?? "",
@@ -134,6 +138,12 @@ function SettingsPage() {
           email: form.email || null,
           address: form.address || null,
           timezone: form.timezone || "America/Los_Angeles",
+          // Minutes a visitor may wait for a first human reply before staff
+          // are alerted. Kept inside a sensible range so alerts stay useful.
+          sla_first_response_minutes: Math.min(
+            1440,
+            Math.max(1, Number(form.sla_first_response_minutes) || 15),
+          ),
           ai_instructions: form.ai_instructions || null,
           emergency_message: form.emergency_message,
           privacy_notice: form.privacy_notice,
@@ -213,6 +223,12 @@ function SettingsPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="name" label="Organization name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
           <Field id="timezone" label="Timezone" value={form.timezone} onChange={(v) => setForm({ ...form, timezone: v })} />
+          <Field
+            id="sla_first_response_minutes"
+            label="First reply target (minutes)"
+            value={form.sla_first_response_minutes}
+            onChange={(v) => setForm({ ...form, sla_first_response_minutes: v.replace(/[^0-9]/g, "") })}
+          />
           <Field id="phone" label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
           <Field id="email" label="Email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
         </div>

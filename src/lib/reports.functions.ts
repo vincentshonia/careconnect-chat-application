@@ -12,6 +12,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveActor, ForbiddenError, requireOrganization, type Actor } from "@/lib/authz.server";
 import { toCsv } from "@/lib/csv";
+import { DEFAULT_SLA_MINUTES } from "@/lib/sla";
 import {
   NO_DEPARTMENT,
   REPORT_SECTIONS as SHARED_SECTIONS,
@@ -109,11 +110,17 @@ function parseRange(filters: ReportFilters) {
  * happens here, so both the interactive report and the CSV export are
  * guaranteed to run exactly the same authorized query.
  */
-function buildCall(scope: Scope, section: string, filters: ReportFilters, options: ReportOptions) {
+function buildCall(
+  scope: Scope,
+  section: string,
+  filters: ReportFilters,
+  options: ReportOptions,
+  defaultSla: number = DEFAULT_SLA_MINUTES,
+) {
   const { from, to } = parseRange(filters);
   const dept = clampDepartments(scope, filters.departmentId ?? null);
   const staff = clampStaff(scope, filters.staffId ?? null);
-  const sla = filters.sla ?? 15;
+  const sla = filters.sla ?? defaultSla;
   const statuses = filters.statuses?.length ? filters.statuses : null;
   const website = filters.websiteId ?? null;
   const type = filters.type ?? "all";
@@ -221,6 +228,23 @@ async function callRpc(fn: string, args: Record<string, unknown>) {
   return data;
 }
 
+/** The organization's own first-response target, used whenever the viewer has
+ * not overridden it with the report filter. */
+async function orgSlaMinutes(
+  db: { from: (t: string) => any },
+  organizationId: string,
+): Promise<number> {
+  const { data } = await db
+    .from("organizations")
+    .select("sla_first_response_minutes")
+    .eq("id", organizationId)
+    .maybeSingle();
+  return (
+    (data as { sla_first_response_minutes?: number | null } | null)?.sla_first_response_minutes ??
+    DEFAULT_SLA_MINUTES
+  );
+}
+
 /** Run a report. Scope is enforced here; the SQL layer is service-role only. */
 export const runReportFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -231,7 +255,9 @@ export const runReportFn = createServerFn({ method: "POST" })
     if (!canRunSection(scope, data.section)) {
       throw new ForbiddenError("That report is outside your reporting scope");
     }
-    const { fn, args } = buildCall(scope, data.section, data.filters, data.options ?? {});
+    const { admin } = await import("@/lib/public-chat.server");
+    const defaultSla = await orgSlaMinutes(admin() as never, scope.organizationId);
+    const { fn, args } = buildCall(scope, data.section, data.filters, data.options ?? {}, defaultSla);
     const result = await callRpc(fn, args);
     // Serialized as JSON: report payloads are dynamic jsonb, which the RPC
     // boundary's structural serializer cannot type.
@@ -301,20 +327,24 @@ export const exportReportFn = createServerFn({ method: "POST" })
       throw new ForbiddenError("That report is outside your reporting scope");
     }
 
+    const { admin: adminForSla } = await import("@/lib/public-chat.server");
+    const defaultSla = await orgSlaMinutes(adminForSla() as never, scope.organizationId);
     const baseOptions = data.options ?? {};
     const rows: Record<string, unknown>[] = [];
     let truncated = false;
 
     if (!spec.paged) {
-      const { fn, args } = buildCall(scope, spec.section, data.filters, baseOptions);
+      const { fn, args } = buildCall(scope, spec.section, data.filters, baseOptions, defaultSla);
       rows.push(...pluck(await callRpc(fn, args), spec.path));
     } else {
       for (let offset = 0; offset < REPORT_EXPORT_ROW_CAP; offset += EXPORT_PAGE) {
-        const { fn, args } = buildCall(scope, spec.section, data.filters, {
-          ...baseOptions,
-          limit: EXPORT_PAGE,
-          offset,
-        });
+        const { fn, args } = buildCall(
+          scope,
+          spec.section,
+          data.filters,
+          { ...baseOptions, limit: EXPORT_PAGE, offset },
+          defaultSla,
+        );
         const batch = pluck(await callRpc(fn, args), spec.path);
         rows.push(...batch);
         if (batch.length < EXPORT_PAGE) break;
@@ -402,6 +432,6 @@ export const reportFilterOptionsFn = createServerFn({ method: "POST" })
       departments: (departments.data ?? []).map((d) => ({ id: d.id as string, name: d.name as string })),
       websites: (websites.data ?? []).map((w) => ({ id: w.id as string, name: w.name as string })),
       staff: people,
-      slaMinutes: 15,
+      slaMinutes: await orgSlaMinutes(db, scope.organizationId),
     };
   });
