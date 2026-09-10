@@ -211,7 +211,12 @@ function QualityPage() {
       }
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="CSAT" value={csat == null ? "—" : `${csat}%`} hint={`${ratingsTotal} ratings`} />
+        <Stat
+          label="CSAT"
+          value={csat == null ? "—" : `${csat.toFixed(1)} / 5`}
+          hint={`${ratingsTotal} ratings`}
+        />
+
         <Stat
           label="Positive ratings"
           value={positiveRate == null ? "—" : `${positiveRate}%`}

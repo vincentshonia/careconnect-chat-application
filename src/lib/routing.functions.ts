@@ -28,10 +28,18 @@ export const transferConversationFn = createServerFn({ method: "POST" })
     // RLS-scoped reads confirm the caller may touch this conversation/department.
     const { data: conversation, error } = await context.supabase
       .from("conversations")
-      .select("id, organization_id, website_id, department_id, assigned_to")
+      .select("id, organization_id, website_id, department_id, assigned_to, status")
       .eq("id", data.conversationId)
       .maybeSingle();
     if (error || !conversation) throw new Error("Conversation not found");
+
+    // A finished chat has nothing to hand over; transferring it would revive
+    // it in another team's queue with no visitor waiting.
+    const transferable = ["waiting", "assigned", "active", "follow_up"];
+    if (!transferable.includes(String(conversation.status))) {
+      throw new Error("Only open conversations can be transferred");
+    }
+
 
     const { data: department } = await context.supabase
       .from("departments")
@@ -57,10 +65,12 @@ export const transferConversationFn = createServerFn({ method: "POST" })
       .update({
         department_id: department.id,
         assigned_to: null,
+        claimed_at: null,
         status: "waiting",
         escalation_requested: true,
       })
       .eq("id", conversation.id);
+
 
     await db.from("messages").insert({
       conversation_id: conversation.id,
