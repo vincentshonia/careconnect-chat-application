@@ -1603,7 +1603,7 @@ function SatisfactionPrompt({
           type="button"
           aria-label="Dismiss rating"
           className="text-[11px] text-muted-foreground hover:underline"
-          onClick={() => setDismissed(true)}
+          onClick={onDismiss}
         >
           Not now
         </button>
