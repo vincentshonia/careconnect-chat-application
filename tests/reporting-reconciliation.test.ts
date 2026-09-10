@@ -3,11 +3,14 @@ import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { reportScopeFor, canRunSection, NO_DEPARTMENT } from "@/lib/report-scope";
 import {
+  captureProtectedBaseline,
   purgeSyntheticOrganizations,
   purgeSyntheticUsers,
+  readProtectedBaseline,
   requireTestBackend,
   syntheticEmail,
   syntheticName,
+  type ProtectedBaseline,
 } from "./helpers/required-env";
 
 
@@ -33,6 +36,26 @@ const db = createClient(url, serviceKey, {
 }) as SupabaseClient;
 
 const suffix = Math.random().toString(36).slice(2, 8);
+
+/**
+ * The live tenant is read once before anything is created and re-read at the
+ * end: these suites write into the same backend, so the proof that they were
+ * harmless is that its row counts never moved.
+ */
+let baseline: ProtectedBaseline | null = null;
+
+beforeAll(async () => {
+  baseline = await captureProtectedBaseline(db);
+  expect(baseline.organizationId).toBeTruthy();
+}, 120_000);
+
+afterAll(async () => {
+  if (!baseline) return;
+  const after = await readProtectedBaseline(db, baseline);
+  expect(after.conversations).toBe(baseline.conversations);
+  expect(after.contacts).toBe(baseline.contacts);
+  expect(after.memberships).toBe(baseline.memberships);
+}, 120_000);
 
 /** Total seeded conversations in the primary tenant. */
 const VOLUME = 2_000;
@@ -161,65 +184,71 @@ async function tickets(overrides: Rpc = {}) {
 
 describe("reporting at volume", () => {
   beforeAll(async () => {
-    orgA = await makeOrg("ScaleA");
-    orgB = await makeOrg("ScaleB");
-    siteA = await makeWebsite(orgA, "scalea");
-    siteB = await makeWebsite(orgB, "scaleb");
-    deptOne = await makeDepartment(orgA, "Enrollment");
-    deptTwo = await makeDepartment(orgA, "Referrals");
+    try {
+      orgA = await makeOrg("ScaleA");
+      orgB = await makeOrg("ScaleB");
+      siteA = await makeWebsite(orgA, "scalea");
+      siteB = await makeWebsite(orgB, "scaleb");
+      deptOne = await makeDepartment(orgA, "Enrollment");
+      deptTwo = await makeDepartment(orgA, "Referrals");
 
-    // Everything is seeded inside a fixed, closed window so the reporting
-    // range can never drift while the suite runs.
-    const anchor = Date.UTC(2025, 0, 15, 12, 0, 0);
-    from = new Date(anchor - 60 * 86_400_000).toISOString();
-    to = new Date(anchor + 60 * 86_400_000).toISOString();
+      // Everything is seeded inside a fixed, closed window so the reporting
+      // range can never drift while the suite runs.
+      const anchor = Date.UTC(2025, 0, 15, 12, 0, 0);
+      from = new Date(anchor - 60 * 86_400_000).toISOString();
+      to = new Date(anchor + 60 * 86_400_000).toISOString();
 
-    const rows: Record<string, unknown>[] = [];
-    for (let i = 0; i < VOLUME; i += 1) {
-      const status = STATUS_CYCLE[i % STATUS_CYCLE.length]!;
-      const created = new Date(anchor - i * 60_000).toISOString();
-      const escalated = i % 4 === 0;
-      const transfers = i % 10 === 0 ? 2 : i % 5 === 0 ? 1 : 0;
-      rows.push({
-        id: randomUUID(),
-        organization_id: orgA,
-        website_id: siteA,
-        department_id: i % 2 === 0 ? deptOne : deptTwo,
-        reference: `SC-${suffix}-${String(i).padStart(5, "0")}`,
-        status,
-        // Every bulk row shares one timestamp per minute; ties are what expose
-        // an unstable sort, so they are deliberately present.
-        created_at: created,
-        last_message_at: created,
-        escalation_requested: escalated,
-        first_human_requested_at: escalated ? created : null,
-        transfer_count: transfers,
-        reopened_count: i % 20 === 0 ? 1 : 0,
-        resolved_at: status === "resolved" ? created : null,
-        closed_at: status === "closed" ? created : null,
-      });
+      const rows: Record<string, unknown>[] = [];
+      for (let i = 0; i < VOLUME; i += 1) {
+        const status = STATUS_CYCLE[i % STATUS_CYCLE.length]!;
+        const created = new Date(anchor - i * 60_000).toISOString();
+        const escalated = i % 4 === 0;
+        const transfers = i % 10 === 0 ? 2 : i % 5 === 0 ? 1 : 0;
+        rows.push({
+          id: randomUUID(),
+          organization_id: orgA,
+          website_id: siteA,
+          department_id: i % 2 === 0 ? deptOne : deptTwo,
+          reference: `SC-${suffix}-${String(i).padStart(5, "0")}`,
+          status,
+          // Every bulk row shares one timestamp per minute; ties are what expose
+          // an unstable sort, so they are deliberately present.
+          created_at: created,
+          last_message_at: created,
+          escalation_requested: escalated,
+          first_human_requested_at: escalated ? created : null,
+          transfer_count: transfers,
+          reopened_count: i % 20 === 0 ? 1 : 0,
+          resolved_at: status === "resolved" ? created : null,
+          closed_at: status === "closed" ? created : null,
+        });
+      }
+      await insertBatched("conversations", rows);
+
+      const others: Record<string, unknown>[] = [];
+      for (let i = 0; i < OTHER_VOLUME; i += 1) {
+        const created = new Date(anchor - i * 60_000).toISOString();
+        others.push({
+          id: randomUUID(),
+          organization_id: orgB,
+          website_id: siteB,
+          reference: `SB-${suffix}-${String(i).padStart(5, "0")}`,
+          status: "resolved",
+          created_at: created,
+          last_message_at: created,
+          resolved_at: created,
+        });
+      }
+      await insertBatched("conversations", others);
+
+      // A bulk load leaves the planner's statistics stale, which makes the
+      // reporting queries pick pathological plans until autovacuum catches up.
+      await db.rpc("refresh_report_statistics" as never);
+    } catch (error) {
+      // A half-built fixture is exactly what gets left behind otherwise.
+      await purgeSyntheticOrganizations(db, [orgA, orgB]);
+      throw error;
     }
-    await insertBatched("conversations", rows);
-
-    const others: Record<string, unknown>[] = [];
-    for (let i = 0; i < OTHER_VOLUME; i += 1) {
-      const created = new Date(anchor - i * 60_000).toISOString();
-      others.push({
-        id: randomUUID(),
-        organization_id: orgB,
-        website_id: siteB,
-        reference: `SB-${suffix}-${String(i).padStart(5, "0")}`,
-        status: "resolved",
-        created_at: created,
-        last_message_at: created,
-        resolved_at: created,
-      });
-    }
-    await insertBatched("conversations", others);
-
-    // A bulk load leaves the planner's statistics stale, which makes the
-    // reporting queries pick pathological plans until autovacuum catches up.
-    await db.rpc("refresh_report_statistics" as never);
   }, 900_000);
 
   afterAll(async () => {
@@ -386,39 +415,45 @@ describe("AI-only completion", () => {
   }
 
   beforeAll(async () => {
-    aiOrg = await makeOrg("ScaleAI");
-    aiSite = await makeWebsite(aiOrg, "scaleai");
-    aiDeptOne = await makeDepartment(aiOrg, "AI One");
-    aiDeptTwo = await makeDepartment(aiOrg, "AI Two");
-    aiFrom = new Date(Date.UTC(2025, 4, 1)).toISOString();
-    aiTo = new Date(Date.UTC(2025, 6, 1)).toISOString();
+    try {
+      aiOrg = await makeOrg("ScaleAI");
+      aiSite = await makeWebsite(aiOrg, "scaleai");
+      aiDeptOne = await makeDepartment(aiOrg, "AI One");
+      aiDeptTwo = await makeDepartment(aiOrg, "AI Two");
+      aiFrom = new Date(Date.UTC(2025, 4, 1)).toISOString();
+      aiTo = new Date(Date.UTC(2025, 6, 1)).toISOString();
 
-    const done = new Date(Date.UTC(2025, 5, 10, 12, 30, 0)).toISOString();
+      const done = new Date(Date.UTC(2025, 5, 10, 12, 30, 0)).toISOString();
 
-    await conversation("completed", { status: "resolved", resolved_at: done });
-    await conversation("unresolved", { status: "active" });
-    await conversation("abandoned", { status: "waiting" });
-    await conversation("spam", { status: "spam" });
-    await conversation("agentmsg", { status: "resolved", resolved_at: done });
-    await conversation("humanreq", { status: "resolved", resolved_at: done });
-    await conversation("otherdept", { status: "resolved", resolved_at: done }, aiDeptTwo);
+      await conversation("completed", { status: "resolved", resolved_at: done });
+      await conversation("unresolved", { status: "active" });
+      await conversation("abandoned", { status: "waiting" });
+      await conversation("spam", { status: "spam" });
+      await conversation("agentmsg", { status: "resolved", resolved_at: done });
+      await conversation("humanreq", { status: "resolved", resolved_at: done });
+      await conversation("otherdept", { status: "resolved", resolved_at: done }, aiDeptTwo);
 
-    const { error: messageError } = await db.from("messages").insert({
-      organization_id: aiOrg,
-      website_id: aiSite,
-      conversation_id: cases['agentmsg'],
-      sender_type: "agent",
-      body: "Following up personally.",
-    } as never);
-    if (messageError) throw new Error(`agent message: ${messageError.message}`);
+      const { error: messageError } = await db.from("messages").insert({
+        organization_id: aiOrg,
+        website_id: aiSite,
+        conversation_id: cases['agentmsg'],
+        sender_type: "agent",
+        body: "Following up personally.",
+      } as never);
+      if (messageError) throw new Error(`agent message: ${messageError.message}`);
 
-    const { error: eventError } = await db.from("conversation_events").insert({
-      organization_id: aiOrg,
-      conversation_id: cases['humanreq'],
-      event_type: "human_requested",
-      detail: "Visitor asked for a person",
-    } as never);
-    if (eventError) throw new Error(`human request event: ${eventError.message}`);
+      const { error: eventError } = await db.from("conversation_events").insert({
+        organization_id: aiOrg,
+        conversation_id: cases['humanreq'],
+        event_type: "human_requested",
+        detail: "Visitor asked for a person",
+      } as never);
+      if (eventError) throw new Error(`human request event: ${eventError.message}`);
+    } catch (error) {
+      // A half-built fixture is exactly what gets left behind otherwise.
+      await purgeSyntheticOrganizations(db, [aiOrg]);
+      throw error;
+    }
   }, 120_000);
 
   afterAll(async () => {
@@ -553,17 +588,23 @@ describe("report days follow the organization timezone", () => {
   const created = new Date(Date.UTC(2025, 5, 11, 6, 30, 0)).toISOString();
 
   beforeAll(async () => {
-    tzOrg = await makeOrg("ScaleTZ");
-    tzSite = await makeWebsite(tzOrg, "scaletz");
-    const { error } = await db.from("conversations").insert({
-      organization_id: tzOrg,
-      website_id: tzSite,
-      reference: `TZ-${suffix}-1`,
-      created_at: created,
-      last_message_at: created,
-      status: "resolved",
-    } as never);
-    if (error) throw new Error(`tz conversation: ${error.message}`);
+    try {
+      tzOrg = await makeOrg("ScaleTZ");
+      tzSite = await makeWebsite(tzOrg, "scaletz");
+      const { error } = await db.from("conversations").insert({
+        organization_id: tzOrg,
+        website_id: tzSite,
+        reference: `TZ-${suffix}-1`,
+        created_at: created,
+        last_message_at: created,
+        status: "resolved",
+      } as never);
+      if (error) throw new Error(`tz conversation: ${error.message}`);
+    } catch (error) {
+      // A half-built fixture is exactly what gets left behind otherwise.
+      await purgeSyntheticOrganizations(db, [tzOrg]);
+      throw error;
+    }
   }, 120_000);
 
   afterAll(async () => {
@@ -651,72 +692,79 @@ describe("staff credit survives a reassignment", () => {
   }
 
   beforeAll(async () => {
-    org = await makeOrg("ScaleCredit");
-    site = await makeWebsite(org, "scalecredit");
-    dept = await makeDepartment(org, "Credit");
-    responder = await makeStaff("responder");
-    inheritor = await makeStaff("inheritor");
+    try {
+      org = await makeOrg("ScaleCredit");
+      site = await makeWebsite(org, "scalecredit");
+      dept = await makeDepartment(org, "Credit");
+      responder = await makeStaff("responder");
+      inheritor = await makeStaff("inheritor");
 
-    const queued = new Date(Date.UTC(2025, 2, 4, 10, 0, 0));
-    const claimed = new Date(Date.UTC(2025, 2, 4, 10, 2, 0));
-    const replied = new Date(Date.UTC(2025, 2, 4, 10, 5, 0));
-    const done = new Date(Date.UTC(2025, 2, 4, 10, 40, 0));
-    windowFrom = new Date(Date.UTC(2025, 1, 1)).toISOString();
-    windowTo = new Date(Date.UTC(2025, 3, 1)).toISOString();
+      const queued = new Date(Date.UTC(2025, 2, 4, 10, 0, 0));
+      const claimed = new Date(Date.UTC(2025, 2, 4, 10, 2, 0));
+      const replied = new Date(Date.UTC(2025, 2, 4, 10, 5, 0));
+      const done = new Date(Date.UTC(2025, 2, 4, 10, 40, 0));
+      windowFrom = new Date(Date.UTC(2025, 1, 1)).toISOString();
+      windowTo = new Date(Date.UTC(2025, 3, 1)).toISOString();
 
-    // The chat was queued, claimed and answered by the responder, then handed
-    // to a second agent who now owns it and has never written a word.
-    const { data, error } = await db
-      .from("conversations")
-      .insert({
+      // The chat was queued, claimed and answered by the responder, then handed
+      // to a second agent who now owns it and has never written a word.
+      const { data, error } = await db
+        .from("conversations")
+        .insert({
+          organization_id: org,
+          website_id: site,
+          department_id: dept,
+          reference: `CR-${suffix}-1`,
+          status: "resolved",
+          escalation_requested: true,
+          created_at: queued.toISOString(),
+          last_message_at: done.toISOString(),
+          first_human_requested_at: queued.toISOString(),
+          claimed_at: claimed.toISOString(),
+          first_agent_response_at: replied.toISOString(),
+          resolved_at: done.toISOString(),
+          resolved_by: responder.id,
+          assigned_to: inheritor.id,
+        } as never)
+        .select("id")
+        .single();
+      if (error) throw new Error(`credit conversation: ${error.message}`);
+      const conversationId = (data as { id: string }).id;
+
+      const { error: messageError } = await db.from("messages").insert({
         organization_id: org,
         website_id: site,
-        department_id: dept,
-        reference: `CR-${suffix}-1`,
-        status: "resolved",
-        escalation_requested: true,
-        created_at: queued.toISOString(),
-        last_message_at: done.toISOString(),
-        first_human_requested_at: queued.toISOString(),
-        claimed_at: claimed.toISOString(),
-        first_agent_response_at: replied.toISOString(),
-        resolved_at: done.toISOString(),
-        resolved_by: responder.id,
-        assigned_to: inheritor.id,
-      } as never)
-      .select("id")
-      .single();
-    if (error) throw new Error(`credit conversation: ${error.message}`);
-    const conversationId = (data as { id: string }).id;
-
-    const { error: messageError } = await db.from("messages").insert({
-      organization_id: org,
-      website_id: site,
-      conversation_id: conversationId,
-      sender_type: "agent",
-      sender_user_id: responder.id,
-      body: "Happy to help with that.",
-      created_at: replied.toISOString(),
-    } as never);
-    if (messageError) throw new Error(`credit message: ${messageError.message}`);
-
-    const { error: eventError } = await db.from("conversation_events").insert([
-      {
-        organization_id: org,
         conversation_id: conversationId,
-        actor_id: responder.id,
-        event_type: "claimed",
-        created_at: claimed.toISOString(),
-      },
-      {
-        organization_id: org,
-        conversation_id: conversationId,
-        actor_id: inheritor.id,
-        event_type: "reassigned",
-        created_at: done.toISOString(),
-      },
-    ] as never);
-    if (eventError) throw new Error(`credit events: ${eventError.message}`);
+        sender_type: "agent",
+        sender_user_id: responder.id,
+        body: "Happy to help with that.",
+        created_at: replied.toISOString(),
+      } as never);
+      if (messageError) throw new Error(`credit message: ${messageError.message}`);
+
+      const { error: eventError } = await db.from("conversation_events").insert([
+        {
+          organization_id: org,
+          conversation_id: conversationId,
+          actor_id: responder.id,
+          event_type: "claimed",
+          created_at: claimed.toISOString(),
+        },
+        {
+          organization_id: org,
+          conversation_id: conversationId,
+          actor_id: inheritor.id,
+          event_type: "reassigned",
+          created_at: done.toISOString(),
+        },
+      ] as never);
+      if (eventError) throw new Error(`credit events: ${eventError.message}`);
+    } catch (error) {
+      // A half-built fixture is exactly what gets left behind otherwise.
+      await purgeSyntheticUsers(db, [responder, inheritor].filter((u) => u?.id));
+      await purgeSyntheticOrganizations(db, [org]);
+      throw error;
+    }
   }, 180_000);
 
   afterAll(async () => {
