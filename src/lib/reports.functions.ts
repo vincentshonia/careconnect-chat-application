@@ -13,6 +13,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveActor, ForbiddenError, requireOrganization, type Actor } from "@/lib/authz.server";
 import { toCsv } from "@/lib/csv";
 import { DEFAULT_SLA_MINUTES } from "@/lib/sla";
+import { DEFAULT_TIMEZONE, safeTimeZone } from "@/lib/org-time";
 import {
   NO_DEPARTMENT,
   REPORT_SECTIONS as SHARED_SECTIONS,
@@ -116,6 +117,7 @@ function buildCall(
   filters: ReportFilters,
   options: ReportOptions,
   defaultSla: number = DEFAULT_SLA_MINUTES,
+  timeZone: string = DEFAULT_TIMEZONE,
 ) {
   const { from, to } = parseRange(filters);
   const dept = clampDepartments(scope, filters.departmentId ?? null);
@@ -178,9 +180,10 @@ function buildCall(
         },
       };
     case "sla":
-      return { fn: "report_sla", args: { ...common, _sla: sla } };
+      // Day and hour grouping happens in the organization's own timezone.
+      return { fn: "report_sla", args: { ...common, _sla: sla, _tz: timeZone } };
     case "volume":
-      return { fn: "report_volume", args: common };
+      return { fn: "report_volume", args: { ...common, _tz: timeZone } };
     case "ai":
       return {
         fn: "report_ai",
@@ -228,21 +231,25 @@ async function callRpc(fn: string, args: Record<string, unknown>) {
   return data;
 }
 
-/** The organization's own first-response target, used whenever the viewer has
- * not overridden it with the report filter. */
-async function orgSlaMinutes(
-  db: { from: (t: string) => any },
+/**
+ * The organization's own first-response target and timezone. The target is
+ * used whenever the viewer has not overridden it with the report filter; the
+ * timezone decides which calendar day each conversation is counted in.
+ */
+async function orgReportSettings(
+  db: { from: (t: string) => { select: (c: string) => any } },
   organizationId: string,
-): Promise<number> {
+): Promise<{ sla: number; timeZone: string }> {
   const { data } = await db
     .from("organizations")
-    .select("sla_first_response_minutes")
+    .select("sla_first_response_minutes, timezone")
     .eq("id", organizationId)
     .maybeSingle();
-  return (
-    (data as { sla_first_response_minutes?: number | null } | null)?.sla_first_response_minutes ??
-    DEFAULT_SLA_MINUTES
-  );
+  const row = data as { sla_first_response_minutes?: number | null; timezone?: string | null } | null;
+  return {
+    sla: row?.sla_first_response_minutes ?? DEFAULT_SLA_MINUTES,
+    timeZone: safeTimeZone(row?.timezone),
+  };
 }
 
 /** Run a report. Scope is enforced here; the SQL layer is service-role only. */
@@ -256,8 +263,15 @@ export const runReportFn = createServerFn({ method: "POST" })
       throw new ForbiddenError("That report is outside your reporting scope");
     }
     const { admin } = await import("@/lib/public-chat.server");
-    const defaultSla = await orgSlaMinutes(admin() as never, scope.organizationId);
-    const { fn, args } = buildCall(scope, data.section, data.filters, data.options ?? {}, defaultSla);
+    const settings = await orgReportSettings(admin() as never, scope.organizationId);
+    const { fn, args } = buildCall(
+      scope,
+      data.section,
+      data.filters,
+      data.options ?? {},
+      settings.sla,
+      settings.timeZone,
+    );
     const result = await callRpc(fn, args);
     // Serialized as JSON: report payloads are dynamic jsonb, which the RPC
     // boundary's structural serializer cannot type.
@@ -327,14 +341,14 @@ export const exportReportFn = createServerFn({ method: "POST" })
       throw new ForbiddenError("That report is outside your reporting scope");
     }
 
-    const { admin: adminForSla } = await import("@/lib/public-chat.server");
-    const defaultSla = await orgSlaMinutes(adminForSla() as never, scope.organizationId);
+    const { admin: adminForSettings } = await import("@/lib/public-chat.server");
+    const settings = await orgReportSettings(adminForSettings() as never, scope.organizationId);
     const baseOptions = data.options ?? {};
     const rows: Record<string, unknown>[] = [];
     let truncated = false;
 
     if (!spec.paged) {
-      const { fn, args } = buildCall(scope, spec.section, data.filters, baseOptions, defaultSla);
+      const { fn, args } = buildCall(scope, spec.section, data.filters, baseOptions, settings.sla, settings.timeZone);
       rows.push(...pluck(await callRpc(fn, args), spec.path));
     } else {
       for (let offset = 0; offset < REPORT_EXPORT_ROW_CAP; offset += EXPORT_PAGE) {
@@ -343,7 +357,8 @@ export const exportReportFn = createServerFn({ method: "POST" })
           spec.section,
           data.filters,
           { ...baseOptions, limit: EXPORT_PAGE, offset },
-          defaultSla,
+          settings.sla,
+          settings.timeZone,
         );
         const batch = pluck(await callRpc(fn, args), spec.path);
         rows.push(...batch);
@@ -432,6 +447,6 @@ export const reportFilterOptionsFn = createServerFn({ method: "POST" })
       departments: (departments.data ?? []).map((d) => ({ id: d.id as string, name: d.name as string })),
       websites: (websites.data ?? []).map((w) => ({ id: w.id as string, name: w.name as string })),
       staff: people,
-      slaMinutes: await orgSlaMinutes(db, scope.organizationId),
+      slaMinutes: (await orgReportSettings(db as never, scope.organizationId)).sla,
     };
   });
