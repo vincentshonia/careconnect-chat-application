@@ -763,13 +763,34 @@ const DEFAULT_LIMITS: OrgLimits = {
   hard_stop: true,
 };
 
+/**
+ * Merge a stored limits row over the defaults, field by field, COALESCE-style:
+ * a null column means "not configured", never "zero". A plain object spread
+ * would let a single null disable a limit or reject every message.
+ */
+export function mergeOrgLimits(row: Partial<Record<keyof OrgLimits, unknown>> | null): OrgLimits {
+  const merged = { ...DEFAULT_LIMITS };
+  if (!row) return merged;
+  for (const field of Object.keys(DEFAULT_LIMITS) as Array<keyof OrgLimits>) {
+    const value = row[field];
+    if (value === null || value === undefined) continue;
+    if (field === "hard_stop") {
+      if (typeof value === "boolean") merged.hard_stop = value;
+      continue;
+    }
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) (merged[field] as number) = numeric;
+  }
+  return merged;
+}
+
 export async function orgLimits(organizationId: string): Promise<OrgLimits> {
   const { data } = await admin()
     .from("organization_limits")
     .select("*")
     .eq("organization_id", organizationId)
     .maybeSingle();
-  return { ...DEFAULT_LIMITS, ...(data ?? {}) } as OrgLimits;
+  return mergeOrgLimits((data ?? null) as Partial<Record<keyof OrgLimits, unknown>> | null);
 }
 
 function currentPeriod() {
