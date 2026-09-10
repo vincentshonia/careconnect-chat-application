@@ -2520,6 +2520,7 @@ export type Database = {
           _scope: string
           _sla?: number
           _to: string
+          _tz?: string
           _user: string
         }
         Returns: Json
@@ -2751,6 +2752,7 @@ export type Database = {
           _to: string
           _transfer?: string
           _type?: string
+          _tz?: string
           _website?: string
         }
         Returns: Json
@@ -2818,6 +2820,7 @@ export type Database = {
           _to: string
           _transfer?: string
           _type?: string
+          _tz?: string
           _website?: string
         }
         Returns: Json
