@@ -47,9 +47,14 @@ describe("session renewal grace", () => {
     await expect(verifySessionForRenewal("garbage.token")).rejects.toThrow();
   });
 
-  it("refuses a token whose expiry is older than the grace window", async () => {
+  it("refuses a tampered token even during the grace window", async () => {
     const { verifySessionForRenewal } = await import("@/lib/widget-session.server");
     const { token } = await signSession(claims);
-    await expect(verifySessionForRenewal(token, -60 * 60 * 24 * 365)).rejects.toThrow();
+    const [, sig] = token.split(".");
+    const forged = btoa(JSON.stringify({ ...claims, org: crypto.randomUUID(), iat: 1, exp: 1 }))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+    await expect(verifySessionForRenewal(`${forged}.${sig}`)).rejects.toThrow();
   });
 });
