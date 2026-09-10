@@ -7,6 +7,7 @@ import { resolveWidgetTabs } from "@/lib/widget-tabs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { chatComplete, embedText, AiGatewayError, CHAT_MODEL } from "./ai.server";
 import { detectCrisis, applyConfidenceBand, LOW_CONFIDENCE_REPLY } from "./ai-confidence";
+import { isOpenNow } from "./business-hours";
 
 type Admin = SupabaseClient<any, "public", any>;
 
@@ -110,6 +111,7 @@ export async function loadWidgetConfig(websiteId: string, hostOrigin: string | n
     { data: services },
     { data: faqs },
     { data: hours },
+    { data: holidays },
     { data: departments },
     { data: team },
   ] = await Promise.all([
@@ -161,7 +163,8 @@ export async function loadWidgetConfig(websiteId: string, hostOrigin: string | n
     ]);
 
 
-  const open = isOpenNow(hours ?? [], website.timezone);
+  // The organization clock is the single source of truth for open/closed.
+  const open = isOpenNow((hours ?? []) as any, (holidays ?? []) as any, org?.timezone);
   const agentsAvailable = await hasAvailableAgent(website.organization_id);
 
 
