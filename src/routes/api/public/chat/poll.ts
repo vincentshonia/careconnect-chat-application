@@ -12,6 +12,7 @@ export const Route = createFileRoute("/api/public/chat/poll")({
         const mod = await import("@/lib/public-chat.server");
         try {
           const ctx = await mod.sessionContext(session, url.searchParams.get("h"));
+          await mod.enforceRateLimit(`poll:s:${ctx.claims.sid}`, 30, 60);
           const conversation = await mod.conversationForSession(ctx, conversationId);
           const db = mod.admin();
 

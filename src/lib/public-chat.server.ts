@@ -103,7 +103,27 @@ export function assertHostAllowed(website: Record<string, any>, hostOrigin: stri
   if (!permitted) throw new PublicChatError(403, "This chat widget is not authorized on this domain");
 }
 
+/**
+ * Widget settings change rarely but are fetched on every page view, so keep a
+ * short per-worker copy. Serverless workers come and go, so this is a
+ * best-effort cache: a stale entry can only be up to a minute old.
+ */
+const WIDGET_CONFIG_TTL_MS = 60_000;
+const widgetConfigCache = new Map<string, { at: number; value: Awaited<ReturnType<typeof buildWidgetConfig>> }>();
+
 export async function loadWidgetConfig(websiteId: string, hostOrigin: string | null) {
+  // The host check must run on every request, so it stays outside the cache.
+  const cached = widgetConfigCache.get(websiteId);
+  if (cached && Date.now() - cached.at < WIDGET_CONFIG_TTL_MS) {
+    await resolveWebsite(websiteId, hostOrigin);
+    return cached.value;
+  }
+  const value = await buildWidgetConfig(websiteId, hostOrigin);
+  widgetConfigCache.set(websiteId, { at: Date.now(), value });
+  return value;
+}
+
+async function buildWidgetConfig(websiteId: string, hostOrigin: string | null) {
   const website = await resolveWebsite(websiteId, hostOrigin);
   const db = admin();
   const [
@@ -345,22 +365,33 @@ export function clientIp(request: Request): string {
 }
 
 /**
- * Throttle anonymous widget traffic. Fails open if the counter itself errors,
- * so a database hiccup never blocks a legitimate visitor.
+ * Throttle anonymous widget traffic. Fails CLOSED: if the counter itself cannot
+ * be read the endpoint is refused with 503, because an unmetered public endpoint
+ * is a worse outcome than a short outage. The cause is always logged.
  */
 export async function enforceRateLimit(key: string, limit: number, windowSeconds: number) {
+  let allowed: boolean | null = null;
   try {
     const { data, error } = await admin().rpc("bump_rate_limit", {
       _key: key,
       _limit: limit,
       _window_seconds: windowSeconds,
     });
-    if (error) return;
-    if (data === false) {
-      throw new PublicChatError(429, "Too many requests. Please wait a moment and try again.");
+    if (error) {
+      console.error("rate limit counter failed", { key, error: error.message });
+      throw new PublicChatError(503, "Service temporarily unavailable. Please try again shortly.");
     }
+    allowed = data !== false;
   } catch (error) {
     if (error instanceof PublicChatError) throw error;
+    console.error("rate limit counter threw", {
+      key,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new PublicChatError(503, "Service temporarily unavailable. Please try again shortly.");
+  }
+  if (!allowed) {
+    throw new PublicChatError(429, "Too many requests. Please wait a moment and try again.");
   }
 }
 
@@ -752,13 +783,34 @@ const DEFAULT_LIMITS: OrgLimits = {
   hard_stop: true,
 };
 
+/**
+ * Merge a stored limits row over the defaults, field by field, COALESCE-style:
+ * a null column means "not configured", never "zero". A plain object spread
+ * would let a single null disable a limit or reject every message.
+ */
+export function mergeOrgLimits(row: Partial<Record<keyof OrgLimits, unknown>> | null): OrgLimits {
+  const merged = { ...DEFAULT_LIMITS };
+  if (!row) return merged;
+  for (const field of Object.keys(DEFAULT_LIMITS) as Array<keyof OrgLimits>) {
+    const value = row[field];
+    if (value === null || value === undefined) continue;
+    if (field === "hard_stop") {
+      if (typeof value === "boolean") merged.hard_stop = value;
+      continue;
+    }
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) (merged[field] as number) = numeric;
+  }
+  return merged;
+}
+
 export async function orgLimits(organizationId: string): Promise<OrgLimits> {
   const { data } = await admin()
     .from("organization_limits")
     .select("*")
     .eq("organization_id", organizationId)
     .maybeSingle();
-  return { ...DEFAULT_LIMITS, ...(data ?? {}) } as OrgLimits;
+  return mergeOrgLimits((data ?? null) as Partial<Record<keyof OrgLimits, unknown>> | null);
 }
 
 function currentPeriod() {
