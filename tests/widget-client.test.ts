@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   isConversationEnded,
   nextPollDelay,
@@ -61,6 +61,23 @@ describe("shouldShowRating", () => {
 });
 
 describe("safeStorage", () => {
+  // The suite runs in node, so stand in for the browser's window.localStorage.
+  function fakeStorage() {
+    const map = new Map<string, string>();
+    return {
+      getItem: (k: string) => map.get(k) ?? null,
+      setItem: (k: string, v: string) => void map.set(k, v),
+      removeItem: (k: string) => void map.delete(k),
+    };
+  }
+
+  beforeEach(() => {
+    (globalThis as any).window = { localStorage: fakeStorage() };
+  });
+  afterEach(() => {
+    delete (globalThis as any).window;
+  });
+
   it("round-trips values and JSON", () => {
     safeStorage.set("k", "v");
     expect(safeStorage.get("k")).toBe("v");
@@ -71,18 +88,15 @@ describe("safeStorage", () => {
   });
 
   it("never throws when storage is blocked (Safari private mode)", () => {
-    const original = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
-    Object.defineProperty(globalThis, "localStorage", {
-      configurable: true,
-      get() {
+    (globalThis as any).window = {
+      get localStorage(): never {
         throw new Error("blocked");
       },
-    });
+    };
     expect(() => safeStorage.set("k", "v")).not.toThrow();
     expect(safeStorage.get("k")).toBeNull();
     expect(safeStorage.getJson("k")).toBeNull();
     expect(() => safeStorage.remove("k")).not.toThrow();
-    if (original) Object.defineProperty(globalThis, "localStorage", original);
   });
 
   it("returns null for corrupt JSON instead of throwing", () => {
