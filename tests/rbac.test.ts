@@ -95,14 +95,18 @@ async function createUser(key: string, org: string, role: OrgRole, departments: 
     email,
     password,
     email_confirm: true,
-    user_metadata: { full_name: `RBAC ${key}` },
+    user_metadata: { full_name: syntheticName(`rbac_${key}`, suffix) },
   });
   if (error || !data.user) throw new Error(`user ${key}: ${error?.message}`);
   const id = data.user.id;
 
-  await admin
-    .from("profiles")
-    .upsert({ id, organization_id: org, full_name: `RBAC ${key}`, email, presence: "available" });
+  await admin.from("profiles").upsert({
+    id,
+    organization_id: org,
+    full_name: syntheticName(`rbac_${key}`, suffix),
+    email,
+    presence: "available",
+  });
   const { error: memberError } = await admin
     .from("organization_memberships")
     .insert({ organization_id: org, user_id: id, role, status: "active" });
@@ -184,12 +188,12 @@ async function scopeForSignedInUser(key: string) {
 describe("authenticated RBAC boundaries", () => {
   beforeAll(async () => {
     ctx.users = {};
-    ctx.orgA = await createOrg(`RbacA${suffix}`);
-    ctx.orgB = await createOrg(`RbacB${suffix}`);
-    ctx.deptA1 = await createDepartment(ctx.orgA, `Intake ${suffix}`);
-    ctx.deptA2 = await createDepartment(ctx.orgA, `Billing ${suffix}`);
-    ctx.websiteA = await createWebsite(ctx.orgA, `SiteA${suffix}`);
-    ctx.websiteB = await createWebsite(ctx.orgB, `SiteB${suffix}`);
+    ctx.orgA = await createOrg("rbacA");
+    ctx.orgB = await createOrg("rbacB");
+    ctx.deptA1 = await createDepartment(ctx.orgA, "intake");
+    ctx.deptA2 = await createDepartment(ctx.orgA, "billing");
+    ctx.websiteA = await createWebsite(ctx.orgA, "siteA");
+    ctx.websiteB = await createWebsite(ctx.orgB, "siteB");
 
     // Full role matrix inside tenant A.
     const userA = await createUser("userA", ctx.orgA, "agent", [ctx.deptA1]);
@@ -223,24 +227,11 @@ describe("authenticated RBAC boundaries", () => {
 
   afterAll(async () => {
     if (!configured) return;
-    for (const org of [ctx.orgA, ctx.orgB].filter(Boolean)) {
-      await admin.from("conversation_events").delete().eq("organization_id", org);
-      await admin.from("messages").delete().eq("organization_id", org);
-      await admin.from("conversations").delete().eq("organization_id", org);
-      await admin.from("department_members").delete().eq("organization_id", org);
-      await admin.from("departments").delete().eq("organization_id", org);
-      await admin.from("websites").delete().eq("organization_id", org);
-      await admin.from("audit_logs").delete().eq("organization_id", org);
-      await admin.from("notifications").delete().eq("organization_id", org);
-      await admin.from("organization_memberships").delete().eq("organization_id", org);
-    }
-    for (const user of Object.values(ctx.users ?? {})) {
-      await admin.from("profiles").delete().eq("id", user.id);
-      await admin.auth.admin.deleteUser(user.id);
-    }
-    for (const org of [ctx.orgA, ctx.orgB].filter(Boolean)) {
-      await admin.from("organizations").delete().eq("id", org);
-    }
+    await purgeSyntheticUsers(
+      admin,
+      Object.values(ctx.users ?? {}).map((user) => ({ id: user.id, email: user.email })),
+    );
+    await purgeSyntheticOrganizations(admin, [ctx.orgA, ctx.orgB]);
   }, 120_000);
 
   describe("cross-tenant denial", () => {
