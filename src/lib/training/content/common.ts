@@ -65,7 +65,7 @@ export const accessChapter: Chapter = {
           kind: "callout",
           tone: "warning",
           title: "Invitation links are shown once and expire",
-          text: "CareConnect never emails a password. Your administrator cannot see the invitation link again after it is created, and it stops working after 7 days or once it has been used. If yours has expired, ask for a new invitation.
+          text: "CareConnect never emails a password. Your administrator cannot see the invitation link again after it is created, and it stops working after 7 days or once it has been used. If yours has expired, ask for a new invitation.",
         },
       ],
     },
