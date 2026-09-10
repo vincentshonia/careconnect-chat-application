@@ -3,6 +3,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  applyQueueFilter,
+  CLOSED_STATUSES,
+  OPEN_STATUSES,
+  QUEUE_STATUSES,
+  waitLabel,
+} from "@/lib/conversation-status";
 import { transferConversationFn } from "@/lib/routing.functions";
 import {
   attachmentUrlFn,
