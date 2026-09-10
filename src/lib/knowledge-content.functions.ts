@@ -34,6 +34,59 @@ const serviceUpdate = z.object({
   status: z.enum(["active", "inactive"]).optional(),
 });
 
+/**
+ * Review queue: recent AI answers that scored low or were thumbed down, grouped
+ * by the question so repeated asks show up once with a count.
+ */
+export const aiReviewQueueFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({ page: z.number().int().min(0).default(0), pageSize: z.number().int().min(1).max(50).default(10) })
+      .parse(input ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    requirePermission(actor, "knowledge.edit");
+    const organizationId = requireOrganization(actor);
+
+    const { data: rows, error } = await context.supabase.rpc("ai_review_queue", {
+      _org: organizationId,
+      _limit: data.pageSize,
+      _offset: data.page * data.pageSize,
+    });
+    if (error) throw new Error(error.message);
+
+    const list = rows ?? [];
+    return {
+      rows: list.map((r) => ({
+        id: r.ai_response_id,
+        question: r.question,
+        answer: r.answer,
+        confidence: r.confidence,
+        feedback: r.visitor_feedback,
+        occurrences: Number(r.occurrences),
+        lastAskedAt: r.last_asked_at,
+      })),
+      total: list.length > 0 ? Number(list[0]!.total_count) : 0,
+    };
+  });
+
+export const dismissAiResponseFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    requirePermission(actor, "knowledge.edit");
+
+    const { error } = await context.supabase
+      .from("ai_responses")
+      .update({ reviewed_at: new Date().toISOString(), reviewed_by: context.userId })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { id: data.id };
+  });
+
 export const createFaqFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => faqCreate.parse(input))
