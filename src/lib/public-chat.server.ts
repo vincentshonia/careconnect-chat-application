@@ -7,6 +7,7 @@ import { resolveWidgetTabs } from "@/lib/widget-tabs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { chatComplete, embedText, AiGatewayError, CHAT_MODEL } from "./ai.server";
 import { detectCrisis, applyConfidenceBand, LOW_CONFIDENCE_REPLY } from "./ai-confidence";
+import { isOpenNow } from "./business-hours";
 
 type Admin = SupabaseClient<any, "public", any>;
 
@@ -110,6 +111,7 @@ export async function loadWidgetConfig(websiteId: string, hostOrigin: string | n
     { data: services },
     { data: faqs },
     { data: hours },
+    { data: holidays },
     { data: departments },
     { data: team },
   ] = await Promise.all([
@@ -126,7 +128,20 @@ export async function loadWidgetConfig(websiteId: string, hostOrigin: string | n
         .eq("organization_id", website.organization_id)
         .eq("status", "active")
         .order("sort_order"),
-      db.from("business_hours").select("*").eq("website_id", website.id),
+      // Hours are configured at organization level in the admin UI, so read
+      // the organization rows and keep any that are not scoped to another
+      // website or to a specific department.
+      db
+        .from("business_hours")
+        .select("*")
+        .eq("organization_id", website.organization_id)
+        .is("department_id", null)
+        .or(`website_id.is.null,website_id.eq.${website.id}`),
+      db
+        .from("holidays")
+        .select("holiday_date,website_id")
+        .eq("organization_id", website.organization_id)
+        .or(`website_id.is.null,website_id.eq.${website.id}`),
       db
         .from("departments")
         .select("id,name,description,website_id")
@@ -148,7 +163,8 @@ export async function loadWidgetConfig(websiteId: string, hostOrigin: string | n
     ]);
 
 
-  const open = isOpenNow(hours ?? [], website.timezone);
+  // The organization clock is the single source of truth for open/closed.
+  const open = isOpenNow((hours ?? []) as any, (holidays ?? []) as any, org?.timezone);
   const agentsAvailable = await hasAvailableAgent(website.organization_id);
 
 
@@ -226,26 +242,6 @@ export const DEFAULT_MENU = [
   { key: "enrollment", label: "Enrollment Assistance", icon: "clipboard" },
 ];
 
-function isOpenNow(hours: Array<Record<string, any>>, timezone: string) {
-  if (!hours.length) return true;
-  const now = new Date();
-  const fmt = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone || "America/Los_Angeles",
-    hour12: false,
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const parts = Object.fromEntries(fmt.formatToParts(now).map((p) => [p.type, p.value]));
-  const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-  const dow = dayMap[parts.weekday as string] ?? now.getDay();
-  const minutes = Number(parts.hour) * 60 + Number(parts.minute);
-  const today = hours.find((h) => h.day_of_week === dow);
-  if (!today || today.is_closed) return false;
-  const [oh, om] = String(today.open_time).split(":").map(Number);
-  const [ch, cm] = String(today.close_time).split(":").map(Number);
-  return minutes >= oh * 60 + om && minutes < ch * 60 + cm;
-}
 
 async function hasAvailableAgent(organizationId: string) {
   const { count } = await admin()

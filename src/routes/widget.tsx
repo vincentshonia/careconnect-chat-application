@@ -570,14 +570,16 @@ function WidgetPage() {
           </div>
 
           {!agentName && (
+            // Outside business hours nobody can pick the chat up, so the offer
+            // becomes a message instead of a promise of a live person.
             <button
               onClick={() => {
-                setFormKind("live_agent");
+                setFormKind(config.businessOpen ? "live_agent" : "message");
                 setView("form");
               }}
               className="relative shrink-0 whitespace-nowrap rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white ring-1 ring-white/25 transition hover:bg-white/25"
             >
-              Talk to an agent
+              {config.businessOpen ? "Talk to an agent" : "Leave a message"}
             </button>
           )}
 
@@ -840,6 +842,13 @@ function WidgetPage() {
 
         {view === "chat" && (
           <div className="space-y-3">
+            {!config.businessOpen && config.website.offlineMessage && (
+              // The assistant still answers when the office is closed; this
+              // only sets expectations about reaching a person.
+              <p className="rounded-xl border border-border bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
+                {config.website.offlineMessage}
+              </p>
+            )}
             {messages.map((m) => (
               <MessageBubble
                 key={m.id}
@@ -1091,6 +1100,11 @@ function HomeView({
 
       {/* --------------------------- content --------------------------- */}
       <div className="-mt-6 flex-1 space-y-3 rounded-t-3xl bg-background px-4 pb-5 pt-4">
+        {!config.businessOpen && config.website.offlineMessage && (
+          <p className="rounded-2xl border border-border/60 bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
+            {config.website.offlineMessage}
+          </p>
+        )}
         <button
           onClick={onStartChat}
           className="group flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card p-4 text-left shadow-panel transition duration-200 hover:-translate-y-0.5"
