@@ -2,7 +2,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { reportScopeFor, canRunSection, NO_DEPARTMENT } from "@/lib/report-scope";
-import { requireTestEnv } from "./helpers/required-env";
+import {
+  purgeSyntheticOrganizations,
+  requireTestBackend,
+  syntheticName,
+} from "./helpers/required-env";
 
 /**
  * Phase 3 scale & reconciliation tests.
