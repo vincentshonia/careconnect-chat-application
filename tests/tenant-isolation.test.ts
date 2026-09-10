@@ -1,6 +1,11 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
-import { requireTestBackend } from "./helpers/required-env";
+import {
+  captureProtectedBaseline,
+  readProtectedBaseline,
+  requireTestBackend,
+  type ProtectedBaseline,
+} from "./helpers/required-env";
 
 /**
  * Tenant isolation tests.
@@ -10,11 +15,18 @@ import { requireTestBackend } from "./helpers/required-env";
  * either an error or zero rows. A regression here means one customer's data
  * is reachable by anyone on the internet.
  */
-const { url, anonKey: key } = requireTestBackend({ publishable: true });
+const { url, anonKey: key, serviceKey } = requireTestBackend({ publishable: true });
 
 const anon = createClient(url, key, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
+
+/** Read-only client, used solely to prove the live tenant was left alone. */
+const admin = createClient(url, serviceKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+
+let baseline: ProtectedBaseline | null = null;
 
 /** Tables that hold tenant-scoped or personal data. Anonymous reads must be empty. */
 const PRIVATE_TABLES = [
@@ -37,9 +49,21 @@ const PRIVATE_TABLES = [
 ];
 
 describe("anonymous access is denied to tenant data", () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     if (!anon) throw new Error("Supabase env not configured for isolation tests");
-  });
+    // This suite creates nothing, so its guarantee is stricter: the live
+    // tenant's counts must be identical before and after.
+    baseline = await captureProtectedBaseline(admin);
+    expect(baseline.organizationId).toBeTruthy();
+  }, 120_000);
+
+  afterAll(async () => {
+    if (!baseline) return;
+    const after = await readProtectedBaseline(admin, baseline);
+    expect(after.conversations).toBe(baseline.conversations);
+    expect(after.contacts).toBe(baseline.contacts);
+    expect(after.memberships).toBe(baseline.memberships);
+  }, 120_000);
 
   it.each(PRIVATE_TABLES)("anon cannot read %s", async (table) => {
     const { data, error } = await anon!.from(table).select("*").limit(5);

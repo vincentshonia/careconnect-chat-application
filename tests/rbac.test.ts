@@ -3,11 +3,14 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { permissionsFor, roleTransitionError, type OrgRole } from "@/lib/permissions";
 import { dashboardScopeFor, reportScopeFor } from "@/lib/report-scope";
 import {
+  captureProtectedBaseline,
   purgeSyntheticOrganizations,
   purgeSyntheticUsers,
+  readProtectedBaseline,
   requireTestBackend,
   syntheticEmail,
   syntheticName,
+  type ProtectedBaseline,
 } from "./helpers/required-env";
 
 /**
@@ -51,6 +54,19 @@ type Ctx = {
 
 const ctx = {} as Ctx;
 const clients: Record<string, SupabaseClient> = {};
+let baseline: ProtectedBaseline | null = null;
+
+/** Deletes every fixture; safe to call twice and safe to call mid-setup. */
+async function teardown() {
+  await purgeSyntheticUsers(
+    admin,
+    Object.values(ctx.users ?? {}).map((user) => ({ id: user.id, email: user.email })),
+  );
+  ctx.users = {};
+  await purgeSyntheticOrganizations(admin, [ctx.orgA, ctx.orgB]);
+  ctx.orgA = "";
+  ctx.orgB = "";
+}
 
 async function createOrg(label: string) {
   const name = syntheticName(label, suffix);
@@ -187,51 +203,62 @@ async function scopeForSignedInUser(key: string) {
 
 describe("authenticated RBAC boundaries", () => {
   beforeAll(async () => {
-    ctx.users = {};
-    ctx.orgA = await createOrg("rbacA");
-    ctx.orgB = await createOrg("rbacB");
-    ctx.deptA1 = await createDepartment(ctx.orgA, "intake");
-    ctx.deptA2 = await createDepartment(ctx.orgA, "billing");
-    ctx.websiteA = await createWebsite(ctx.orgA, "siteA");
-    ctx.websiteB = await createWebsite(ctx.orgB, "siteB");
+    baseline = await captureProtectedBaseline(admin);
+    expect(baseline.organizationId).toBeTruthy();
+    try {
+      ctx.users = {};
+      ctx.orgA = await createOrg("rbacA");
+      ctx.orgB = await createOrg("rbacB");
+      ctx.deptA1 = await createDepartment(ctx.orgA, "intake");
+      ctx.deptA2 = await createDepartment(ctx.orgA, "billing");
+      ctx.websiteA = await createWebsite(ctx.orgA, "siteA");
+      ctx.websiteB = await createWebsite(ctx.orgB, "siteB");
 
-    // Full role matrix inside tenant A.
-    const userA = await createUser("userA", ctx.orgA, "agent", [ctx.deptA1]);
-    await createUser("userB", ctx.orgA, "agent", [ctx.deptA1]);
-    await createUser("userC", ctx.orgA, "agent", [ctx.deptA2]);
-    await createUser("lead", ctx.orgA, "team_lead", [ctx.deptA1]);
-    await createUser("manager", ctx.orgA, "manager", [ctx.deptA1]);
-    await createUser("managerNone", ctx.orgA, "manager", []);
-    await createUser("adminA", ctx.orgA, "administrator", []);
-    await createUser("superA", ctx.orgA, "super_admin", []);
-    await createUser("suspended", ctx.orgA, "agent", [ctx.deptA1]);
-    // Tenant B employee.
-    await createUser("agentB", ctx.orgB, "agent", []);
+      // Full role matrix inside tenant A.
+      const userA = await createUser("userA", ctx.orgA, "agent", [ctx.deptA1]);
+      await createUser("userB", ctx.orgA, "agent", [ctx.deptA1]);
+      await createUser("userC", ctx.orgA, "agent", [ctx.deptA2]);
+      await createUser("lead", ctx.orgA, "team_lead", [ctx.deptA1]);
+      await createUser("manager", ctx.orgA, "manager", [ctx.deptA1]);
+      await createUser("managerNone", ctx.orgA, "manager", []);
+      await createUser("adminA", ctx.orgA, "administrator", []);
+      await createUser("superA", ctx.orgA, "super_admin", []);
+      await createUser("suspended", ctx.orgA, "agent", [ctx.deptA1]);
+      // Tenant B employee.
+      await createUser("agentB", ctx.orgB, "agent", []);
 
-    ctx.convA1 = await createConversation(
-      ctx.orgA,
-      ctx.websiteA,
-      ctx.deptA1,
-      `A1-${suffix}`,
-      userA,
-    );
-    ctx.convA1Open = await createConversation(
-      ctx.orgA,
-      ctx.websiteA,
-      ctx.deptA1,
-      `A1open-${suffix}`,
-    );
-    ctx.convA2 = await createConversation(ctx.orgA, ctx.websiteA, ctx.deptA2, `A2-${suffix}`);
-    ctx.convB = await createConversation(ctx.orgB, ctx.websiteB, null, `B1-${suffix}`);
+      ctx.convA1 = await createConversation(
+        ctx.orgA,
+        ctx.websiteA,
+        ctx.deptA1,
+        `A1-${suffix}`,
+        userA,
+      );
+      ctx.convA1Open = await createConversation(
+        ctx.orgA,
+        ctx.websiteA,
+        ctx.deptA1,
+        `A1open-${suffix}`,
+      );
+      ctx.convA2 = await createConversation(ctx.orgA, ctx.websiteA, ctx.deptA2, `A2-${suffix}`);
+      ctx.convB = await createConversation(ctx.orgB, ctx.websiteB, null, `B1-${suffix}`);
+    } catch (error) {
+      // Setup can fail halfway through; without this the partly built tenant
+      // is what survives as orphaned data.
+      await teardown();
+      throw error;
+    }
   }, 120_000);
 
   afterAll(async () => {
     if (!configured) return;
-    await purgeSyntheticUsers(
-      admin,
-      Object.values(ctx.users ?? {}).map((user) => ({ id: user.id, email: user.email })),
-    );
-    await purgeSyntheticOrganizations(admin, [ctx.orgA, ctx.orgB]);
+    await teardown();
+    if (baseline) {
+      const after = await readProtectedBaseline(admin, baseline);
+      expect(after.conversations).toBe(baseline.conversations);
+      expect(after.contacts).toBe(baseline.contacts);
+      expect(after.memberships).toBe(baseline.memberships);
+    }
   }, 120_000);
 
   describe("cross-tenant denial", () => {

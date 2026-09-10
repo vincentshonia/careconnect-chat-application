@@ -1,19 +1,28 @@
 /**
- * Release-critical suites must never silently skip — and must never touch the
- * production project.
+ * Release-critical suites must never silently skip — and must never damage real
+ * tenant data.
  *
  * `requireTestEnv` replaces the former `describe.runIf(configured)` guards: when
  * a required credential is missing the suite file fails loudly at import time
  * instead of reporting a false PASS with zero executed assertions.
  *
- * `requireTestBackend` goes further: the integration suites resolve their
- * connection ONLY from `TEST_SUPABASE_*`, and refuse to run when those point at
- * the production project. There is no fallback to `SUPABASE_URL`.
+ * This deployment runs on Lovable Cloud, where there is only one backend. The
+ * integration suites therefore run against the primary project, but ONLY with
+ * an explicit opt-in (`ALLOW_INTEGRATION_TESTS_ON_PRIMARY=true`) and behind the
+ * synthetic-prefix guards below: every fixture row is created through
+ * `syntheticName()`/`syntheticEmail()`, and every delete refuses any row whose
+ * name or e-mail is not prefixed.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** Every artefact an integration fixture creates carries this prefix. */
 export const TEST_PREFIX = "__test_";
+/** The browser E2E fixtures use their own prefix; teardown accepts both. */
+export const E2E_PREFIX = "__e2e_";
+const SYNTHETIC_PREFIXES = [TEST_PREFIX, E2E_PREFIX] as const;
+
+/** Organization that must never be touched by any test. */
+export const PROTECTED_ORGANIZATION = "Pacific Health Group";
 
 export function requireTestEnv(vars: Record<string, string | undefined>): true {
   const missing = Object.entries(vars)
@@ -40,39 +49,95 @@ function normalize(value: string | undefined): string {
 }
 
 /**
- * Resolves the dedicated test project. Fails fast — never degrades to
- * production — when the variables are absent or point at the live project.
+ * Resolves the primary backend for an integration suite. Requires an explicit,
+ * deliberate opt-in: without `ALLOW_INTEGRATION_TESTS_ON_PRIMARY=true` the
+ * suite fails fast at import time rather than writing to the live project.
  */
 export function requireTestBackend(options: { publishable?: boolean } = {}): TestBackend {
-  const url = normalize(process.env["TEST_SUPABASE_URL"]);
-  const serviceKey = (process.env["TEST_SUPABASE_SERVICE_ROLE_KEY"] ?? "").trim();
-  const anonKey = (process.env["TEST_SUPABASE_PUBLISHABLE_KEY"] ?? "").trim();
-
-  const required: Record<string, string> = {
-    TEST_SUPABASE_URL: url,
-    TEST_SUPABASE_SERVICE_ROLE_KEY: serviceKey,
-  };
-  if (options.publishable) required["TEST_SUPABASE_PUBLISHABLE_KEY"] = anonKey;
-  requireTestEnv(required);
-
-  const productionUrl = normalize(process.env["SUPABASE_URL"]);
-  if (productionUrl && url.toLowerCase() === productionUrl.toLowerCase()) {
+  const allow = (process.env["ALLOW_INTEGRATION_TESTS_ON_PRIMARY"] ?? "").trim().toLowerCase();
+  if (allow !== "true") {
     throw new Error(
-      "Integration suites refuse to run: TEST_SUPABASE_URL is the same project as SUPABASE_URL. " +
-        "These suites create and delete tenants and must never be pointed at production.",
+      "Integration suites refuse to run: ALLOW_INTEGRATION_TESTS_ON_PRIMARY is not set to \"true\". " +
+        "This deployment has a single backend, so these suites create and delete synthetic " +
+        `${TEST_PREFIX} tenants inside the live project. Set ALLOW_INTEGRATION_TESTS_ON_PRIMARY=true to acknowledge that.`,
     );
   }
+
+  const url = normalize(process.env["SUPABASE_URL"]);
+  const serviceKey = (process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? "").trim();
+  const anonKey = (process.env["SUPABASE_PUBLISHABLE_KEY"] ?? "").trim();
+
+  const required: Record<string, string> = {
+    SUPABASE_URL: url,
+    SUPABASE_SERVICE_ROLE_KEY: serviceKey,
+  };
+  if (options.publishable) required["SUPABASE_PUBLISHABLE_KEY"] = anonKey;
+  requireTestEnv(required);
 
   return { url, serviceKey, anonKey };
 }
 
 /** Refuses to operate on anything that is not demonstrably synthetic. */
 export function assertSynthetic(name: string | null | undefined, what: string): void {
-  if (!name || !name.startsWith(TEST_PREFIX)) {
+  if (!name || !SYNTHETIC_PREFIXES.some((prefix) => name.startsWith(prefix))) {
     throw new Error(
-      `Test safety guard tripped: refusing to touch ${what} "${name}" — it is not prefixed with ${TEST_PREFIX}.`,
+      `Test safety guard tripped: refusing to touch ${what} "${name}" — it is not prefixed with ${SYNTHETIC_PREFIXES.join(" or ")}.`,
     );
   }
+}
+
+type CountClient = SupabaseClient<any, "public", any>;
+
+export type ProtectedBaseline = {
+  organizationId: string;
+  conversations: number;
+  contacts: number;
+  memberships: number;
+};
+
+async function countFor(db: CountClient, table: string, organizationId: string): Promise<number> {
+  const { count, error } = await db
+    .from(table)
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", organizationId);
+  if (error) throw new Error(`baseline count ${table}: ${error.message}`);
+  return count ?? 0;
+}
+
+/**
+ * Captures the live tenant's row counts before a suite runs. The suite asserts
+ * the id was found, so a rename or a missing tenant is a loud failure rather
+ * than a silently skipped safety check.
+ */
+export async function captureProtectedBaseline(db: CountClient): Promise<ProtectedBaseline> {
+  const { data, error } = await db
+    .from("organizations")
+    .select("id")
+    .eq("name", PROTECTED_ORGANIZATION)
+    .maybeSingle();
+  if (error) throw new Error(`protected baseline: ${error.message}`);
+  const organizationId = (data as { id: string } | null)?.id;
+  if (!organizationId) {
+    throw new Error(`protected baseline: organization "${PROTECTED_ORGANIZATION}" was not found.`);
+  }
+  return {
+    organizationId,
+    conversations: await countFor(db, "conversations", organizationId),
+    contacts: await countFor(db, "contacts", organizationId),
+    memberships: await countFor(db, "organization_memberships", organizationId),
+  };
+}
+
+/** Proves the suite left the live tenant completely untouched. */
+export async function readProtectedBaseline(
+  db: CountClient,
+  baseline: ProtectedBaseline,
+): Promise<Omit<ProtectedBaseline, "organizationId">> {
+  return {
+    conversations: await countFor(db, "conversations", baseline.organizationId),
+    contacts: await countFor(db, "contacts", baseline.organizationId),
+    memberships: await countFor(db, "organization_memberships", baseline.organizationId),
+  };
 }
 
 /** Prefixed, collision-free name for any synthetic record. */
