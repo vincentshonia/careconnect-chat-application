@@ -345,22 +345,33 @@ export function clientIp(request: Request): string {
 }
 
 /**
- * Throttle anonymous widget traffic. Fails open if the counter itself errors,
- * so a database hiccup never blocks a legitimate visitor.
+ * Throttle anonymous widget traffic. Fails CLOSED: if the counter itself cannot
+ * be read the endpoint is refused with 503, because an unmetered public endpoint
+ * is a worse outcome than a short outage. The cause is always logged.
  */
 export async function enforceRateLimit(key: string, limit: number, windowSeconds: number) {
+  let allowed: boolean | null = null;
   try {
     const { data, error } = await admin().rpc("bump_rate_limit", {
       _key: key,
       _limit: limit,
       _window_seconds: windowSeconds,
     });
-    if (error) return;
-    if (data === false) {
-      throw new PublicChatError(429, "Too many requests. Please wait a moment and try again.");
+    if (error) {
+      console.error("rate limit counter failed", { key, error: error.message });
+      throw new PublicChatError(503, "Service temporarily unavailable. Please try again shortly.");
     }
+    allowed = data !== false;
   } catch (error) {
     if (error instanceof PublicChatError) throw error;
+    console.error("rate limit counter threw", {
+      key,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new PublicChatError(503, "Service temporarily unavailable. Please try again shortly.");
+  }
+  if (!allowed) {
+    throw new PublicChatError(429, "Too many requests. Please wait a moment and try again.");
   }
 }
 
