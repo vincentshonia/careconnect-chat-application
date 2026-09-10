@@ -539,8 +539,10 @@ function InboxPage() {
   });
 
   const transfer = useMutation({
-    mutationFn: async (departmentId: string) =>
-      transferFn({ data: { conversationId: active!.id, departmentId } }),
+    mutationFn: async ({ departmentId, note }: { departmentId: string; note?: string }) =>
+      transferFn({
+        data: { conversationId: active!.id, departmentId, ...(note ? { note } : {}) },
+      }),
     onSuccess: (result) => {
       toast.success(
         result?.assignedTo
@@ -564,6 +566,16 @@ function InboxPage() {
   // Mirror the server contract exactly: an unassigned conversation must be
   // claimed before anyone — supervisors included — can reply. Offering the
   // reply box earlier produced a message the server then refused to send.
+  const blockReason = active
+    ? claimBlockReason({
+        presence,
+        activeChats,
+        maxChats,
+        departmentId: active.department_id,
+        myDepartmentIds: departmentIds,
+        isSupervisor,
+      })
+    : null;
   const canReply =
     Boolean(active) &&
     !isClosed &&
@@ -579,6 +591,9 @@ function InboxPage() {
     ...(can("conversation.view_all") ? [{ key: "all" as Tab, label: "All conversations" }] : []),
   ];
 
+  const departmentName = (id: string | null) =>
+    id ? ((departmentsQuery.data ?? []).find((d) => d.id === id)?.name ?? null) : null;
+
   function ownershipLabel(c: Conversation) {
     if (!c.assigned_to) return "";
     if (c.assigned_to === userId) return "Assigned to you";
@@ -593,6 +608,27 @@ function InboxPage() {
       description="Website chat conversations, AI answers, and live agent replies."
       actions={
         <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs">
+            <span className="text-muted-foreground">Status</span>
+            <select
+              aria-label="My availability"
+              value={presence ?? "available"}
+              disabled={setPresence.isPending || !userId}
+              onChange={(e) => setPresence.mutate(e.target.value)}
+              className="h-6 rounded border border-input bg-background px-1 text-xs"
+            >
+              <option value="available">Available</option>
+              <option value="away">Away</option>
+              <option value="busy">Busy</option>
+            </select>
+            <span
+              className={`ml-1 font-medium ${
+                maxChats && activeChats >= maxChats ? "text-destructive" : "text-muted-foreground"
+              }`}
+            >
+              {activeChats}/{maxChats ?? "—"} chats
+            </span>
+          </span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -643,11 +679,12 @@ function InboxPage() {
                     <p className="truncate text-xs text-muted-foreground">
                       {c.reference} · {formatInZone(c.last_message_at)}
                     </p>
-                    {tab === "waiting" ? (
-                      <p className="mt-0.5 text-xs font-medium text-destructive">
-                        Waiting {waitLabel(c.requested_agent_at)}
-                      </p>
-                    ) : null}
+                    <QueueMeta
+                      conversation={c}
+                      now={nowTick}
+                      slaMinutes={slaMinutes}
+                      departmentName={departmentName(c.department_id)}
+                    />
                   </button>
                 </li>
               ))}
@@ -696,22 +733,13 @@ function InboxPage() {
 
                 <div className="ml-auto flex flex-wrap items-center gap-2">
                   {can("conversation.transfer") ? (
-                    <select
-                      aria-label="Transfer to department"
-                      value={active.department_id ?? ""}
-                      disabled={transfer.isPending}
-                      onChange={(e) => {
-                        if (e.target.value) transfer.mutate(e.target.value);
-                      }}
-                      className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                    >
-                      <option value="">Transfer to…</option>
-                      {(departmentsQuery.data ?? []).map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name}
-                        </option>
-                      ))}
-                    </select>
+                    <TransferDialog
+                      key={active.id}
+                      departments={departmentsQuery.data ?? []}
+                      currentDepartmentId={active.department_id}
+                      busy={transfer.isPending}
+                      onConfirm={(departmentId, note) => transfer.mutate({ departmentId, note })}
+                    />
                   ) : null}
 
                   {isSupervisor && !isClosed ? (
@@ -724,9 +752,21 @@ function InboxPage() {
                   ) : null}
 
                   {canClaim ? (
-                    <Button size="sm" onClick={() => claim.mutate()} disabled={claim.isPending}>
-                      {claim.isPending ? "Claiming…" : "Claim conversation"}
-                    </Button>
+                    <span title={blockReason ?? "Take ownership of this conversation"}>
+                      <Button
+                        size="sm"
+                        onClick={() => claim.mutate()}
+                        disabled={claim.isPending || Boolean(blockReason)}
+                        aria-describedby={blockReason ? "claim-reason" : undefined}
+                      >
+                        {claim.isPending ? "Claiming…" : "Claim conversation"}
+                      </Button>
+                    </span>
+                  ) : null}
+                  {canClaim && blockReason ? (
+                    <span id="claim-reason" className="text-xs text-destructive">
+                      {blockReason}
+                    </span>
                   ) : null}
 
 
