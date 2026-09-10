@@ -570,14 +570,16 @@ function WidgetPage() {
           </div>
 
           {!agentName && (
+            // Outside business hours nobody can pick the chat up, so the offer
+            // becomes a message instead of a promise of a live person.
             <button
               onClick={() => {
-                setFormKind("live_agent");
+                setFormKind(config.businessOpen ? "live_agent" : "message");
                 setView("form");
               }}
               className="relative shrink-0 whitespace-nowrap rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white ring-1 ring-white/25 transition hover:bg-white/25"
             >
-              Talk to an agent
+              {config.businessOpen ? "Talk to an agent" : "Leave a message"}
             </button>
           )}
 
