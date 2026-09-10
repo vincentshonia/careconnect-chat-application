@@ -7,15 +7,18 @@ export const Route = createFileRoute("/api/public/chat/config")({
         const url = new URL(request.url);
         const websiteId = url.searchParams.get("w") ?? "";
         const host = url.searchParams.get("h");
-        const { loadWidgetConfig, PublicChatError } = await import("@/lib/public-chat.server");
+        const mod = await import("@/lib/public-chat.server");
         try {
-          const config = await loadWidgetConfig(websiteId, host);
-          return Response.json(config, { headers: { "Cache-Control": "no-store" } });
+          await mod.enforceRateLimit(`cfg:ip:${mod.clientIp(request)}`, 60, 60);
+          const config = await mod.loadWidgetConfig(websiteId, host);
+          return Response.json(config, {
+            headers: { "Cache-Control": "public, max-age=60" },
+          });
         } catch (error) {
-          const status = error instanceof PublicChatError ? error.status : 500;
+          const status = error instanceof mod.PublicChatError ? error.status : 500;
           return Response.json(
             { error: error instanceof Error ? error.message : "Unexpected error" },
-            { status },
+            { status, headers: { "Cache-Control": "no-store" } },
           );
         }
       },
