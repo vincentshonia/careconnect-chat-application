@@ -46,7 +46,7 @@ export async function logAudit(entry: AuditEntry) {
     await supabase.from("audit_logs").insert({
       organization_id: actor.orgId,
       website_id: entry.websiteId ?? null,
-      actor_id: actor.userId,
+      
       action: entry.action,
       record_type: entry.recordType ?? null,
       record_id: entry.recordId ?? null,
