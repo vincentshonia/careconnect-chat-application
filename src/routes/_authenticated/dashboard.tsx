@@ -226,7 +226,7 @@ function DashboardPage() {
             <Kpi label="Active" value={fmtNum(current['org_active'])} to="/inbox" search={{ tab: "active" }} />
             <Kpi label="Agent requested" value={fmtNum(current['org_agent_requested'])} tone={num(current['org_agent_requested']) ? "warn" : "default"} to="/inbox" search={{ tab: "waiting" }} />
             <Kpi label="Completed today" value={fmtNum(current['org_completed_today'])} tone="good" to="/inbox" search={{ tab: "closed" }} />
-            <Kpi label="SLA risk" value={fmtNum(current['org_sla_risk'])} tone={num(current['org_sla_risk']) ? "critical" : "default"} tooltip={TIP.sla} to="/inbox" search={{ tab: "waiting" }} />
+            <Kpi label="SLA risk" value={fmtNum(current['org_sla_risk'])} tone={num(current['org_sla_risk']) ? "critical" : "default"} tooltip={TIP.slaRisk} to="/inbox" search={{ tab: "waiting" }} />
             <Kpi label="Open intakes" value={fmtNum(current['org_open_intakes'])} to="/intake" />
           </div>
         ) : (
@@ -239,7 +239,7 @@ function DashboardPage() {
               label="SLA risk"
               value={fmtNum(current['my_sla_risk'])}
               tone={num(current['my_sla_risk']) ? "critical" : "default"}
-              tooltip={TIP.sla}
+              tooltip={TIP.slaRisk}
               to="/inbox"
               search={{ tab: "mine" }}
             />
