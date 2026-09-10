@@ -882,23 +882,32 @@ function WidgetPage() {
               // name (the greeting already reads this key).
               const givenName = String(payload['fullName'] ?? "").trim();
               if (givenName) {
-                try {
-                  window.localStorage.setItem(`${storageKey}-name`, givenName);
-                } catch {
-                  /* storage unavailable */
-                }
+                safeStorage.set(`${storageKey}-name`, givenName);
                 setVisitorName(givenName.split(" ")[0] ?? null);
               }
-              setLiveStatus(
-                formKind === "live_agent"
-                  ? data.assignedAgent
-                    ? `${data.assignedAgent} has been assigned and will join shortly`
-                    : data.agentsAvailable
-                      ? "Looking for an available representative"
-                      : "No representative is currently available — your message has been saved."
-                  : "Your request has been received. A representative will follow up.",
-              );
 
+              // Only a live-agent request means someone is waiting for a
+              // person; the other forms just need a confirmation in the chat.
+              if (formKind !== "live_agent") {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: uid(),
+                    role: "bot",
+                    text: "Thank you — we have received your details and a representative will follow up.",
+                  },
+                ]);
+                setView("chat");
+                return;
+              }
+
+              setLiveStatus(
+                data.assignedAgent
+                  ? `${data.assignedAgent} has been assigned and will join shortly`
+                  : data.agentsAvailable
+                    ? "Looking for an available representative"
+                    : "No representative is currently available — your message has been saved.",
+              );
               setView("waiting");
             }}
           />
