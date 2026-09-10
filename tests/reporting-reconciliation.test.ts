@@ -22,13 +22,12 @@ import {
  *
  * All fixtures are ephemeral and removed in `afterAll`.
  */
-const url = process.env['SUPABASE_URL'] ?? "";
-const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? "";
-const configured = requireTestEnv({ SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: serviceKey });
+const { url, serviceKey } = requireTestBackend();
+const configured = true;
 
-const db = configured
-  ? createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
-  : (null as unknown as SupabaseClient);
+const db = createClient(url, serviceKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+}) as SupabaseClient;
 
 const suffix = Math.random().toString(36).slice(2, 8);
 
@@ -92,9 +91,10 @@ async function insertBatched(table: string, rows: Record<string, unknown>[]) {
 
 
 async function makeOrg(name: string) {
+  const orgName = syntheticName(name, suffix);
   const { data, error } = await db
     .from("organizations")
-    .insert({ name: `${name} ${suffix}`, slug: `${name.toLowerCase()}-${suffix}` })
+    .insert({ name: orgName, slug: orgName.toLowerCase() })
     .select("id")
     .single();
   if (error) throw new Error(`org: ${error.message}`);
@@ -104,7 +104,11 @@ async function makeOrg(name: string) {
 async function makeWebsite(org: string, name: string) {
   const { data, error } = await db
     .from("websites")
-    .insert({ organization_id: org, name: `${name} ${suffix}`, domain: `${name}-${suffix}.test` })
+    .insert({
+      organization_id: org,
+      name: syntheticName(name, suffix),
+      domain: `${name.toLowerCase()}-${suffix}.test`,
+    })
     .select("id")
     .single();
   if (error) throw new Error(`website: ${error.message}`);
@@ -114,7 +118,7 @@ async function makeWebsite(org: string, name: string) {
 async function makeDepartment(org: string, name: string) {
   const { data, error } = await db
     .from("departments")
-    .insert({ organization_id: org, name: `${name} ${suffix}` })
+    .insert({ organization_id: org, name: syntheticName(name, suffix) })
     .select("id")
     .single();
   if (error) throw new Error(`department: ${error.message}`);
