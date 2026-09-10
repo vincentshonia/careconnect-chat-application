@@ -26,6 +26,27 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ReassignDialog } from "@/components/admin/ReassignDialog";
 import { formatInZone, formatTimeInZone } from "@/lib/org-time";
+import { useDebounced } from "@/hooks/use-debounced";
+import { DEFAULT_SLA_MINUTES, waitingMinutes } from "@/lib/sla";
+import { claimBlockReason } from "@/lib/claim-eligibility";
+import {
+  applyTemplateVars,
+  matchTemplates,
+  replaceSlashQuery,
+  slashQuery,
+  type ResponseTemplate,
+} from "@/lib/templates";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   // `?c=<id>` lets report drill-downs open a specific conversation.
@@ -66,6 +87,8 @@ type Conversation = {
   website_id: string;
   visitor_type: string;
   contact_id: string | null;
+  unread_agent_count: number;
+  first_human_requested_at: string | null;
 };
 
 type Tab = "waiting" | "mine" | "department" | "active" | "closed" | "all";
@@ -115,7 +138,15 @@ function InboxPage() {
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
+  const debouncedQuery = useDebounced(query, 300);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const replyRef = useRef<HTMLTextAreaElement>(null);
+  // One shared clock so every wait timer in the list ticks together.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
 
   const userId = session.data?.userId ?? null;
@@ -143,14 +174,22 @@ function InboxPage() {
    * the whole conversation table.
    */
   const conversationsQuery = useQuery({
-    queryKey: ["conversations", tab, statusFilter, page, query, userId, departmentIds.join(",")],
+    queryKey: [
+      "conversations",
+      tab,
+      statusFilter,
+      page,
+      debouncedQuery,
+      userId,
+      departmentIds.join(","),
+    ],
     refetchInterval: 60_000,
     placeholderData: (prev) => prev,
     queryFn: async () => {
       let q = supabase
         .from("conversations")
         .select(
-          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id",
+          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id, unread_agent_count, first_human_requested_at",
           { count: "exact" },
         );
 
@@ -178,8 +217,8 @@ function InboxPage() {
       }
 
       if (statusFilter) q = q.eq("status", statusFilter as never);
-      if (query.trim()) {
-        const term = query.trim().replace(/[%,()]/g, "");
+      if (debouncedQuery.trim()) {
+        const term = debouncedQuery.trim().replace(/[%,()]/g, "");
         if (term) q = q.or(`reference.ilike.%${term}%,subject.ilike.%${term}%`);
       }
 
@@ -190,7 +229,7 @@ function InboxPage() {
           ? q
               .order("requested_agent_at", { ascending: true, nullsFirst: true })
               .order("id", { ascending: true })
-          : q.order("last_message_at", { ascending: false });
+          : q.order("last_message_at", { ascending: false }).order("id", { ascending: false });
 
       const { data, error, count } = await ordered
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
@@ -206,11 +245,14 @@ function InboxPage() {
   const activeQuery = useQuery({
     queryKey: ["conversation", activeId],
     enabled: Boolean(activeId),
+    // Safety net: even if a realtime event is missed, the open chat cannot
+    // stay stale for more than a few seconds.
+    refetchInterval: 15_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("conversations")
         .select(
-          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id",
+          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id, unread_agent_count, first_human_requested_at",
         )
         .eq("id", activeId!)
         .maybeSingle();
@@ -228,7 +270,7 @@ function InboxPage() {
   // Changing queue or filters always restarts at the first page.
   useEffect(() => {
     setPage(0);
-  }, [tab, statusFilter, query]);
+  }, [tab, statusFilter, debouncedQuery]);
 
 
   /**
@@ -351,6 +393,7 @@ function InboxPage() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["conversations"] });
     queryClient.invalidateQueries({ queryKey: ["messages", activeId] });
+    queryClient.invalidateQueries({ queryKey: ["conversation", activeId] });
   };
   const fail = (error: unknown, fallback: string) =>
     toast.error(error instanceof Error ? error.message : fallback);
@@ -368,6 +411,7 @@ function InboxPage() {
       toast.success("You now own this conversation");
       await queryClient.invalidateQueries({ queryKey: ["conversations"] });
       await queryClient.invalidateQueries({ queryKey: ["conversation"] });
+      queryClient.invalidateQueries({ queryKey: ["conversation", claimedId] });
       queryClient.invalidateQueries({ queryKey: ["messages", claimedId] });
       // Stay on the chat you just claimed: it has left the Waiting queue.
       setTab("mine");
