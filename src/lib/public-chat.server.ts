@@ -515,7 +515,13 @@ export {
 
 export type AnswerResult = {
   answer: string;
-  sources: Array<{ articleId: string; title: string; url: string | null }>;
+  sources: Array<{
+    articleId: string | null;
+    sourceType?: string;
+    sourceId?: string;
+    title: string;
+    url: string | null;
+  }>;
   confidence: number;
   escalate: boolean;
   crisis: boolean;
