@@ -194,7 +194,7 @@ export async function handoffToHumans(input: {
       ? `Chat claimed by ${assigned.fullName}${where}`
       : `New visitor waiting${where}`,
     body: assigned ? input.reason : `${who} requested a live representative. ${input.reason}`,
-    link: `/inbox?c=${conversation.id}`,
+    link: `/inbox?c=${input.conversationId}`,
     recordType: "conversations",
     recordId: input.conversationId,
   });
@@ -207,7 +207,7 @@ export async function handoffToHumans(input: {
       severity: "critical",
       title: `New chat assigned to you${where}`,
       body: input.reason,
-      link: `/inbox?c=${conversation.id}`,
+      link: `/inbox?c=${input.conversationId}`,
       recordType: "conversations",
       recordId: input.conversationId,
     });
