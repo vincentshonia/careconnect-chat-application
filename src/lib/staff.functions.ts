@@ -1,10 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  createStaffInput,
-  staffAccessInput,
-  generateTempPassword,
-} from "@/lib/staff-helpers";
+import { createStaffInput, staffAccessInput } from "@/lib/staff-helpers";
+import { issueInvitation } from "@/lib/invitations.functions";
 import {
   resolveActor,
   requirePermission,
