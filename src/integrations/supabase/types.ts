@@ -420,6 +420,7 @@ export type Database = {
           last_agent_message_at: string | null
           last_message_at: string
           last_visitor_message_at: string | null
+          metadata: Json
           organization_id: string
           outcome: string | null
           priority: Database["public"]["Enums"]["conversation_priority"]
@@ -458,6 +459,7 @@ export type Database = {
           last_agent_message_at?: string | null
           last_message_at?: string
           last_visitor_message_at?: string | null
+          metadata?: Json
           organization_id: string
           outcome?: string | null
           priority?: Database["public"]["Enums"]["conversation_priority"]
@@ -496,6 +498,7 @@ export type Database = {
           last_agent_message_at?: string | null
           last_message_at?: string
           last_visitor_message_at?: string | null
+          metadata?: Json
           organization_id?: string
           outcome?: string | null
           priority?: Database["public"]["Enums"]["conversation_priority"]
@@ -2654,6 +2657,7 @@ export type Database = {
           last_agent_message_at: string | null
           last_message_at: string
           last_visitor_message_at: string | null
+          metadata: Json
           organization_id: string
           outcome: string | null
           priority: Database["public"]["Enums"]["conversation_priority"]
