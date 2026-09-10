@@ -109,11 +109,17 @@ function parseRange(filters: ReportFilters) {
  * happens here, so both the interactive report and the CSV export are
  * guaranteed to run exactly the same authorized query.
  */
-function buildCall(scope: Scope, section: string, filters: ReportFilters, options: ReportOptions) {
+function buildCall(
+  scope: Scope,
+  section: string,
+  filters: ReportFilters,
+  options: ReportOptions,
+  defaultSla: number = DEFAULT_SLA_MINUTES,
+) {
   const { from, to } = parseRange(filters);
   const dept = clampDepartments(scope, filters.departmentId ?? null);
   const staff = clampStaff(scope, filters.staffId ?? null);
-  const sla = filters.sla ?? 15;
+  const sla = filters.sla ?? defaultSla;
   const statuses = filters.statuses?.length ? filters.statuses : null;
   const website = filters.websiteId ?? null;
   const type = filters.type ?? "all";
@@ -402,6 +408,6 @@ export const reportFilterOptionsFn = createServerFn({ method: "POST" })
       departments: (departments.data ?? []).map((d) => ({ id: d.id as string, name: d.name as string })),
       websites: (websites.data ?? []).map((w) => ({ id: w.id as string, name: w.name as string })),
       staff: people,
-      slaMinutes: 15,
+      slaMinutes: await orgSlaMinutes(db, scope.organizationId),
     };
   });

@@ -50,10 +50,15 @@ export const getDashboardMetricsFn = createServerFn({ method: "POST" })
     // the viewer's browser clock — including across daylight-saving shifts.
     const { data: org } = await context.supabase
       .from("organizations")
-      .select("timezone")
+      .select("timezone, sla_first_response_minutes")
       .eq("id", organizationId)
       .maybeSingle();
     const timeZone = safeTimeZone(org?.timezone);
+    // The first-response target is an organization setting, not a constant.
+    const { DEFAULT_SLA_MINUTES } = await import("@/lib/sla");
+    const slaMinutes =
+      (org as { sla_first_response_minutes?: number | null } | null)?.sla_first_response_minutes ??
+      DEFAULT_SLA_MINUTES;
     const { from, to, prevFrom, prevTo } = periodWindow(data.period, timeZone);
     const { admin } = await import("@/lib/public-chat.server");
     const db = admin() as unknown as {
@@ -73,7 +78,7 @@ export const getDashboardMetricsFn = createServerFn({ method: "POST" })
       _to: to,
       _prev_from: prevFrom,
       _prev_to: prevTo,
-      _sla: 15,
+      _sla: slaMinutes,
     });
     if (error) {
       console.error("[dashboard] rpc failed", error.message);
@@ -87,7 +92,7 @@ export const getDashboardMetricsFn = createServerFn({ method: "POST" })
       timezone: timeZone,
       canTransfer: actor.permissions.has("conversation.transfer"),
       canViewStaff: actor.permissions.has("staff.view"),
-      slaMinutes: 15,
+      slaMinutes,
       // Dynamic jsonb: serialized so the RPC boundary keeps a stable type.
       json: JSON.stringify(scopeDashboardMetrics(result, scope)),
     };
