@@ -317,6 +317,11 @@ export const reassignConversationFn = createServerFn({ method: "POST" })
     const conversation = await loadConversation(data.conversationId);
     if (!canView(actor, conversation)) throw new ForbiddenError("Conversation not found");
 
+    // Finished chats have no owner to move; reopening is a separate action.
+    if (["resolved", "closed", "abandoned"].includes(String(conversation.status))) {
+      throw new Error("This conversation is already finished and cannot be reassigned");
+    }
+
     const { admin } = await import("@/lib/public-chat.server");
     const db = admin();
 
@@ -338,14 +343,29 @@ export const reassignConversationFn = createServerFn({ method: "POST" })
       overrideReason = decision.overrideReason;
     }
 
-    await db
+    // Only write if the owner is still who we read a moment ago, so two
+    // supervisors acting at once can't silently overwrite each other.
+    const previousAssignee = conversation.assigned_to ?? null;
+    let update = db
       .from("conversations")
       .update({
         assigned_to: data.userId,
         status: data.userId ? "assigned" : "waiting",
         claimed_at: data.userId ? new Date().toISOString() : null,
+        ...(data.userId ? {} : { escalation_requested: true }),
       })
       .eq("id", conversation.id);
+    update = previousAssignee
+      ? update.eq("assigned_to", previousAssignee)
+      : update.is("assigned_to", null);
+    const { data: updatedRows, error: updateError } = await update.select("id");
+    if (updateError) throw new Error(updateError.message);
+    if (!updatedRows || updatedRows.length === 0) {
+      throw new Error(
+        "This conversation was reassigned by someone else — reload and try again",
+      );
+    }
+
 
     const newName = data.userId ? await agentName(data.userId) : null;
 
