@@ -2553,6 +2553,16 @@ export type Database = {
         Returns: Database["public"]["Enums"]["conversation_status"][]
       }
       conversation_human_touched: { Args: { _id: string }; Returns: boolean }
+      cron_health: {
+        Args: never
+        Returns: {
+          created: string
+          error_msg: string
+          job_name: string
+          status_code: number
+          timed_out: boolean
+        }[]
+      }
       current_org_id: { Args: never; Returns: string }
       current_rank: { Args: never; Returns: number }
       dashboard_metrics: {
