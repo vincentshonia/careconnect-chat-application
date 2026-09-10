@@ -295,6 +295,8 @@ function WidgetPage() {
             landingPage: page,
             referrer: params.get("r"),
             deviceType: typeof window !== "undefined" && window.innerWidth < 640 ? "mobile" : "desktop",
+            // So the assistant can answer in the visitor's own language.
+            language: typeof navigator !== "undefined" ? navigator.language : null,
           },
         }),
       });

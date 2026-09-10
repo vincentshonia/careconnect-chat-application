@@ -5,8 +5,18 @@ import { resolveWidgetTabs } from "@/lib/widget-tabs";
  * function validates the website + host origin before touching data.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { chatComplete, embedText, AiGatewayError, CHAT_MODEL } from "./ai.server";
-import { detectCrisis, applyConfidenceBand, LOW_CONFIDENCE_REPLY } from "./ai-confidence";
+import { chatCompleteJson, embedText, AiGatewayError, CHAT_MODEL } from "./ai.server";
+import {
+  detectCrisis,
+  applyConfidenceBand,
+  lowConfidenceReply,
+  crisisFollowUp,
+  emergencyFallback,
+  detectLanguage,
+  normalizeLanguage,
+  type ReplyLanguage,
+} from "./ai-confidence";
+import { checkGrounding, type GroundingResult } from "./grounding";
 import { isOpenNow } from "./business-hours";
 
 type Admin = SupabaseClient<any, "public", any>;
@@ -306,6 +316,7 @@ export async function ensureVisitor(
       utm_campaign: meta.utmCampaign ?? null,
       device_type: meta.deviceType ?? null,
       browser: meta.browser ?? null,
+      preferred_language: meta.language ?? null,
     })
     .select("*")
     .single();
@@ -507,11 +518,39 @@ export async function insertMessage(
 
 export {
   CRISIS_PATTERNS,
+  CRISIS_PATTERNS_ES,
   detectCrisis,
   LOW_CONFIDENCE_REPLY,
   HEDGE_PREFIX,
   applyConfidenceBand,
+  normalizeLanguage,
 } from "./ai-confidence";
+
+/**
+ * Relevance floor for retrieved chunks.
+ *
+ * Fusion scores are rank-based, so the best chunk always scores about the same
+ * whether or not it has anything to do with the question — calibration against
+ * Pacific Health Group's content showed an off-topic question ("how do I bake
+ * sourdough bread?") topping out at the same 0.032 as a real one. So fusion is
+ * used for ordering only, and a chunk must additionally clear one of the raw
+ * scores: meaning-similarity 0.30, or word/fuzzy match 0.18. In calibration the
+ * off-topic question peaked at 0.069 similarity and 0.094 text, so it retrieves
+ * nothing, while "what is your phone number?" still reaches the contact page
+ * (0.326) and "what counties do you serve?" the counties FAQ (0.636).
+ */
+export const MIN_SIMILARITY = 0.3;
+export const MIN_TEXT_SCORE = 0.18;
+
+
+export type AnswerDiagnostics = {
+  retrieval: Array<{ title: string; fused: number; similarity: number; text: number }>;
+  floor: number;
+  grounding?: Pick<GroundingResult, "grounded" | "reason" | "removed" | "supported">;
+  parse_error?: string | null;
+  parse_retried?: boolean;
+  language?: ReplyLanguage;
+};
 
 export type AnswerResult = {
   answer: string;
@@ -526,13 +565,39 @@ export type AnswerResult = {
   escalate: boolean;
   crisis: boolean;
   aiResponseId?: string;
+  diagnostics?: AnswerDiagnostics;
 };
+
+/**
+ * What language should the assistant reply in? An explicit hint wins, then the
+ * linked contact's stated preference, then the browser language the widget
+ * recorded for this visitor.
+ */
+async function resolveLanguage(
+  db: Admin,
+  conversationId: string | null | undefined,
+  hint: string | null | undefined,
+  question: string,
+): Promise<ReplyLanguage> {
+  if (hint) return normalizeLanguage(hint);
+  if (!conversationId) return detectLanguage(question);
+  const { data } = await db
+    .from("conversations")
+    .select("contact_id, visitor_id, contacts(preferred_language), visitors(preferred_language)")
+    .eq("id", conversationId)
+    .maybeSingle();
+  const row = data as Record<string, any> | null;
+  const stored = row?.contacts?.preferred_language ?? row?.visitors?.preferred_language ?? null;
+  return stored ? normalizeLanguage(stored) : detectLanguage(question);
+}
 
 export async function answerQuestion(opts: {
   website: Record<string, any>;
   question: string;
   history: Array<{ role: "user" | "assistant"; content: string }>;
   conversationId?: string | null;
+  /** Browser or form language for this visitor, when the caller knows it. */
+  language?: string | null;
 }): Promise<AnswerResult> {
   const { website, question } = opts;
   const db = admin();
@@ -543,27 +608,39 @@ export async function answerQuestion(opts: {
     .eq("id", website.organization_id)
     .maybeSingle();
 
+  const language = await resolveLanguage(
+    db,
+    opts.conversationId ?? null,
+    opts.language ?? null,
+    question,
+  );
+
   if (detectCrisis(question)) {
     return {
       answer:
-        (org?.emergency_message ??
-          "If this is a medical emergency, please call 911 immediately.") +
-        "\n\nI can also connect you with a representative during business hours.",
+        (org?.emergency_message ?? emergencyFallback(language)) +
+        "\n\n" +
+        crisisFollowUp(language),
       sources: [],
       confidence: 1,
       escalate: true,
       crisis: true,
+      diagnostics: { retrieval: [], floor: MIN_SIMILARITY, language },
     };
   }
 
+  // Hybrid retrieval: meaning-similarity and word/fuzzy matching, blended by
+  // reciprocal rank fusion so an exact plan name or phone number is found even
+  // when the embedding misses it.
   let matches: Array<Record<string, any>> = [];
   try {
     const embedding = await embedText(question);
-    const { data } = await db.rpc("match_knowledge", {
+    const { data } = await db.rpc("match_knowledge_hybrid", {
       _org: website.organization_id,
       _website: website.id,
-      query_embedding: embedding as unknown as string,
-      match_count: 6,
+      _embedding: embedding as unknown as string,
+      _query: question,
+      _k: 6,
     });
     matches = (data as Array<Record<string, any>>) ?? [];
   } catch (err) {
@@ -571,15 +648,25 @@ export async function answerQuestion(opts: {
     matches = [];
   }
 
-  const relevant = matches.filter((m) => (m.similarity ?? 0) > 0.25);
+  const relevant = matches.filter(
+    (m) =>
+      Number(m.similarity ?? 0) >= MIN_SIMILARITY || Number(m.text_score ?? 0) >= MIN_TEXT_SCORE,
+  );
+  const retrieval = matches.map((m) => ({
+    title: String(m.title ?? ""),
+    fused: Number(m.fused_score ?? 0),
+    similarity: Number(m.similarity ?? 0),
+    text: Number(m.text_score ?? 0),
+  }));
 
   if (!relevant.length) {
     return {
-      answer: LOW_CONFIDENCE_REPLY,
+      answer: lowConfidenceReply(language),
       sources: [],
       confidence: 0,
       escalate: true,
       crisis: false,
+      diagnostics: { retrieval, floor: MIN_SIMILARITY, language },
     };
   }
 
@@ -593,9 +680,13 @@ export async function answerQuestion(opts: {
     org?.ai_instructions ?? "",
     website.ai_instructions ?? "",
     "Answer ONLY using the approved sources below. Never invent facts, policies, phone numbers or eligibility rules.",
+    "Only state a phone number, web address, dollar amount or percentage if it appears word-for-word in a source you cite.",
     "If the sources do not clearly answer the question, say you are not confident and offer a representative.",
     "Never diagnose a condition, recommend treatment, guarantee eligibility, promise enrollment approval, or give legal advice.",
     "Keep answers under 120 words, compassionate, professional and easy to read.",
+    language === "es"
+      ? "Reply in the visitor's language: responda en español."
+      : "Reply in the visitor's language.",
     `Contact: ${org?.phone ?? ""} ${org?.email ?? ""}`.trim(),
     "",
     "APPROVED SOURCES:",
@@ -604,7 +695,11 @@ export async function answerQuestion(opts: {
     .filter(Boolean)
     .join("\n");
 
-  const raw = await chatComplete(
+  const { parsed, raw, parseError, retried } = await chatCompleteJson<{
+    answer: string;
+    confidence: number;
+    used_sources: number[];
+  }>(
     [
       { role: "system", content: system },
       ...opts.history.slice(-8).map((m) => ({ role: m.role, content: m.content }) as const),
@@ -625,19 +720,25 @@ export async function answerQuestion(opts: {
     },
   );
 
-  let parsed: { answer: string; confidence: number; used_sources: number[] };
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    parsed = { answer: raw || LOW_CONFIDENCE_REPLY, confidence: 0.4, used_sources: [] };
-  }
+  const result = parsed ?? {
+    answer: raw || lowConfidenceReply(language),
+    confidence: 0.4,
+    used_sources: [] as number[],
+  };
 
-  const confidence = Math.max(0, Math.min(1, Number(parsed.confidence) || 0));
-  const band = applyConfidenceBand(parsed.answer ?? "", confidence);
-  const escalate = band.escalate;
-  const used = parsed.used_sources?.length
-    ? parsed.used_sources.map((n) => relevant[n - 1]).filter(Boolean)
-    : relevant.slice(0, 2);
+  const used = (result.used_sources ?? []).map((n) => relevant[n - 1]).filter(Boolean);
+
+  // The model's own confidence is only a starting point: an answer that cites
+  // nothing, or states a number no cited source contains, is not trustworthy
+  // however sure the model sounds.
+  const grounding = checkGrounding(
+    result.answer ?? "",
+    used.map((m) => `${m.title}\n${m.content}`),
+    Math.max(0, Math.min(1, Number(result.confidence) || 0)),
+  );
+
+  const confidence = grounding.confidence;
+  const band = applyConfidenceBand(grounding.answer, confidence, language);
 
   // Articles, FAQs and services all land here, so identity is the source pair,
   // not the (now optional) article id.
@@ -660,8 +761,21 @@ export async function answerQuestion(opts: {
     answer: band.answer,
     sources: band.useSources ? sources : [],
     confidence,
-    escalate,
+    escalate: band.escalate,
     crisis: false,
+    diagnostics: {
+      retrieval,
+      floor: MIN_SIMILARITY,
+      grounding: {
+        grounded: grounding.grounded,
+        reason: grounding.reason,
+        removed: grounding.removed,
+        supported: grounding.supported,
+      },
+      parse_error: parseError,
+      parse_retried: retried,
+      language,
+    },
   };
 }
 
@@ -685,6 +799,7 @@ export async function recordAiResponse(params: {
       confidence: params.result.confidence,
       model: CHAT_MODEL,
       escalated: params.result.escalate,
+      metadata: (params.result.diagnostics ?? {}) as never,
     })
     .select("id")
     .single();

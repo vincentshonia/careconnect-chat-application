@@ -94,6 +94,49 @@ export async function embedTexts(inputs: string[], batchSize = 64): Promise<numb
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
+/**
+ * Ask for a JSON object and actually get one. Gemini occasionally wraps its
+ * schema output in prose or a code fence, so an unparseable reply is retried
+ * once with a blunt instruction before the caller falls back. The parse failure
+ * is returned so it can be logged and the rate watched.
+ */
+export async function chatCompleteJson<T>(
+  messages: ChatMessage[],
+  options: { jsonSchema: Record<string, unknown>; temperature?: number },
+): Promise<{ parsed: T | null; raw: string; parseError: string | null; retried: boolean }> {
+  const raw = await chatComplete(messages, options);
+  const first = tryParse<T>(raw);
+  if (first.value !== null) {
+    return { parsed: first.value, raw, parseError: null, retried: false };
+  }
+
+  const retryMessages: ChatMessage[] = [
+    ...messages,
+    {
+      role: "system",
+      content:
+        "Your previous reply could not be parsed. Return ONLY a single JSON object matching the schema. No prose, no markdown, no code fences.",
+    },
+  ];
+  const rawRetry = await chatComplete(retryMessages, options);
+  const second = tryParse<T>(rawRetry);
+  return {
+    parsed: second.value,
+    raw: rawRetry,
+    parseError: second.value !== null ? null : `${first.error} (retry: ${second.error})`,
+    retried: true,
+  };
+}
+
+function tryParse<T>(raw: string): { value: T | null; error: string } {
+  const text = (raw ?? "").trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  try {
+    return { value: JSON.parse(text) as T, error: "" };
+  } catch (error) {
+    return { value: null, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export async function chatComplete(
   messages: ChatMessage[],
   options: { jsonSchema?: Record<string, unknown>; temperature?: number } = {},
