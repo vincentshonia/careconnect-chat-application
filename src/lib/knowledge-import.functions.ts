@@ -26,6 +26,9 @@ export const importKnowledgeSourceFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data, context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    requirePermission(actor, "knowledge.edit");
+
     const { data: profile } = await context.supabase
       .from("profiles")
       .select("organization_id")
