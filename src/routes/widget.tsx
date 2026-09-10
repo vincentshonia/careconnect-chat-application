@@ -493,6 +493,7 @@ function WidgetPage() {
         { id: uid(), role: "system", text: (e as Error).message || "We could not reach the assistant." },
       ]);
     } finally {
+      inFlight.current = false;
       setSending(false);
     }
   };
