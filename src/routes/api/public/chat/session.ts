@@ -31,6 +31,7 @@ export const Route = createFileRoute("/api/public/chat/session")({
             publicKey: parsed.data.publicKey ?? null,
             host: parsed.data.host ?? null,
             meta: parsed.data.meta ?? {},
+            priorSession: parsed.data.priorSession ?? null,
           });
           return Response.json(result, { headers: { "Cache-Control": "no-store" } });
         } catch (error) {
