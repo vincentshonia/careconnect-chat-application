@@ -6,6 +6,8 @@ const schema = z.object({
   publicKey: z.string().max(120).nullable().optional(),
   host: z.string().max(300).nullable().optional(),
   meta: z.record(z.any()).optional(),
+  /** The token being replaced, so renewal keeps the same visitor. */
+  priorSession: z.string().max(4000).nullable().optional(),
 });
 
 /**
