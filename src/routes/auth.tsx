@@ -22,9 +22,10 @@ export function safeRedirect(value: unknown): string | null {
 }
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    redirect: safeRedirect(search["redirect"]) ?? undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => {
+    const target = safeRedirect(search["redirect"]);
+    return target ? { redirect: target } : {};
+  },
   head: () => ({
     meta: [
       { title: "Staff Sign In — Pacific Health Group Support Console" },
