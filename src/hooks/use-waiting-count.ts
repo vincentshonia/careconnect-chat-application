@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { applyQueueFilter } from "@/lib/conversation-status";
 
 /**
  * How many conversations are still waiting for a human to pick them up.
