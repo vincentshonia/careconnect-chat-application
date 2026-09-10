@@ -38,12 +38,41 @@ type Faq = Database["public"]["Tables"]["faqs"]["Row"];
 
 const STATUSES: Article["status"][] = ["draft", "pending_review", "approved", "published", "archived"];
 
+function ReindexAllButton() {
+  const session = useSessionContext();
+  const reindexAll = useServerFn(reindexAllFn);
+  const [result, setResult] = useState<string | null>(null);
+
+  const run = useMutation({
+    mutationFn: async () => await reindexAll({}),
+    onSuccess: (r) =>
+      setResult(
+        `Re-indexed ${r.articles} articles, ${r.faqs} FAQs and ${r.services} services into ${r.chunks} searchable pieces.`,
+      ),
+    onError: (e) => setResult(e instanceof Error ? e.message : "Could not rebuild the index."),
+  });
+
+  if (!session.data?.can("knowledge.edit")) return null;
+
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-3">
+      <Button variant="outline" size="sm" disabled={run.isPending} onClick={() => run.mutate()}>
+        {run.isPending ? "Rebuilding…" : "Reindex all"}
+      </Button>
+      <p className="text-xs text-muted-foreground">
+        {result ?? "Rebuilds the assistant's search index from articles, FAQs and services."}
+      </p>
+    </div>
+  );
+}
+
 function KnowledgePage() {
   return (
     <AdminShell
       title="Knowledge base"
-      description="Articles feed the AI chatbot through vector search; FAQs appear in the widget."
+      description="Articles, FAQs and services all feed the AI chatbot through vector search."
     >
+      <ReindexAllButton />
       <Tabs defaultValue="articles">
         <TabsList>
           <TabsTrigger value="articles">Articles</TabsTrigger>
