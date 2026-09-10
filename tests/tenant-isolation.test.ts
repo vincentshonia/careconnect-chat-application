@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
-import { requireTestEnv } from "./helpers/required-env";
+import { requireTestBackend } from "./helpers/required-env";
 
 /**
  * Tenant isolation tests.
@@ -10,13 +10,11 @@ import { requireTestEnv } from "./helpers/required-env";
  * either an error or zero rows. A regression here means one customer's data
  * is reachable by anyone on the internet.
  */
-const url = process.env.SUPABASE_URL ?? "";
-const key = process.env.SUPABASE_PUBLISHABLE_KEY ?? "";
-const configured = requireTestEnv({ SUPABASE_URL: url, SUPABASE_PUBLISHABLE_KEY: key });
+const { url, anonKey: key } = requireTestBackend({ publishable: true });
 
-const anon = configured
-  ? createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
-  : null;
+const anon = createClient(url, key, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
 /** Tables that hold tenant-scoped or personal data. Anonymous reads must be empty. */
 const PRIVATE_TABLES = [

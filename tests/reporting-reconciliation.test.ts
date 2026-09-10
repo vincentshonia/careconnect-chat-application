@@ -221,15 +221,7 @@ describe("reporting at volume", () => {
 
   afterAll(async () => {
     if (!configured) return;
-    for (const org of [orgA, orgB].filter(Boolean)) {
-      await db.from("ai_responses").delete().eq("organization_id", org);
-      await db.from("messages").delete().eq("organization_id", org);
-      await db.from("conversation_events").delete().eq("organization_id", org);
-      await db.from("conversations").delete().eq("organization_id", org);
-      await db.from("departments").delete().eq("organization_id", org);
-      await db.from("websites").delete().eq("organization_id", org);
-      await db.from("organizations").delete().eq("id", org);
-    }
+    await purgeSyntheticOrganizations(db, [orgA, orgB]);
   }, 240_000);
 
   it("reports the exact total for the tenant", async () => {
