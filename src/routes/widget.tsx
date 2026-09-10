@@ -99,7 +99,13 @@ type Bubble = {
   id: string;
   role: "visitor" | "bot" | "system";
   text: string;
-  sources?: Array<{ articleId: string; title: string; url: string | null }>;
+  sources?: Array<{
+    articleId?: string | null;
+    sourceType?: string;
+    sourceId?: string;
+    title: string;
+    url: string | null;
+  }>;
   aiResponseId?: string;
   escalate?: boolean;
   author?: string;
