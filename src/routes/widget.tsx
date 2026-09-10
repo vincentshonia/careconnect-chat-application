@@ -173,24 +173,66 @@ function WidgetPage() {
   const [agentName, setAgentName] = useState<string | null>(null);
   const [agentAvatar, setAgentAvatar] = useState<string | null>(null);
   const [faqQuery, setFaqQuery] = useState("");
+  /** Latest conversation status reported by the server. */
+  const [convStatus, setConvStatus] = useState<string | null>(null);
+  /** True once a human (not the assistant) has replied in this conversation. */
+  const [agentReplied, setAgentReplied] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
-  const lastSeen = useRef<string | null>(null);
+  /** Newest message timestamp we have rendered, per conversation id. */
+  const lastSeenByConversation = useRef<Record<string, string>>({});
+  /** Set while a send is in flight so two fast Enters cannot open two chats. */
+  const inFlight = useRef(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
   const storageKey = `phg-widget-${websiteId}`;
+  const threadKey = `${storageKey}-conv-v1`;
+  const ended = isConversationEnded(convStatus);
 
   // Personalized greeting when the visitor has already told us their name.
   const [visitorName, setVisitorName] = useState<string | null>(null);
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(`phg-widget-${websiteId}-name`);
-      if (stored) setVisitorName(stored.split(" ")[0]);
-    } catch {
-      /* storage unavailable */
-    }
+    const stored = safeStorage.get(`phg-widget-${websiteId}-name`);
+    if (stored) setVisitorName(stored.split(" ")[0] ?? null);
   }, [websiteId]);
+
+  /* ------------------- restore / persist the conversation ---------------- */
+  // The widget lives in an iframe that is torn down on every page navigation,
+  // so the thread has to be rebuilt from storage or the visitor loses it.
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    if (!websiteId) return;
+    const saved = safeStorage.getJson<{ conversationId: string; messages: Bubble[] }>(threadKey);
+    if (saved?.conversationId && Array.isArray(saved.messages)) {
+      setConversationId(saved.conversationId);
+      setMessages(saved.messages);
+    }
+    setRestored(true);
+  }, [websiteId, threadKey]);
+
+  useEffect(() => {
+    if (!restored) return;
+    if (!conversationId || ended) return;
+    safeStorage.setJson(threadKey, {
+      conversationId,
+      messages: messages.filter((m) => m.role !== "system").slice(-60),
+      updatedAt: Date.now(),
+    });
+  }, [restored, conversationId, messages, ended, threadKey]);
+
+  /** Forget the finished chat and start over from the welcome message. */
+  const startNewChat = useCallback(() => {
+    safeStorage.remove(threadKey);
+    setConversationId(null);
+    setConvStatus(null);
+    setAgentReplied(false);
+    setAgentName(null);
+    setAgentAvatar(null);
+    setLiveStatus(null);
+    setMessages(config ? [{ id: uid(), role: "bot", text: config.website.welcomeMessage }] : []);
+    setView("chat");
+  }, [threadKey, config]);
 
   // Suggested help topics on Home: services first, then FAQ questions.
   const homeTopics = useMemo(() => {
