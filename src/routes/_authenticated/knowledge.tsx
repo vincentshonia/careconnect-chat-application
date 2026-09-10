@@ -8,7 +8,12 @@ import { useSessionContext } from "@/hooks/use-session-context";
 import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { reindexArticleFn, reindexAllFn } from "@/lib/admin.functions";
-import { createFaqFn, deleteFaqFn } from "@/lib/knowledge-content.functions";
+import {
+  createFaqFn,
+  deleteFaqFn,
+  aiReviewQueueFn,
+  dismissAiResponseFn,
+} from "@/lib/knowledge-content.functions";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { KnowledgeImport } from "@/components/admin/KnowledgeImport";
 import { Button } from "@/components/ui/button";
@@ -431,9 +436,15 @@ function Articles() {
   );
 }
 
-function Faqs() {
+function Faqs({ prefill }: { prefill?: FaqPrefill }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState({ category: "General", question: "", answer: "" });
+
+  useEffect(() => {
+    if (prefill) {
+      setDraft((d) => ({ ...d, question: prefill.question, answer: prefill.answer }));
+    }
+  }, [prefill]);
   const [page, setPage] = useState(0);
   const PAGE = 25;
   const session = useSessionContext();
