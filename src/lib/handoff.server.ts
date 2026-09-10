@@ -86,6 +86,41 @@ export async function handoffToHumans(input: {
 }): Promise<HandoffResult> {
   const db = admin();
 
+  // Idempotency: a conversation already in the human queue must not raise a
+  // second alert, event or audit row each time the visitor sends a message.
+  const { data: existing } = await db
+    .from("conversations")
+    .select("department_id, status, escalation_requested, assigned_to, first_human_requested_at")
+    .eq("id", input.conversationId)
+    .maybeSingle();
+
+  if (
+    existing?.escalation_requested &&
+    ["waiting", "assigned", "active"].includes(String(existing.status))
+  ) {
+    const { data: currentDept } = existing.department_id
+      ? await db.from("departments").select("id, name").eq("id", existing.department_id).maybeSingle()
+      : { data: null as { id: string; name: string } | null };
+    let assigned: AssignedAgent | null = null;
+    if (existing.assigned_to) {
+      const { data: profile } = await db
+        .from("profiles")
+        .select("id, full_name")
+        .eq("id", existing.assigned_to)
+        .maybeSingle();
+      assigned = {
+        userId: existing.assigned_to as string,
+        fullName: (profile?.full_name as string) ?? "Assigned agent",
+      } as AssignedAgent;
+    }
+    return {
+      departmentId: (existing.department_id as string | null) ?? null,
+      departmentName: currentDept?.name ?? null,
+      assigned,
+      routingMode: await departmentRoutingMode((existing.department_id as string | null) ?? null),
+    };
+  }
+
   const departmentId = await resolveDepartment({
     organizationId: input.organizationId,
     preferredDepartmentId: input.departmentId ?? null,
@@ -106,6 +141,7 @@ export async function handoffToHumans(input: {
       escalation_requested: true,
       escalation_reason: input.reason,
       requested_agent_at: new Date().toISOString(),
+      first_human_requested_at: existing?.first_human_requested_at ?? new Date().toISOString(),
     })
     .eq("id", input.conversationId)
     .is("assigned_to", null); // never disturb a chat an agent already owns
