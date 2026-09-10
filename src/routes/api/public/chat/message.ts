@@ -51,8 +51,22 @@ export const Route = createFileRoute("/api/public/chat/message")({
 
           const visitorMessage = await mod.insertMessage(conversation, "visitor", input.text, "Visitor");
 
+          // The insert may have reopened a finished chat. Re-read the row so a
+          // reopen that went back to the human queue is not also answered by
+          // the assistant.
+          const dbEarly = mod.admin();
+          const { data: refreshed } = await dbEarly
+            .from("conversations")
+            .select("status, escalation_requested, assigned_to")
+            .eq("id", conversation.id)
+            .maybeSingle();
+          const liveAgentOwned = Boolean(
+            (refreshed?.escalation_requested ?? conversation.escalation_requested) ||
+              (refreshed?.assigned_to ?? conversation.assigned_to),
+          );
+
           // A live agent owns the conversation: don't answer with AI.
-          if (conversation.escalation_requested || conversation.assigned_to) {
+          if (liveAgentOwned) {
             return Response.json({
               conversationId: conversation.id,
               messageId: visitorMessage.id,
@@ -61,6 +75,7 @@ export const Route = createFileRoute("/api/public/chat/message")({
           }
 
           await mod.enforceAiBudget(ctx.claims.org, limits);
+
 
           const db = mod.admin();
           const { data: prior } = await db
@@ -146,6 +161,10 @@ export const Route = createFileRoute("/api/public/chat/message")({
             crisis: result.crisis,
             suggestHuman: streak >= 2,
             aiResponseId,
+            // The widget renders this bubble immediately; returning the stored
+            // id and timestamp lets it dedupe against the polling feed.
+            messageId: aiMessage.id,
+            createdAt: aiMessage.created_at,
           });
         } catch (error) {
           if (error instanceof AiGatewayError) {

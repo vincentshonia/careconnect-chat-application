@@ -96,7 +96,7 @@ export async function handoffToHumans(input: {
 
   if (
     existing?.escalation_requested &&
-    ["waiting", "assigned", "active"].includes(String(existing.status))
+    !["resolved", "closed", "abandoned"].includes(String(existing.status))
   ) {
     const { data: currentDept } = existing.department_id
       ? await db.from("departments").select("id, name").eq("id", existing.department_id).maybeSingle()
@@ -185,19 +185,23 @@ export async function handoffToHumans(input: {
   const who = input.visitorLabel?.trim() || "A visitor";
   const where = department?.name ? ` — ${department.name}` : "";
 
-  await notifyStaff({
-    organizationId: input.organizationId,
-    departmentId,
-    type: "escalation",
-    severity: "critical",
-    title: assigned
-      ? `Chat claimed by ${assigned.fullName}${where}`
-      : `New visitor waiting${where}`,
-    body: assigned ? input.reason : `${who} requested a live representative. ${input.reason}`,
-    link: `/inbox?c=${input.conversationId}`,
-    recordType: "conversations",
-    recordId: input.conversationId,
-  });
+  // A chat somebody already owns is not "waiting" for anyone, so the
+  // department-wide alert is skipped entirely.
+  if (!existing?.assigned_to) {
+    await notifyStaff({
+      organizationId: input.organizationId,
+      departmentId,
+      type: "escalation",
+      severity: "critical",
+      title: assigned
+        ? `Chat claimed by ${assigned.fullName}${where}`
+        : `New visitor waiting${where}`,
+      body: assigned ? input.reason : `${who} requested a live representative. ${input.reason}`,
+      link: `/inbox?c=${input.conversationId}`,
+      recordType: "conversations",
+      recordId: input.conversationId,
+    });
+  }
 
   if (assigned) {
     await notifyStaff({

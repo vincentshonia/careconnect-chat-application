@@ -108,6 +108,7 @@ type Bubble = {
   }>;
   aiResponseId?: string;
   escalate?: boolean;
+  suggestHuman?: boolean;
   author?: string;
   attachment?: { name: string; url: string | null; type: string };
 };
@@ -495,17 +496,27 @@ function WidgetPage() {
         setSending(false);
         return;
       }
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: uid(),
-          role: "bot",
+      // Store the server id and seed the poll cursor, so the same answer is
+      // not rendered twice when the waiting view starts polling.
+      if (data.conversationId && data.createdAt) {
+        lastSeenByConversation.current[data.conversationId as string] = data.createdAt as string;
+      }
+      setMessages((prev) => {
+        const bubble = {
+          id: (data.messageId as string) ?? uid(),
+          role: "bot" as const,
           text: data.answer,
           sources: data.sources,
           aiResponseId: data.aiResponseId,
           escalate: data.escalate,
-        },
-      ]);
+          suggestHuman: Boolean(data.suggestHuman),
+        };
+        return prev.some((m) => m.id === bubble.id) ? prev : [...prev, bubble];
+      });
+      // A crisis pulls a person in straight away: switch to the waiting view so
+      // the widget starts polling for the representative's reply.
+      if (data.crisis) setView("waiting");
+
     } catch (e) {
       setMessages((prev) => [
         ...prev,
@@ -1378,14 +1389,18 @@ function MessageBubble({
           ))}
         </div>
       )}
-      {bubble.escalate && (
+      {(bubble.escalate || bubble.suggestHuman) && (
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => onAction("connect")}
-            className="rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white"
+            className={
+              bubble.suggestHuman
+                ? "rounded-lg px-3 py-2 text-xs font-bold text-white"
+                : "rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white"
+            }
             style={{ background: brand }}
           >
-            Connect me
+            {bubble.suggestHuman ? "Talk to a representative" : "Connect me"}
           </button>
           <button
             onClick={() => onAction("message")}

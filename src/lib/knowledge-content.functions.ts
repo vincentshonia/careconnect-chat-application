@@ -137,8 +137,15 @@ export const deleteFaqFn = createServerFn({ method: "POST" })
     const actor = await resolveActor(context.supabase, context.userId);
     requirePermission(actor, "knowledge.edit");
 
-    const { error } = await context.supabase.from("faqs").delete().eq("id", data.id);
+    // The delete is scoped by the caller's own access rules; only clear the
+    // search index when a row this caller could actually reach was removed.
+    const { data: removed, error } = await context.supabase
+      .from("faqs")
+      .delete()
+      .eq("id", data.id)
+      .select("id");
     if (error) throw new Error(error.message);
+    if ((removed ?? []).length !== 1) throw new Error("Not found");
 
     const { removeIndexedSource } = await import("@/lib/knowledge-index.server");
     await removeIndexedSource("faq", data.id);
@@ -193,8 +200,13 @@ export const deleteServiceFn = createServerFn({ method: "POST" })
     const actor = await resolveActor(context.supabase, context.userId);
     requirePermission(actor, "knowledge.edit");
 
-    const { error } = await context.supabase.from("services").delete().eq("id", data.id);
+    const { data: removed, error } = await context.supabase
+      .from("services")
+      .delete()
+      .eq("id", data.id)
+      .select("id");
     if (error) throw new Error(error.message);
+    if ((removed ?? []).length !== 1) throw new Error("Not found");
 
     const { removeIndexedSource } = await import("@/lib/knowledge-index.server");
     await removeIndexedSource("service", data.id);
