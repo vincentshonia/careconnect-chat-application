@@ -11,7 +11,20 @@ import chatBubblesAsset from "@/assets/chat-bubbles.png.asset.json";
 
 const BRAND_LOGO_URL = brandLogoAsset.url;
 
+/**
+ * Only same-origin relative paths are accepted, so an invitation (or any other)
+ * link can never bounce a signed-in staff member to an external site.
+ */
+export function safeRedirect(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return null;
+  return value;
+}
+
 export const Route = createFileRoute("/auth")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: safeRedirect(search["redirect"]) ?? undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Staff Sign In — Pacific Health Group Support Console" },
