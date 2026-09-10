@@ -3,7 +3,7 @@ import { alertRecipients } from "@/lib/assignment.server";
 
 type NotifyInput = {
   organizationId: string;
-  type: "escalation" | "new_intake" | "sla_breach" | "low_rating";
+  type: "escalation" | "new_intake" | "sla_breach" | "low_rating" | "visitor_reply";
   title: string;
   body?: string | null;
   link?: string | null;
@@ -21,6 +21,9 @@ const PREF_COLUMN: Record<NotifyInput["type"], string> = {
   new_intake: "inapp_new_intake",
   sla_breach: "inapp_sla_breach",
   low_rating: "inapp_low_rating",
+  // Visitor replies follow the same opt-in as escalations: both mean "a person
+  // is waiting on you in the inbox".
+  visitor_reply: "inapp_escalations",
 };
 
 /** Insert size cap per round-trip, so large teams do not produce one giant statement. */

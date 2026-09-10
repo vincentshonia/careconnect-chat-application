@@ -113,7 +113,7 @@ export const transferConversationFn = createServerFn({ method: "POST" })
         ? `Chat transferred to ${department.name} — assigned to ${assigned.fullName}`
         : `Chat transferred to ${department.name} — waiting for an agent`,
       body: data.note ?? `Transferred by ${actorName}`,
-      link: "/inbox",
+      link: `/inbox?c=${conversation.id}`,
       recordType: "conversations",
       recordId: conversation.id,
     });
@@ -126,7 +126,7 @@ export const transferConversationFn = createServerFn({ method: "POST" })
         severity: "critical",
         title: `Chat assigned to you by ${actorName}`,
         body: data.note ?? `Transferred to ${department.name}`,
-        link: "/inbox",
+        link: `/inbox?c=${conversation.id}`,
         recordType: "conversations",
         recordId: conversation.id,
       });

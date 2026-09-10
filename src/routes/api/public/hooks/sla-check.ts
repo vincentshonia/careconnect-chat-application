@@ -105,7 +105,7 @@ export const Route = createFileRoute("/api/public/hooks/sla-check")({
             severity: "warning",
             title: `Conversation ${row.reference} has waited ${minutes} min`,
             body: `No agent reply yet — the first-response target is ${target} minutes.`,
-            link: "/inbox",
+            link: `/inbox?c=${row.id}`,
             recordType: "conversations",
             recordId: row.id,
             ...audience,

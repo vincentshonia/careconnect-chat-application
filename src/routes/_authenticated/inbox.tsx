@@ -26,6 +26,27 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ReassignDialog } from "@/components/admin/ReassignDialog";
 import { formatInZone, formatTimeInZone } from "@/lib/org-time";
+import { useDebounced } from "@/hooks/use-debounced";
+import { DEFAULT_SLA_MINUTES, waitingMinutes } from "@/lib/sla";
+import { claimBlockReason } from "@/lib/claim-eligibility";
+import {
+  applyTemplateVars,
+  matchTemplates,
+  replaceSlashQuery,
+  slashQuery,
+  type ResponseTemplate,
+} from "@/lib/templates";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   // `?c=<id>` lets report drill-downs open a specific conversation.
@@ -66,6 +87,8 @@ type Conversation = {
   website_id: string;
   visitor_type: string;
   contact_id: string | null;
+  unread_agent_count: number;
+  first_human_requested_at: string | null;
 };
 
 type Tab = "waiting" | "mine" | "department" | "active" | "closed" | "all";
@@ -115,7 +138,15 @@ function InboxPage() {
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
+  const debouncedQuery = useDebounced(query, 300);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const replyRef = useRef<HTMLTextAreaElement>(null);
+  // One shared clock so every wait timer in the list ticks together.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
 
   const userId = session.data?.userId ?? null;
@@ -137,20 +168,99 @@ function InboxPage() {
     },
   });
 
+  const presence = (presenceQuery.data as { presence?: string } | null)?.presence ?? null;
+  const maxChats =
+    (presenceQuery.data as { max_concurrent_chats?: number } | null)?.max_concurrent_chats ?? null;
+  const agentName = (presenceQuery.data as { full_name?: string } | null)?.full_name ?? null;
+
+  /** How many open chats this agent already owns — the capacity numerator. */
+  const myLoadQuery = useQuery({
+    queryKey: ["my-load", userId],
+    enabled: Boolean(userId),
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("conversations")
+        .select("id", { count: "exact", head: true })
+        .eq("assigned_to", userId!)
+        .not("status", "in", `(${CLOSED_STATUSES.join(",")})`);
+      return count ?? 0;
+    },
+  });
+  const activeChats = myLoadQuery.data ?? 0;
+
+  const setPresence = useMutation({
+    mutationFn: async (next: string) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ presence: next })
+        .eq("id", userId!);
+      if (error) throw error;
+      return next;
+    },
+    onSuccess: (next) => {
+      toast.success(`You're now ${next}`);
+      queryClient.invalidateQueries({ queryKey: ["my-presence", userId] });
+    },
+    onError: (e) => fail(e, "Could not change your status"),
+  });
+
+  /** The organization's first-response target drives the SLA countdown. */
+  const slaQuery = useQuery({
+    queryKey: ["org-sla", organizationId],
+    enabled: Boolean(organizationId),
+    staleTime: 300_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("organizations")
+        .select("sla_first_response_minutes")
+        .eq("id", organizationId!)
+        .maybeSingle();
+      return data?.sla_first_response_minutes ?? DEFAULT_SLA_MINUTES;
+    },
+  });
+  const slaMinutes = slaQuery.data ?? DEFAULT_SLA_MINUTES;
+
+  /** Approved saved replies for this organization. */
+  const templatesQuery = useQuery({
+    queryKey: ["response-templates", organizationId],
+    enabled: Boolean(organizationId),
+    staleTime: 300_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("response_templates")
+        .select("id, name, shortcut, category, body")
+        .eq("approved", true)
+        .order("shortcut", { nullsFirst: false })
+        .range(0, 199);
+      if (error) throw error;
+      return (data ?? []) as ResponseTemplate[];
+    },
+  });
+  const templates = templatesQuery.data ?? [];
+
   /**
    * Queue loading is done by the database, one page at a time: each tab is a
    * filtered, ordered, ranged query so the browser never holds — or filters —
    * the whole conversation table.
    */
   const conversationsQuery = useQuery({
-    queryKey: ["conversations", tab, statusFilter, page, query, userId, departmentIds.join(",")],
+    queryKey: [
+      "conversations",
+      tab,
+      statusFilter,
+      page,
+      debouncedQuery,
+      userId,
+      departmentIds.join(","),
+    ],
     refetchInterval: 60_000,
     placeholderData: (prev) => prev,
     queryFn: async () => {
       let q = supabase
         .from("conversations")
         .select(
-          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id",
+          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id, unread_agent_count, first_human_requested_at",
           { count: "exact" },
         );
 
@@ -178,8 +288,8 @@ function InboxPage() {
       }
 
       if (statusFilter) q = q.eq("status", statusFilter as never);
-      if (query.trim()) {
-        const term = query.trim().replace(/[%,()]/g, "");
+      if (debouncedQuery.trim()) {
+        const term = debouncedQuery.trim().replace(/[%,()]/g, "");
         if (term) q = q.or(`reference.ilike.%${term}%,subject.ilike.%${term}%`);
       }
 
@@ -190,7 +300,7 @@ function InboxPage() {
           ? q
               .order("requested_agent_at", { ascending: true, nullsFirst: true })
               .order("id", { ascending: true })
-          : q.order("last_message_at", { ascending: false });
+          : q.order("last_message_at", { ascending: false }).order("id", { ascending: false });
 
       const { data, error, count } = await ordered
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
@@ -206,11 +316,14 @@ function InboxPage() {
   const activeQuery = useQuery({
     queryKey: ["conversation", activeId],
     enabled: Boolean(activeId),
+    // Safety net: even if a realtime event is missed, the open chat cannot
+    // stay stale for more than a few seconds.
+    refetchInterval: 15_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("conversations")
         .select(
-          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id",
+          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id, unread_agent_count, first_human_requested_at",
         )
         .eq("id", activeId!)
         .maybeSingle();
@@ -228,7 +341,7 @@ function InboxPage() {
   // Changing queue or filters always restarts at the first page.
   useEffect(() => {
     setPage(0);
-  }, [tab, statusFilter, query]);
+  }, [tab, statusFilter, debouncedQuery]);
 
 
   /**
@@ -351,6 +464,7 @@ function InboxPage() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["conversations"] });
     queryClient.invalidateQueries({ queryKey: ["messages", activeId] });
+    queryClient.invalidateQueries({ queryKey: ["conversation", activeId] });
   };
   const fail = (error: unknown, fallback: string) =>
     toast.error(error instanceof Error ? error.message : fallback);
@@ -368,6 +482,7 @@ function InboxPage() {
       toast.success("You now own this conversation");
       await queryClient.invalidateQueries({ queryKey: ["conversations"] });
       await queryClient.invalidateQueries({ queryKey: ["conversation"] });
+      queryClient.invalidateQueries({ queryKey: ["conversation", claimedId] });
       queryClient.invalidateQueries({ queryKey: ["messages", claimedId] });
       // Stay on the chat you just claimed: it has left the Waiting queue.
       setTab("mine");
@@ -424,8 +539,10 @@ function InboxPage() {
   });
 
   const transfer = useMutation({
-    mutationFn: async (departmentId: string) =>
-      transferFn({ data: { conversationId: active!.id, departmentId } }),
+    mutationFn: async ({ departmentId, note }: { departmentId: string; note?: string }) =>
+      transferFn({
+        data: { conversationId: active!.id, departmentId, ...(note ? { note } : {}) },
+      }),
     onSuccess: (result) => {
       toast.success(
         result?.assignedTo
@@ -436,6 +553,33 @@ function InboxPage() {
     },
     onError: (e) => fail(e, "Could not transfer this conversation"),
   });
+
+  const [slashTerm, setSlashTerm] = useState<string | null>(null);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const slashMatches = useMemo(
+    () => (slashTerm === null ? [] : matchTemplates(templates, slashTerm)),
+    [slashTerm, templates],
+  );
+
+  /**
+   * Insert a saved reply, substituting the visitor and agent names. When the
+   * agent triggered it with "/", the typed shortcut is replaced; from the
+   * picker the wording is appended to whatever they have already written.
+   */
+  const insertTemplate = (template: ResponseTemplate, fromSlash: boolean) => {
+    const body = applyTemplateVars(template.body, {
+      visitorName: contactQuery.data?.full_name ?? null,
+      agentName,
+    });
+    setDraft((current) => {
+      if (!fromSlash) return current ? `${current.replace(/\s*$/, "")}\n${body}` : body;
+      const caret = replyRef.current?.selectionStart ?? current.length;
+      return replaceSlashQuery(current, caret, body);
+    });
+    setSlashTerm(null);
+    setSlashIndex(0);
+    replyRef.current?.focus();
+  };
 
   const isOwner = Boolean(active && active.assigned_to === userId);
   const isClosed = Boolean(active && (CLOSED_STATUSES as readonly string[]).includes(active.status));
@@ -449,6 +593,16 @@ function InboxPage() {
   // Mirror the server contract exactly: an unassigned conversation must be
   // claimed before anyone — supervisors included — can reply. Offering the
   // reply box earlier produced a message the server then refused to send.
+  const blockReason = active
+    ? claimBlockReason({
+        presence,
+        activeChats,
+        maxChats,
+        departmentId: active.department_id,
+        myDepartmentIds: departmentIds,
+        isSupervisor,
+      })
+    : null;
   const canReply =
     Boolean(active) &&
     !isClosed &&
@@ -464,6 +618,9 @@ function InboxPage() {
     ...(can("conversation.view_all") ? [{ key: "all" as Tab, label: "All conversations" }] : []),
   ];
 
+  const departmentName = (id: string | null) =>
+    id ? ((departmentsQuery.data ?? []).find((d) => d.id === id)?.name ?? null) : null;
+
   function ownershipLabel(c: Conversation) {
     if (!c.assigned_to) return "";
     if (c.assigned_to === userId) return "Assigned to you";
@@ -478,6 +635,27 @@ function InboxPage() {
       description="Website chat conversations, AI answers, and live agent replies."
       actions={
         <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs">
+            <span className="text-muted-foreground">Status</span>
+            <select
+              aria-label="My availability"
+              value={presence ?? "available"}
+              disabled={setPresence.isPending || !userId}
+              onChange={(e) => setPresence.mutate(e.target.value)}
+              className="h-6 rounded border border-input bg-background px-1 text-xs"
+            >
+              <option value="available">Available</option>
+              <option value="away">Away</option>
+              <option value="busy">Busy</option>
+            </select>
+            <span
+              className={`ml-1 font-medium ${
+                maxChats && activeChats >= maxChats ? "text-destructive" : "text-muted-foreground"
+              }`}
+            >
+              {activeChats}/{maxChats ?? "—"} chats
+            </span>
+          </span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -528,11 +706,12 @@ function InboxPage() {
                     <p className="truncate text-xs text-muted-foreground">
                       {c.reference} · {formatInZone(c.last_message_at)}
                     </p>
-                    {tab === "waiting" ? (
-                      <p className="mt-0.5 text-xs font-medium text-destructive">
-                        Waiting {waitLabel(c.requested_agent_at)}
-                      </p>
-                    ) : null}
+                    <QueueMeta
+                      conversation={c}
+                      now={nowTick}
+                      slaMinutes={slaMinutes}
+                      departmentName={departmentName(c.department_id)}
+                    />
                   </button>
                 </li>
               ))}
@@ -581,22 +760,13 @@ function InboxPage() {
 
                 <div className="ml-auto flex flex-wrap items-center gap-2">
                   {can("conversation.transfer") ? (
-                    <select
-                      aria-label="Transfer to department"
-                      value={active.department_id ?? ""}
-                      disabled={transfer.isPending}
-                      onChange={(e) => {
-                        if (e.target.value) transfer.mutate(e.target.value);
-                      }}
-                      className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                    >
-                      <option value="">Transfer to…</option>
-                      {(departmentsQuery.data ?? []).map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name}
-                        </option>
-                      ))}
-                    </select>
+                    <TransferDialog
+                      key={active.id}
+                      departments={departmentsQuery.data ?? []}
+                      currentDepartmentId={active.department_id}
+                      busy={transfer.isPending}
+                      onConfirm={(departmentId, note) => transfer.mutate({ departmentId, note })}
+                    />
                   ) : null}
 
                   {isSupervisor && !isClosed ? (
@@ -609,9 +779,21 @@ function InboxPage() {
                   ) : null}
 
                   {canClaim ? (
-                    <Button size="sm" onClick={() => claim.mutate()} disabled={claim.isPending}>
-                      {claim.isPending ? "Claiming…" : "Claim conversation"}
-                    </Button>
+                    <span title={blockReason ?? "Take ownership of this conversation"}>
+                      <Button
+                        size="sm"
+                        onClick={() => claim.mutate()}
+                        disabled={claim.isPending || Boolean(blockReason)}
+                        aria-describedby={blockReason ? "claim-reason" : undefined}
+                      >
+                        {claim.isPending ? "Claiming…" : "Claim conversation"}
+                      </Button>
+                    </span>
+                  ) : null}
+                  {canClaim && blockReason ? (
+                    <span id="claim-reason" className="text-xs text-destructive">
+                      {blockReason}
+                    </span>
                   ) : null}
 
 
@@ -674,19 +856,78 @@ function InboxPage() {
                     if (draft.trim()) sendReply.mutate(draft.trim());
                   }}
                 >
-                  <Textarea
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        if (draft.trim() && !sendReply.isPending) sendReply.mutate(draft.trim());
-                      }
-                    }}
-                    placeholder="Reply to the visitor… (Enter to send, Shift+Enter for a new line)"
-                    rows={3}
-                  />
-                  <div className="mt-2 flex justify-end">
+                  <div className="relative">
+                    <Textarea
+                      ref={replyRef}
+                      value={draft}
+                      onChange={(e) => {
+                        setDraft(e.target.value);
+                        setSlashTerm(slashQuery(e.target.value, e.target.selectionStart ?? 0));
+                        setSlashIndex(0);
+                      }}
+                      onKeyDown={(e) => {
+                        if (slashMatches.length > 0) {
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            setSlashIndex((i) => (i + 1) % slashMatches.length);
+                            return;
+                          }
+                          if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            setSlashIndex(
+                              (i) => (i - 1 + slashMatches.length) % slashMatches.length,
+                            );
+                            return;
+                          }
+                          if (e.key === "Escape") {
+                            e.preventDefault();
+                            setSlashTerm(null);
+                            return;
+                          }
+                          if (e.key === "Enter" || e.key === "Tab") {
+                            e.preventDefault();
+                            const picked = slashMatches[slashIndex] ?? slashMatches[0];
+                            if (picked) insertTemplate(picked, true);
+                            return;
+                          }
+                        }
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          if (draft.trim() && !sendReply.isPending) sendReply.mutate(draft.trim());
+                        }
+                      }}
+                      placeholder="Reply to the visitor… (Enter to send, Shift+Enter for a new line, / for a saved reply)"
+                      rows={3}
+                    />
+                    {slashMatches.length > 0 ? (
+                      <ul className="absolute bottom-full left-0 z-20 mb-1 max-h-56 w-full overflow-y-auto rounded-md border border-border bg-popover p-1 shadow-md">
+                        {slashMatches.map((t, i) => (
+                          <li key={t.id}>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                insertTemplate(t, true);
+                              }}
+                              className={`flex w-full flex-col items-start rounded px-2 py-1.5 text-left text-xs hover:bg-accent ${
+                                i === slashIndex ? "bg-accent" : ""
+                              }`}
+                            >
+                              <span className="font-medium">
+                                {t.shortcut ? `/${t.shortcut}` : t.name}
+                              </span>
+                              <span className="line-clamp-1 text-muted-foreground">{t.body}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 flex items-center justify-end gap-2">
+                    <TemplatePicker
+                      templates={templates}
+                      onPick={(t) => insertTemplate(t, false)}
+                    />
                     <Button type="submit" size="sm" disabled={sendReply.isPending || !draft.trim()}>
                       {sendReply.isPending ? "Sending…" : "Send reply"}
                     </Button>
@@ -728,6 +969,210 @@ function InboxPage() {
         </aside>
       </div>
     </AdminShell>
+  );
+}
+
+/** Wait time, SLA countdown, priority, department and unread marker for a row. */
+function QueueMeta({
+  conversation,
+  now,
+  slaMinutes,
+  departmentName,
+}: {
+  conversation: Conversation;
+  now: number;
+  slaMinutes: number;
+  departmentName: string | null;
+}) {
+  const waited = waitingMinutes(conversation, now);
+  const remaining = waited === null ? null : Math.round(slaMinutes - waited);
+  const tone =
+    remaining === null
+      ? "text-muted-foreground"
+      : remaining < 0
+        ? "text-destructive"
+        : remaining <= 5
+          ? "text-amber-600 dark:text-amber-500"
+          : "text-muted-foreground";
+
+  return (
+    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+      {waited !== null ? (
+        <span className="font-medium text-destructive">
+          Waiting {waitLabel(conversation.first_human_requested_at ?? conversation.requested_agent_at)}
+        </span>
+      ) : null}
+      {remaining !== null ? (
+        <span className={tone}>
+          {remaining < 0 ? `${Math.abs(remaining)} min over target` : `${remaining} min left`}
+        </span>
+      ) : null}
+      <span className="text-muted-foreground">{conversation.priority}</span>
+      {departmentName ? <span className="text-muted-foreground">{departmentName}</span> : null}
+      {conversation.unread_agent_count > 0 ? (
+        <span
+          aria-label={`${conversation.unread_agent_count} unread visitor messages`}
+          className="inline-flex h-2 w-2 rounded-full bg-primary"
+        />
+      ) : null}
+    </p>
+  );
+}
+
+/** Searchable list of approved saved replies. */
+function TemplatePicker({
+  templates,
+  onPick,
+}: {
+  templates: ResponseTemplate[];
+  onPick: (template: ResponseTemplate) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [term, setTerm] = useState("");
+  const matches = matchTemplates(templates, term, 50);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" size="sm" variant="outline">
+          Templates
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Saved replies</DialogTitle>
+          <DialogDescription>
+            Approved wording for common questions. In the reply box you can also type “/” followed
+            by the shortcut.
+          </DialogDescription>
+        </DialogHeader>
+        <Input
+          autoFocus
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          placeholder="Search saved replies"
+        />
+        <ul className="max-h-72 space-y-1 overflow-y-auto">
+          {matches.length === 0 ? (
+            <li className="p-2 text-sm text-muted-foreground">No saved replies match that.</li>
+          ) : (
+            matches.map((t) => (
+              <li key={t.id}>
+                <button
+                  type="button"
+                  className="w-full rounded-md border border-border p-2 text-left hover:bg-accent"
+                  onClick={() => {
+                    onPick(t);
+                    setOpen(false);
+                  }}
+                >
+                  <span className="text-sm font-medium">
+                    {t.name}
+                    {t.shortcut ? (
+                      <span className="ml-2 text-xs text-muted-foreground">/{t.shortcut}</span>
+                    ) : null}
+                  </span>
+                  <span className="mt-1 line-clamp-2 block text-xs text-muted-foreground">
+                    {t.body}
+                  </span>
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Deliberate transfer: pick a department, add a handover note, confirm. */
+function TransferDialog({
+  departments,
+  currentDepartmentId,
+  busy,
+  onConfirm,
+}: {
+  departments: Array<{ id: string; name: string }>;
+  currentDepartmentId: string | null;
+  busy: boolean;
+  onConfirm: (departmentId: string, note?: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [departmentId, setDepartmentId] = useState("");
+  const [note, setNote] = useState("");
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          setDepartmentId("");
+          setNote("");
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button type="button" size="sm" variant="outline" disabled={busy}>
+          {busy ? "Transferring…" : "Transfer…"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Transfer this conversation</DialogTitle>
+          <DialogDescription>
+            The chat moves to the chosen department's queue and the visitor is told it was handed
+            over.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="transfer-dept">Department</Label>
+            <select
+              id="transfer-dept"
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="">Choose a department…</option>
+              {departments
+                .filter((d) => d.id !== currentDepartmentId)
+                .map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="transfer-note">Note for the receiving team (optional)</Label>
+            <Textarea
+              id="transfer-note"
+              rows={3}
+              maxLength={500}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="What has been done so far, and what is needed next?"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={!departmentId || busy}
+            onClick={() => {
+              onConfirm(departmentId, note.trim() || undefined);
+              setOpen(false);
+            }}
+          >
+            Transfer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
