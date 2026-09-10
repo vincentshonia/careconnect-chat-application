@@ -1363,7 +1363,7 @@ function MessageBubble({
         <div className="text-[11px] text-muted-foreground">
           Based on:{" "}
           {bubble.sources.map((s, i) => (
-            <span key={s.articleId}>
+            <span key={s.sourceId ?? s.articleId ?? `${s.title}-${i}`}>
               {i > 0 && ", "}
               {s.url ? (
                 <a className="underline" href={s.url} target="_blank" rel="noreferrer">
