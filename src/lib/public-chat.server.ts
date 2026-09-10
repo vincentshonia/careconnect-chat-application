@@ -6,6 +6,7 @@ import { resolveWidgetTabs } from "@/lib/widget-tabs";
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { chatComplete, embedText, AiGatewayError, CHAT_MODEL } from "./ai.server";
+import { detectCrisis, applyConfidenceBand, LOW_CONFIDENCE_REPLY } from "./ai-confidence";
 
 type Admin = SupabaseClient<any, "public", any>;
 
@@ -432,17 +433,13 @@ export async function insertMessage(
 
 /* --------------------------------- RAG ----------------------------------- */
 
-const CRISIS_PATTERNS = [
-  /suicid/i, /kill myself/i, /overdos/i, /can'?t breathe/i, /chest pain/i,
-  /emergency/i, /bleeding/i, /unconscious/i, /want to die/i, /hurt myself/i,
-];
-
-export function detectCrisis(text: string) {
-  return CRISIS_PATTERNS.some((r) => r.test(text));
-}
-
-const LOW_CONFIDENCE_REPLY =
-  "I'm not completely confident that I have the correct information for that question. Would you like me to connect you with a representative?";
+export {
+  CRISIS_PATTERNS,
+  detectCrisis,
+  LOW_CONFIDENCE_REPLY,
+  HEDGE_PREFIX,
+  applyConfidenceBand,
+} from "./ai-confidence";
 
 export type AnswerResult = {
   answer: string;
@@ -558,7 +555,8 @@ export async function answerQuestion(opts: {
   }
 
   const confidence = Math.max(0, Math.min(1, Number(parsed.confidence) || 0));
-  const escalate = confidence < 0.5;
+  const band = applyConfidenceBand(parsed.answer ?? "", confidence);
+  const escalate = band.escalate;
   const used = parsed.used_sources?.length
     ? parsed.used_sources.map((n) => relevant[n - 1]).filter(Boolean)
     : relevant.slice(0, 2);
@@ -573,8 +571,8 @@ export async function answerQuestion(opts: {
   );
 
   return {
-    answer: escalate ? LOW_CONFIDENCE_REPLY : parsed.answer,
-    sources: escalate ? [] : sources,
+    answer: band.answer,
+    sources: band.useSources ? sources : [],
     confidence,
     escalate,
     crisis: false,
