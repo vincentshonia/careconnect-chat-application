@@ -126,7 +126,13 @@ async function makeStaff(key: string, options: StaffOptions = {}) {
   return id;
 }
 
+/**
+ * A conversation only enters the human queue once the visitor has actually
+ * asked for a person, so a claimable fixture must carry that request — the
+ * same state the widget and the AI handoff produce.
+ */
 async function makeConversation(department: string | null, status = "waiting") {
+  const requestedAt = new Date().toISOString();
   const { data, error } = await db
     .from("conversations")
     .insert({
@@ -135,6 +141,8 @@ async function makeConversation(department: string | null, status = "waiting") {
       department_id: department,
       reference: `C-${suffix}-${Math.random().toString(36).slice(2, 9)}`,
       status,
+      escalation_requested: true,
+      first_human_requested_at: requestedAt,
     })
     .select("id")
     .single();
