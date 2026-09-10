@@ -1561,6 +1561,23 @@ function Field({
   );
 }
 
+/** Shown when the server reports the conversation is resolved, closed or abandoned. */
+function EndedNotice({ brand, onRestart }: { brand: string; onRestart: () => void }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 text-center">
+      <p className="text-sm font-semibold text-card-foreground">This conversation has ended</p>
+      <button
+        type="button"
+        onClick={onRestart}
+        className="mt-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
+        style={{ background: brand }}
+      >
+        Start a new chat
+      </button>
+    </div>
+  );
+}
+
 /** Post-conversation satisfaction rating shown once the chat has some depth. */
 function SatisfactionPrompt({
   conversationId,
