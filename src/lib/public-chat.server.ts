@@ -500,7 +500,7 @@ export async function insertMessage(
       severity: "warning",
       title: `Conversation ${conversation.reference ?? ""} was reopened`.trim(),
       body: "A visitor replied after this conversation was finished.",
-      link: "/inbox",
+      link: `/inbox?c=${conversation.id}`,
       recordType: "conversations",
       recordId: conversation.id,
       ...(decision.keepAssignee && previousAssignee
@@ -508,6 +508,22 @@ export async function insertMessage(
         : conversation.department_id
           ? { departmentId: conversation.department_id as string }
           : {}),
+    });
+  }
+  // A visitor writing into a chat somebody already owns is the single most
+  // time-sensitive event an agent has, so the owner is told directly.
+  if (senderType === "visitor" && previousAssignee && !decision.reopens) {
+    const { notifyStaff } = await import("@/lib/notifications.server");
+    await notifyStaff({
+      organizationId: conversation.organization_id,
+      type: "visitor_reply",
+      severity: "info",
+      title: `New visitor message on ${conversation.reference ?? "a conversation"}`,
+      body: body.slice(0, 140),
+      link: `/inbox?c=${conversation.id}`,
+      recordType: "conversations",
+      recordId: conversation.id,
+      userIds: [previousAssignee],
     });
   }
   return data;
