@@ -175,14 +175,14 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             request_type: typeMap[input.kind] ?? "general",
             priority: input.kind === "live_agent" ? "high" : "normal",
             full_name: input.fullName,
-            email: input.email,
-            phone: input.phone,
+            email: normalizedEmail ?? input.email,
+            phone: normalizedPhone ?? input.phone,
             county: input.county ?? null,
             health_plan: input.healthPlan ?? null,
             service_interest: input.serviceInterest ?? null,
             preferred_language: input.preferredLanguage ?? "English",
             source: "widget",
-            notes: input.reason ?? null,
+            notes: intakeNotes,
           });
 
           // Full human hand-off: department routing, staff alerts and — only
