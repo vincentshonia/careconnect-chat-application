@@ -2605,6 +2605,7 @@ export type Database = {
         Args: { _user?: string }
         Returns: Database["public"]["Enums"]["platform_role"]
       }
+      purge_old_rate_limits: { Args: never; Returns: undefined }
       quality_summary: { Args: { _org: string }; Returns: Json }
       reassignment_candidates: {
         Args: { _conversation: string; _org: string }
