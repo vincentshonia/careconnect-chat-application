@@ -607,3 +607,161 @@ describe("report days follow the organization timezone", () => {
     expect(days.map((r) => r.day)).toEqual(["2025-06-11"]);
   });
 });
+
+/**
+ * Staff figures must follow the person who actually did the work. Reassigning
+ * a conversation moves the current owner — it must never move the credit for a
+ * reply that somebody else already sent.
+ */
+describe("staff credit survives a reassignment", () => {
+  let org = "";
+  let site = "";
+  let dept = "";
+  let responder = { id: "", email: "" };
+  let inheritor = { id: "", email: "" };
+  let windowFrom = "";
+  let windowTo = "";
+
+  async function makeStaff(key: string) {
+    const email = syntheticEmail(`credit_${key}`, suffix);
+    const fullName = syntheticName(`credit_${key}`, suffix);
+    const { data, error } = await db.auth.admin.createUser({
+      email,
+      password: `Cc!${suffix}Aa1${key}`,
+      email_confirm: true,
+      user_metadata: { full_name: fullName },
+    });
+    if (error || !data.user) throw new Error(`staff ${key}: ${error?.message}`);
+    const id = data.user.id;
+    await db.from("profiles").upsert({
+      id,
+      organization_id: org,
+      full_name: fullName,
+      email,
+      presence: "available",
+    } as never);
+    const { error: memberError } = await db
+      .from("organization_memberships")
+      .insert({ organization_id: org, user_id: id, role: "agent", status: "active" } as never);
+    if (memberError) throw new Error(`membership ${key}: ${memberError.message}`);
+    await db
+      .from("department_members")
+      .insert({ department_id: dept, user_id: id, organization_id: org } as never);
+    return { id, email };
+  }
+
+  beforeAll(async () => {
+    org = await makeOrg("ScaleCredit");
+    site = await makeWebsite(org, "scalecredit");
+    dept = await makeDepartment(org, "Credit");
+    responder = await makeStaff("responder");
+    inheritor = await makeStaff("inheritor");
+
+    const queued = new Date(Date.UTC(2025, 2, 4, 10, 0, 0));
+    const claimed = new Date(Date.UTC(2025, 2, 4, 10, 2, 0));
+    const replied = new Date(Date.UTC(2025, 2, 4, 10, 5, 0));
+    const done = new Date(Date.UTC(2025, 2, 4, 10, 40, 0));
+    windowFrom = new Date(Date.UTC(2025, 1, 1)).toISOString();
+    windowTo = new Date(Date.UTC(2025, 3, 1)).toISOString();
+
+    // The chat was queued, claimed and answered by the responder, then handed
+    // to a second agent who now owns it and has never written a word.
+    const { data, error } = await db
+      .from("conversations")
+      .insert({
+        organization_id: org,
+        website_id: site,
+        department_id: dept,
+        reference: `CR-${suffix}-1`,
+        status: "resolved",
+        escalation_requested: true,
+        created_at: queued.toISOString(),
+        last_message_at: done.toISOString(),
+        first_human_requested_at: queued.toISOString(),
+        claimed_at: claimed.toISOString(),
+        first_agent_response_at: replied.toISOString(),
+        resolved_at: done.toISOString(),
+        resolved_by: responder.id,
+        assigned_to: inheritor.id,
+      } as never)
+      .select("id")
+      .single();
+    if (error) throw new Error(`credit conversation: ${error.message}`);
+    const conversationId = (data as { id: string }).id;
+
+    const { error: messageError } = await db.from("messages").insert({
+      organization_id: org,
+      website_id: site,
+      conversation_id: conversationId,
+      sender_type: "agent",
+      sender_user_id: responder.id,
+      body: "Happy to help with that.",
+      created_at: replied.toISOString(),
+    } as never);
+    if (messageError) throw new Error(`credit message: ${messageError.message}`);
+
+    const { error: eventError } = await db.from("conversation_events").insert([
+      {
+        organization_id: org,
+        conversation_id: conversationId,
+        actor_id: responder.id,
+        event_type: "claimed",
+        created_at: claimed.toISOString(),
+      },
+      {
+        organization_id: org,
+        conversation_id: conversationId,
+        actor_id: inheritor.id,
+        event_type: "reassigned",
+        created_at: done.toISOString(),
+      },
+    ] as never);
+    if (eventError) throw new Error(`credit events: ${eventError.message}`);
+  }, 180_000);
+
+  afterAll(async () => {
+    if (!configured) return;
+    await purgeSyntheticUsers(db, [responder, inheritor].filter((u) => u.id));
+    await purgeSyntheticOrganizations(db, [org]);
+  }, 180_000);
+
+  async function staffRows() {
+    return rpc<Record<string, unknown>[]>("report_staff", {
+      _org: org,
+      _from: windowFrom,
+      _to: windowTo,
+      _dept: null,
+      _staff: null,
+      _statuses: null,
+      _website: null,
+      _type: "all",
+      _transfer: "all",
+      _priority: null,
+      _sla: 15,
+    });
+  }
+
+  it("keeps the first-response and reply-target credit with the original responder", async () => {
+    const rows = await staffRows();
+    const original = rows.find((r) => r['user_id'] === responder.id);
+    const now = rows.find((r) => r['user_id'] === inheritor.id);
+    expect(original).toBeTruthy();
+    expect(now).toBeTruthy();
+    expect(Number(original!['avg_response'])).toBe(5);
+    expect(Number(original!['avg_claim'])).toBe(2);
+    expect(Number(original!['sla_pct'])).toBe(100);
+    // The current owner never replied, so nothing is credited to them.
+    expect(now!['avg_response']).toBeNull();
+    expect(now!['sla_pct']).toBeNull();
+  });
+
+  it("credits handling time to whoever resolved the conversation", async () => {
+    const rows = await staffRows();
+    const original = rows.find((r) => r['user_id'] === responder.id);
+    const now = rows.find((r) => r['user_id'] === inheritor.id);
+    expect(Number(original!['avg_handle'])).toBe(38);
+    expect(now!['avg_handle']).toBeNull();
+    // Current workload still belongs to the person who holds the chat today.
+    expect(Number(now!['assigned_count'])).toBe(1);
+  });
+});
