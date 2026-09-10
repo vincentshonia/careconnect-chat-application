@@ -320,18 +320,14 @@ function Faqs() {
 
   const orgId = session.data?.organizationId ?? faqQuery.data?.rows?.[0]?.organization_id ?? null;
 
+  const createFaq = useServerFn(createFaqFn);
+  const deleteFaq = useServerFn(deleteFaqFn);
+
   const create = useMutation({
     mutationFn: async () => {
-      if (!orgId) throw new Error("No organization context available");
-      const { error } = await supabase.from("faqs").insert({
-        organization_id: orgId,
-        category: draft.category,
-        question: draft.question,
-        answer: draft.answer,
-        applies_to_all: true,
-        status: "active",
+      await createFaq({
+        data: { category: draft.category, question: draft.question, answer: draft.answer },
       });
-      if (error) throw error;
       await logAudit({ action: "faq.created", recordType: "faqs", newValue: { category: draft.category, question: draft.question } });
     },
     onSuccess: () => {
@@ -342,8 +338,7 @@ function Faqs() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("faqs").delete().eq("id", id);
-      if (error) throw error;
+      await deleteFaq({ data: { id } });
       await logAudit({ action: "faq.deleted", recordType: "faqs", recordId: id });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["kb-faqs"] }),
