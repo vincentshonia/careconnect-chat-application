@@ -162,9 +162,10 @@ async function activeCount(userId: string) {
 
 describe("claim & routing concurrency", () => {
   beforeAll(async () => {
+    const orgName = syntheticName("conc", suffix);
     const { data, error } = await db
       .from("organizations")
-      .insert({ name: `Conc ${suffix}`, slug: `conc-${suffix}` })
+      .insert({ name: orgName, slug: orgName.toLowerCase() })
       .select("id")
       .single();
     if (error) throw new Error(`org: ${error.message}`);
@@ -174,8 +175,8 @@ describe("claim & routing concurrency", () => {
       .from("websites")
       .insert({
         organization_id: orgId,
-        name: `ConcSite ${suffix}`,
-        domain: `conc-${suffix}.example.com`,
+        name: syntheticName("concsite", suffix),
+        domain: `conc-${suffix}.example.test`,
         public_key: `pk_conc_${suffix}`,
       })
       .select("id")
@@ -186,24 +187,11 @@ describe("claim & routing concurrency", () => {
 
   afterAll(async () => {
     if (!configured || !orgId) return;
-    await db.from("conversation_events").delete().eq("organization_id", orgId);
-    await db.from("messages").delete().eq("organization_id", orgId);
-    await db.from("conversations").delete().eq("organization_id", orgId);
-    await db.from("notifications").delete().eq("organization_id", orgId);
-    await db.from("audit_logs").delete().eq("organization_id", orgId);
-    await db.from("department_members").delete().eq("organization_id", orgId);
-    await db.from("departments").delete().eq("organization_id", orgId);
-    await db.from("websites").delete().eq("organization_id", orgId);
-    await db.from("organization_memberships").delete().eq("organization_id", orgId);
-    for (const id of createdUsers) {
-      await db.from("notification_preferences").delete().eq("user_id", id);
-      await db.from("profiles").delete().eq("id", id);
-      await db.auth.admin.deleteUser(id);
-    }
-    await db.from("organizations").delete().eq("id", orgId);
     // Teardown deletes dozens of auth users one call at a time; under load the
     // sandbox needs more than the default hook budget to finish, and a hook
     // that is cut short leaves synthetic rows behind for the next run.
+    await purgeSyntheticUsers(db, createdUsers);
+    await purgeSyntheticOrganizations(db, [orgId]);
   }, 300_000);
 
   describe("1. manual claim — many agents, one conversation", () => {
@@ -342,7 +330,7 @@ describe("claim & routing concurrency", () => {
 
     it("an already-authenticated session cannot bypass a mid-session suspension", async () => {
       const department = await makeDepartment("StatusLive");
-      const email = `conc-live-${suffix}@example.test`;
+      const email = syntheticEmail("conc_live", suffix);
       const { data, error } = await db.auth.admin.createUser({
         email,
         password,
@@ -350,10 +338,14 @@ describe("claim & routing concurrency", () => {
       });
       if (error || !data.user) throw new Error(`user: ${error?.message}`);
       const id = data.user.id;
-      createdUsers.push(id);
-      await db
-        .from("profiles")
-        .upsert({ id, organization_id: orgId, full_name: "Conc Live", email, presence: "available" });
+      createdUsers.push({ id, email });
+      await db.from("profiles").upsert({
+        id,
+        organization_id: orgId,
+        full_name: syntheticName("conc_live", suffix),
+        email,
+        presence: "available",
+      });
       await db
         .from("organization_memberships")
         .insert({ organization_id: orgId, user_id: id, role: "agent", status: "active" });
