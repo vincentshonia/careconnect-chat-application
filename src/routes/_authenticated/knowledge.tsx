@@ -66,26 +66,131 @@ function ReindexAllButton() {
   );
 }
 
+const REVIEW_PAGE = 10;
+
+type FaqPrefill = { question: string; answer: string } | null;
+
 function KnowledgePage() {
+  const session = useSessionContext();
+  const canEdit = session.data?.can("knowledge.edit") ?? false;
+  const [tab, setTab] = useState("articles");
+  const [prefill, setPrefill] = useState<FaqPrefill>(null);
+  const reviewQueue = useServerFn(aiReviewQueueFn);
+
+  const reviewCount = useQuery({
+    queryKey: ["ai-review", 0],
+    queryFn: async () => await reviewQueue({ data: { page: 0, pageSize: REVIEW_PAGE } }),
+    enabled: canEdit,
+  });
+
   return (
     <AdminShell
       title="Knowledge base"
       description="Articles, FAQs and services all feed the AI chatbot through vector search."
     >
       <ReindexAllButton />
-      <Tabs defaultValue="articles">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="articles">Articles</TabsTrigger>
           <TabsTrigger value="faqs">FAQs</TabsTrigger>
+          {canEdit ? (
+            <TabsTrigger value="review" className="gap-2">
+              AI review
+              {reviewCount.data && reviewCount.data.total > 0 ? (
+                <Badge variant="secondary">{reviewCount.data.total}</Badge>
+              ) : null}
+            </TabsTrigger>
+          ) : null}
         </TabsList>
         <TabsContent value="articles" className="mt-4">
           <Articles />
         </TabsContent>
         <TabsContent value="faqs" className="mt-4">
-          <Faqs />
+          <Faqs prefill={prefill} />
         </TabsContent>
+        {canEdit ? (
+          <TabsContent value="review" className="mt-4">
+            <AiReview
+              onCreateFaq={(question, answer) => {
+                setPrefill({ question, answer });
+                setTab("faqs");
+              }}
+            />
+          </TabsContent>
+        ) : null}
       </Tabs>
     </AdminShell>
+  );
+}
+
+function AiReview({ onCreateFaq }: { onCreateFaq: (question: string, answer: string) => void }) {
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(0);
+  const reviewQueue = useServerFn(aiReviewQueueFn);
+  const dismiss = useServerFn(dismissAiResponseFn);
+
+  const listQuery = useQuery({
+    queryKey: ["ai-review", page],
+    queryFn: async () => await reviewQueue({ data: { page, pageSize: REVIEW_PAGE } }),
+  });
+
+  const dismissOne = useMutation({
+    mutationFn: async (id: string) => await dismiss({ data: { id } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ai-review"] }),
+  });
+
+  const rows = listQuery.data?.rows ?? [];
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Questions from the last 30 days where the assistant was unsure or the visitor was unhappy.
+        Answer them once as an FAQ and the assistant will use it next time.
+      </p>
+      {listQuery.isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Nothing needs review right now.</p>
+      ) : (
+        rows.map((r) => (
+          <article key={r.id} className="rounded-xl border border-border p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">Asked {r.occurrences}×</Badge>
+              <Badge variant="outline">
+                Confidence {r.confidence === null ? "—" : Math.round(Number(r.confidence) * 100)}%
+              </Badge>
+              {r.feedback === "negative" ? <Badge variant="destructive">Thumbs down</Badge> : null}
+              <span className="text-xs text-muted-foreground">
+                Last asked {formatDateInZone(r.lastAskedAt)}
+              </span>
+            </div>
+            <h3 className="mt-2 text-sm font-semibold">{r.question}</h3>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{r.answer}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => onCreateFaq(r.question, r.answer ?? "")}>
+                Create FAQ from this
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={dismissOne.isPending}
+                onClick={() => dismissOne.mutate(r.id)}
+              >
+                Dismiss
+              </Button>
+            </div>
+          </article>
+        ))
+      )}
+      <Pager
+        page={page}
+        pageSize={REVIEW_PAGE}
+        total={listQuery.data?.total ?? 0}
+        onPage={setPage}
+        noun="questions"
+        busy={listQuery.isFetching}
+      />
+    </div>
   );
 }
 
