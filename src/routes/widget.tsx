@@ -2,6 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
 import { resolveWidgetTabs, tabIconPath } from "@/lib/widget-tabs";
+import {
+  isConversationEnded,
+  nextPollDelay,
+  POLL_MIN_MS,
+  safeStorage,
+  shouldShowRating,
+} from "@/lib/widget-client";
 
 const BRAND_LOGO_URL = brandLogoAsset.url;
 
@@ -166,24 +173,77 @@ function WidgetPage() {
   const [agentName, setAgentName] = useState<string | null>(null);
   const [agentAvatar, setAgentAvatar] = useState<string | null>(null);
   const [faqQuery, setFaqQuery] = useState("");
+  /** Latest conversation status reported by the server. */
+  const [convStatus, setConvStatus] = useState<string | null>(null);
+  /** True once a human (not the assistant) has replied in this conversation. */
+  const [agentReplied, setAgentReplied] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
-  const lastSeen = useRef<string | null>(null);
+  /** Newest message timestamp we have rendered, per conversation id. */
+  const lastSeenByConversation = useRef<Record<string, string>>({});
+  /** Set while a send is in flight so two fast Enters cannot open two chats. */
+  const inFlight = useRef(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
   const storageKey = `phg-widget-${websiteId}`;
+  const threadKey = `${storageKey}-conv-v1`;
+  const ended = isConversationEnded(convStatus);
 
   // Personalized greeting when the visitor has already told us their name.
   const [visitorName, setVisitorName] = useState<string | null>(null);
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(`phg-widget-${websiteId}-name`);
-      if (stored) setVisitorName(stored.split(" ")[0]);
-    } catch {
-      /* storage unavailable */
-    }
+    const stored = safeStorage.get(`phg-widget-${websiteId}-name`);
+    if (stored) setVisitorName(stored.split(" ")[0] ?? null);
   }, [websiteId]);
+
+  /* ------------------- restore / persist the conversation ---------------- */
+  // The widget lives in an iframe that is torn down on every page navigation,
+  // so the thread has to be rebuilt from storage or the visitor loses it.
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    if (!websiteId) return;
+    const saved = safeStorage.getJson<{ conversationId: string; messages: Bubble[] }>(threadKey);
+    if (saved?.conversationId && Array.isArray(saved.messages)) {
+      setConversationId(saved.conversationId);
+      setMessages(saved.messages);
+    }
+    setRestored(true);
+  }, [websiteId, threadKey]);
+
+  useEffect(() => {
+    if (!restored) return;
+    if (!conversationId || ended) return;
+    safeStorage.setJson(threadKey, {
+      conversationId,
+      messages: messages.filter((m) => m.role !== "system").slice(-60),
+      updatedAt: Date.now(),
+    });
+  }, [restored, conversationId, messages, ended, threadKey]);
+
+  /* Rating dismissal is remembered per conversation, not per page view. */
+  const ratingKey = conversationId ? `${storageKey}-rated-${conversationId}` : null;
+  const [ratingDismissed, setRatingDismissed] = useState(false);
+  useEffect(() => {
+    setRatingDismissed(ratingKey ? safeStorage.get(ratingKey) === "1" : false);
+  }, [ratingKey]);
+  const dismissRating = useCallback(() => {
+    if (ratingKey) safeStorage.set(ratingKey, "1");
+    setRatingDismissed(true);
+  }, [ratingKey]);
+
+  /** Forget the finished chat and start over from the welcome message. */
+  const startNewChat = useCallback(() => {
+    safeStorage.remove(threadKey);
+    setConversationId(null);
+    setConvStatus(null);
+    setAgentReplied(false);
+    setAgentName(null);
+    setAgentAvatar(null);
+    setLiveStatus(null);
+    setMessages(config ? [{ id: uid(), role: "bot", text: config.website.welcomeMessage }] : []);
+    setView("chat");
+  }, [threadKey, config]);
 
   // Suggested help topics on Home: services first, then FAQ questions.
   const homeTopics = useMemo(() => {
@@ -209,19 +269,11 @@ function WidgetPage() {
   const ensureSession = useCallback(
     async (force = false): Promise<string> => {
       const key = `${storageKey}-session-v2`;
-      if (!force) {
-        let cached = sessionRef.current;
-        if (!cached && typeof window !== "undefined") {
-          try {
-            cached = JSON.parse(window.localStorage.getItem(key) ?? "null");
-          } catch {
-            cached = null;
-          }
-        }
-        if (cached?.token && Date.parse(cached.expiresAt) - 60_000 > Date.now()) {
-          sessionRef.current = cached;
-          return cached.token;
-        }
+      const cached =
+        sessionRef.current ?? safeStorage.getJson<{ token: string; expiresAt: string }>(key);
+      if (!force && cached?.token && Date.parse(cached.expiresAt) - 60_000 > Date.now()) {
+        sessionRef.current = cached;
+        return cached.token;
       }
       const res = await fetch("/api/public/chat/session", {
         method: "POST",
@@ -229,6 +281,9 @@ function WidgetPage() {
         body: JSON.stringify({
           websiteId,
           host: hostOrigin,
+          // Hand back the token being replaced: the server reuses the same
+          // visitor when it is genuine, so older conversations stay reachable.
+          priorSession: cached?.token ?? null,
           meta: {
             currentPage: page,
             landingPage: page,
@@ -240,9 +295,7 @@ function WidgetPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Unable to start a chat session");
       sessionRef.current = { token: json.token, expiresAt: json.expiresAt };
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(key, JSON.stringify(sessionRef.current));
-      }
+      safeStorage.setJson(key, sessionRef.current);
       return json.token as string;
     },
     [storageKey, websiteId, hostOrigin, page, params],
@@ -290,7 +343,7 @@ function WidgetPage() {
       return;
     }
 
-    const dismissedAt = Number(window.localStorage.getItem(`${storageKey}-dismissed`) ?? 0);
+    const dismissedAt = Number(safeStorage.get(`${storageKey}-dismissed`) ?? 0);
     const days = config.website.triggerRepeatDays || 0;
     const suppressed =
       dismissedAt > 0 && (days === 0 || Date.now() - dismissedAt < days * 86400000);
@@ -314,43 +367,84 @@ function WidgetPage() {
   }, [messages, view]);
 
   /* -------------------------- live agent polling ------------------------ */
+  // Each conversation keeps its own "newest message seen" marker, so opening
+  // the waiting view never re-renders bubbles the visitor already read.
   useEffect(() => {
-    if (!conversationId || view !== "waiting") return;
+    if (!conversationId || view !== "waiting" || ended) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let delay = POLL_MIN_MS;
+    let lastMessageAt = Date.now();
+
     const tick = async () => {
       const request = async (token: string) => {
         const qs = new URLSearchParams({ c: conversationId, s: token, h: hostOrigin ?? "" });
-        if (lastSeen.current) qs.set("since", lastSeen.current);
+        const since = lastSeenByConversation.current[conversationId];
+        if (since) qs.set("since", since);
         return fetch(`/api/public/chat/poll?${qs.toString()}`);
       };
-      let res = await request(await ensureSession());
-      if (res.status === 401) res = await request(await ensureSession(true));
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.connected && data.agentName) {
-        setAgentName(data.agentName);
-        setAgentAvatar(data.agentAvatarUrl ?? null);
-        setLiveStatus("Representative connected");
-      }
-      const incoming = (data.messages ?? []).filter(
-        (m: any) => m.sender_type === "agent" || m.sender_type === "ai",
-      );
-      if (incoming.length) {
-        lastSeen.current = incoming[incoming.length - 1].created_at;
-        setMessages((prev) => [
-          ...prev,
-          ...incoming.map((m: any) => ({
-            id: m.id,
-            role: "bot" as const,
-            text: m.body,
-            author: m.sender_name ?? "Representative",
-          })),
-        ]);
+      try {
+        let res = await request(await ensureSession());
+        if (res.status === 401) res = await request(await ensureSession(true));
+        if (cancelled) return;
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+
+        if (data.status) setConvStatus(data.status as string);
+        if (data.connected && data.agentName) {
+          setAgentName(data.agentName);
+          setAgentAvatar(data.agentAvatarUrl ?? null);
+          setLiveStatus("Representative connected");
+        }
+        const incoming = (data.messages ?? []).filter(
+          (m: any) => m.sender_type === "agent" || m.sender_type === "ai",
+        );
+        if (incoming.length) {
+          lastMessageAt = Date.now();
+          delay = POLL_MIN_MS;
+          lastSeenByConversation.current[conversationId] = incoming[incoming.length - 1].created_at;
+          if (incoming.some((m: any) => m.sender_type === "agent")) setAgentReplied(true);
+          setMessages((prev) => {
+            const known = new Set(prev.map((p) => p.id));
+            const fresh = incoming
+              .filter((m: any) => !known.has(m.id))
+              .map((m: any) => ({
+                id: m.id,
+                role: "bot" as const,
+                text: m.body,
+                author: m.sender_name ?? "Representative",
+              }));
+            return fresh.length ? [...prev, ...fresh] : prev;
+          });
+        }
+        // A finished conversation stops the loop and drops the saved thread.
+        if (isConversationEnded(data.status)) {
+          cancelled = true;
+          safeStorage.remove(threadKey);
+          return;
+        }
+      } catch {
+        /* transient network error — try again on the next tick */
+      } finally {
+        if (!cancelled) {
+          delay = nextPollDelay(delay, Date.now() - lastMessageAt);
+          timer = setTimeout(tick, delay);
+        }
       }
     };
+
     void tick();
-    const interval = setInterval(tick, 5000);
-    return () => clearInterval(interval);
-  }, [conversationId, view, ensureSession, hostOrigin]);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [conversationId, view, ended, ensureSession, hostOrigin, threadKey]);
+
+  // A conversation that just ended should not keep a stale saved copy around.
+  useEffect(() => {
+    if (ended) safeStorage.remove(threadKey);
+  }, [ended, threadKey]);
 
   const brand = config?.website.primaryColor ?? "#0f766e";
   const radius = config?.website.borderRadius ?? 16;
@@ -365,16 +459,20 @@ function WidgetPage() {
 
   const dismissTeaser = () => {
     setShowTeaser(false);
-    window.localStorage.setItem(`${storageKey}-dismissed`, String(Date.now()));
+    safeStorage.set(`${storageKey}-dismissed`, String(Date.now()));
   };
 
   const closeWidget = () => {
     setOpen(false);
-    window.localStorage.setItem(`${storageKey}-dismissed`, String(Date.now()));
+    safeStorage.set(`${storageKey}-dismissed`, String(Date.now()));
   };
 
   const sendQuestion = async (text: string) => {
     if (!text.trim() || !config) return;
+    // One guard for both the Enter key and the send button: without it two
+    // fast presses each started their own conversation.
+    if (inFlight.current) return;
+    inFlight.current = true;
     setView("chat");
     setInput("");
     setMessages((prev) => [...prev, { id: uid(), role: "visitor", text }]);
@@ -406,6 +504,7 @@ function WidgetPage() {
         { id: uid(), role: "system", text: (e as Error).message || "We could not reach the assistant." },
       ]);
     } finally {
+      inFlight.current = false;
       setSending(false);
     }
   };
@@ -794,23 +893,32 @@ function WidgetPage() {
               // name (the greeting already reads this key).
               const givenName = String(payload['fullName'] ?? "").trim();
               if (givenName) {
-                try {
-                  window.localStorage.setItem(`${storageKey}-name`, givenName);
-                } catch {
-                  /* storage unavailable */
-                }
+                safeStorage.set(`${storageKey}-name`, givenName);
                 setVisitorName(givenName.split(" ")[0] ?? null);
               }
-              setLiveStatus(
-                formKind === "live_agent"
-                  ? data.assignedAgent
-                    ? `${data.assignedAgent} has been assigned and will join shortly`
-                    : data.agentsAvailable
-                      ? "Looking for an available representative"
-                      : "No representative is currently available — your message has been saved."
-                  : "Your request has been received. A representative will follow up.",
-              );
 
+              // Only a live-agent request means someone is waiting for a
+              // person; the other forms just need a confirmation in the chat.
+              if (formKind !== "live_agent") {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: uid(),
+                    role: "bot",
+                    text: "Thank you — we have received your details and a representative will follow up.",
+                  },
+                ]);
+                setView("chat");
+                return;
+              }
+
+              setLiveStatus(
+                data.assignedAgent
+                  ? `${data.assignedAgent} has been assigned and will join shortly`
+                  : data.agentsAvailable
+                    ? "Looking for an available representative"
+                    : "No representative is currently available — your message has been saved.",
+              );
               setView("waiting");
             }}
           />
@@ -818,23 +926,32 @@ function WidgetPage() {
 
         {view === "waiting" && (
           <div className="space-y-3">
-            <div className="rounded-xl border border-border bg-card p-4 text-center">
-              <p className="text-sm font-semibold text-card-foreground">{liveStatus ?? "Connecting you"}</p>
-              {agentName && <p className="mt-1 text-xs text-muted-foreground">You are chatting with {agentName}.</p>}
-              {!agentName && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  You can keep typing below — a representative will see everything you send.
-                </p>
-              )}
-            </div>
+            {ended ? (
+              <EndedNotice brand={brand} onRestart={startNewChat} />
+            ) : (
+              <div className="rounded-xl border border-border bg-card p-4 text-center">
+                <p className="text-sm font-semibold text-card-foreground">{liveStatus ?? "Connecting you"}</p>
+                {agentName && <p className="mt-1 text-xs text-muted-foreground">You are chatting with {agentName}.</p>}
+                {!agentName && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    You can keep typing below — a representative will see everything you send.
+                  </p>
+                )}
+              </div>
+            )}
             {messages
               .filter((m) => m.role !== "system")
               .map((m) => (
                 <MessageBubble key={m.id} bubble={m} brand={brand} onRate={rateAnswer} onAction={() => {}} />
               ))}
-            {/* A visitor who reached a human must still be able to rate the chat. */}
-            {conversationId && !sending && (
-              <SatisfactionPrompt conversationId={conversationId} brand={brand} chatPost={chatPost} />
+            {/* Only ask for a rating once a person replied or the chat ended. */}
+            {shouldShowRating({ conversationId, status: convStatus, agentReplied, dismissed: ratingDismissed, sending }) && (
+              <SatisfactionPrompt
+                conversationId={conversationId!}
+                brand={brand}
+                chatPost={chatPost}
+                onDismiss={dismissRating}
+              />
             )}
           </div>
 
@@ -875,15 +992,21 @@ function WidgetPage() {
               </div>
 
             )}
-            {conversationId && !sending && messages.filter((m) => m.role === "bot").length >= 2 && (
-              <SatisfactionPrompt conversationId={conversationId} brand={brand} chatPost={chatPost} />
+            {ended && <EndedNotice brand={brand} onRestart={startNewChat} />}
+            {shouldShowRating({ conversationId, status: convStatus, agentReplied, dismissed: ratingDismissed, sending }) && (
+              <SatisfactionPrompt
+                conversationId={conversationId!}
+                brand={brand}
+                chatPost={chatPost}
+                onDismiss={dismissRating}
+              />
             )}
           </div>
         )}
 
       </div>
 
-      {(view === "chat" || view === "waiting") && (
+      {(view === "chat" || view === "waiting") && !ended && (
         <form
           className="border-t border-border/70 bg-card px-3 pb-3 pt-2.5"
           onSubmit={(e) => {
@@ -1438,22 +1561,39 @@ function Field({
   );
 }
 
+/** Shown when the server reports the conversation is resolved, closed or abandoned. */
+function EndedNotice({ brand, onRestart }: { brand: string; onRestart: () => void }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 text-center">
+      <p className="text-sm font-semibold text-card-foreground">This conversation has ended</p>
+      <button
+        type="button"
+        onClick={onRestart}
+        className="mt-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
+        style={{ background: brand }}
+      >
+        Start a new chat
+      </button>
+    </div>
+  );
+}
+
 /** Post-conversation satisfaction rating shown once the chat has some depth. */
 function SatisfactionPrompt({
   conversationId,
   brand,
   chatPost,
+  onDismiss,
 }: {
   conversationId: string;
   brand: string;
   chatPost: (path: string, body: Record<string, unknown>) => Promise<Response>;
+  onDismiss: () => void;
 }) {
   const [score, setScore] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const [done, setDone] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
 
-  if (dismissed) return null;
 
   if (done) {
     return (
@@ -1480,7 +1620,7 @@ function SatisfactionPrompt({
           type="button"
           aria-label="Dismiss rating"
           className="text-[11px] text-muted-foreground hover:underline"
-          onClick={() => setDismissed(true)}
+          onClick={onDismiss}
         >
           Not now
         </button>

@@ -6,6 +6,8 @@ const schema = z.object({
   publicKey: z.string().max(120).nullable().optional(),
   host: z.string().max(300).nullable().optional(),
   meta: z.record(z.any()).optional(),
+  /** The token being replaced, so renewal keeps the same visitor. */
+  priorSession: z.string().max(4000).nullable().optional(),
 });
 
 /**
@@ -29,6 +31,7 @@ export const Route = createFileRoute("/api/public/chat/session")({
             publicKey: parsed.data.publicKey ?? null,
             host: parsed.data.host ?? null,
             meta: parsed.data.meta ?? {},
+            priorSession: parsed.data.priorSession ?? null,
           });
           return Response.json(result, { headers: { "Cache-Control": "no-store" } });
         } catch (error) {

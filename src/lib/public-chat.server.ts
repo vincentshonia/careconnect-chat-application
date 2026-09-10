@@ -657,13 +657,29 @@ export async function startWidgetSession(opts: {
   publicKey?: string | null;
   host: string | null;
   meta: Record<string, any>;
+  /** The token being replaced, so a renewal keeps the same visitor. */
+  priorSession?: string | null;
 }) {
-  const { newSessionId, signSession } = await import("./widget-session.server");
+  const { newSessionId, signSession, verifySessionForRenewal } = await import(
+    "./widget-session.server"
+  );
   const website = opts.publicKey
     ? await resolveWebsiteByKey(opts.publicKey, opts.host)
     : await resolveWebsite(String(opts.websiteId ?? ""), opts.host);
 
-  const sid = newSessionId();
+  // A renewal presents its previous token. When that token is genuine (even if
+  // it expired in the last week) and belongs to this website, the visitor is
+  // the same person — reuse their session id so their conversations survive.
+  let sid: string | null = null;
+  if (opts.priorSession) {
+    try {
+      const prior = await verifySessionForRenewal(opts.priorSession);
+      if (prior.wid === website.id && prior.org === website.organization_id) sid = prior.sid;
+    } catch {
+      sid = null;
+    }
+  }
+  sid = sid ?? newSessionId();
   await ensureVisitor(website, sid, opts.meta ?? {});
   const { token, expiresAt } = await signSession({
     sid,
