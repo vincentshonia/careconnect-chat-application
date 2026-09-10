@@ -409,6 +409,7 @@ function WidgetPage() {
         }
         // A finished conversation stops the loop and drops the saved thread.
         if (isConversationEnded(data.status)) {
+          cancelled = true;
           safeStorage.remove(threadKey);
           return;
         }
