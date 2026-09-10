@@ -33,3 +33,23 @@ describe("widget session tokens", () => {
     expect(ids.size).toBe(200);
   });
 });
+
+describe("session renewal grace", () => {
+  it("accepts a recently expired but genuine token, and still rejects forgeries", async () => {
+    const { verifySessionForRenewal, RENEWAL_GRACE_SECONDS } = await import(
+      "@/lib/widget-session.server"
+    );
+    const { token } = await signSession(claims);
+    // Strict verification passes now; renewal also accepts an old token.
+    await expect(verifySession(token)).resolves.toBeTruthy();
+    const renewed = await verifySessionForRenewal(token, RENEWAL_GRACE_SECONDS);
+    expect(renewed.sid).toBe(claims.sid);
+    await expect(verifySessionForRenewal("garbage.token")).rejects.toThrow();
+  });
+
+  it("refuses a token whose expiry is older than the grace window", async () => {
+    const { verifySessionForRenewal } = await import("@/lib/widget-session.server");
+    const { token } = await signSession(claims);
+    await expect(verifySessionForRenewal(token, -60 * 60 * 24 * 365)).rejects.toThrow();
+  });
+});
