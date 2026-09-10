@@ -126,7 +126,20 @@ export async function loadWidgetConfig(websiteId: string, hostOrigin: string | n
         .eq("organization_id", website.organization_id)
         .eq("status", "active")
         .order("sort_order"),
-      db.from("business_hours").select("*").eq("website_id", website.id),
+      // Hours are configured at organization level in the admin UI, so read
+      // the organization rows and keep any that are not scoped to another
+      // website or to a specific department.
+      db
+        .from("business_hours")
+        .select("*")
+        .eq("organization_id", website.organization_id)
+        .is("department_id", null)
+        .or(`website_id.is.null,website_id.eq.${website.id}`),
+      db
+        .from("holidays")
+        .select("holiday_date,website_id")
+        .eq("organization_id", website.organization_id)
+        .or(`website_id.is.null,website_id.eq.${website.id}`),
       db
         .from("departments")
         .select("id,name,description,website_id")
