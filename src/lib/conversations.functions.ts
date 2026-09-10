@@ -224,10 +224,23 @@ export const replyToConversationFn = createServerFn({ method: "POST" })
       .select("first_response_at, first_agent_response_at")
       .eq("id", conversation.id)
       .maybeSingle();
-    if (!existing?.first_agent_response_at) patch.first_agent_response_at = now;
+    const isFirstAgentReply = !existing?.first_agent_response_at;
+    if (isFirstAgentReply) patch.first_agent_response_at = now;
     if (!existing?.first_response_at) patch.first_response_at = now;
 
     await db.from("conversations").update(patch).eq("id", conversation.id);
+
+    // Reporting credits the first responder from the event log, so the first
+    // agent reply is recorded explicitly rather than inferred from messages.
+    if (isFirstAgentReply) {
+      await db.from("conversation_events").insert({
+        conversation_id: conversation.id,
+        organization_id: conversation.organization_id,
+        actor_id: actor.userId,
+        event_type: "agent_reply",
+        detail: `First reply by ${name}`,
+      });
+    }
 
     await writeAudit(db as never, {
       actor,
