@@ -432,41 +432,13 @@ export async function insertMessage(
 
 /* --------------------------------- RAG ----------------------------------- */
 
-const CRISIS_PATTERNS = [
-  /\bI('m| am) (going to|about to) (hurt|kill)/i,
-  /\b(suicid|kill myself|end my life)/i,
-  /\b(having|I have) (a )?(heart attack|stroke|overdos)/i,
-  /\b(can'?t|cannot) breathe\b/i,
-];
-
-export function detectCrisis(text: string) {
-  return CRISIS_PATTERNS.some((r) => r.test(text));
-}
-
-const LOW_CONFIDENCE_REPLY =
-  "I'm not completely confident that I have the correct information for that question. Would you like me to connect you with a representative?";
-
-/** Prefix used when the model is unsure but still has something useful to say. */
-export const HEDGE_PREFIX = "I may not have complete information on this, but ";
-
-/**
- * Decide what the visitor sees for a given confidence score.
- *
- * - 0.5 and above: the model's answer, with its sources.
- * - 0.3 to 0.5: the model's answer behind a short hedge, sources kept.
- * - below 0.3: the canned low-confidence reply with no sources.
- */
-export function applyConfidenceBand(modelAnswer: string, confidence: number) {
-  if (confidence >= 0.5) {
-    return { answer: modelAnswer, escalate: false, useSources: true, hedged: false };
-  }
-  if (confidence >= 0.3 && modelAnswer.trim()) {
-    const body = modelAnswer.trim();
-    const hedged = HEDGE_PREFIX + body.charAt(0).toLowerCase() + body.slice(1);
-    return { answer: hedged, escalate: true, useSources: true, hedged: true };
-  }
-  return { answer: LOW_CONFIDENCE_REPLY, escalate: true, useSources: false, hedged: false };
-}
+export {
+  CRISIS_PATTERNS,
+  detectCrisis,
+  LOW_CONFIDENCE_REPLY,
+  HEDGE_PREFIX,
+  applyConfidenceBand,
+} from "./ai-confidence";
 
 export type AnswerResult = {
   answer: string;
