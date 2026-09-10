@@ -1513,6 +1513,7 @@ export type Database = {
           privacy_notice: string
           require_mfa: boolean
           require_mfa_for_admins: boolean
+          sla_first_response_minutes: number
           slug: string
           status: Database["public"]["Enums"]["entity_status"]
           timezone: string
@@ -1533,6 +1534,7 @@ export type Database = {
           privacy_notice?: string
           require_mfa?: boolean
           require_mfa_for_admins?: boolean
+          sla_first_response_minutes?: number
           slug: string
           status?: Database["public"]["Enums"]["entity_status"]
           timezone?: string
@@ -1553,6 +1555,7 @@ export type Database = {
           privacy_notice?: string
           require_mfa?: boolean
           require_mfa_for_admins?: boolean
+          sla_first_response_minutes?: number
           slug?: string
           status?: Database["public"]["Enums"]["entity_status"]
           timezone?: string
