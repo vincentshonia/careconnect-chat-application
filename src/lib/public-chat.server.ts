@@ -406,25 +406,70 @@ export async function insertMessage(
   if (error) throw new PublicChatError(500, "Could not save the message");
   // A visitor writing into a finished thread reopens it, so it re-enters the
   // queue instead of silently landing in a closed conversation.
-  const reopens =
-    senderType === "visitor" && ["resolved", "closed"].includes(String(conversation.status));
+  const { decideReopen } = await import("@/lib/conversation-reopen");
+  const previousAssignee: string | null = conversation.assigned_to ?? null;
+  let assigneePresence: string | null = null;
+  if (previousAssignee) {
+    const { data: profile } = await db
+      .from("profiles")
+      .select("presence")
+      .eq("id", previousAssignee)
+      .maybeSingle();
+    assigneePresence = (profile as { presence?: string } | null)?.presence ?? null;
+  }
+  const decision = decideReopen({
+    senderType,
+    status: String(conversation.status),
+    assignedTo: previousAssignee,
+    assigneePresence,
+  });
+  const now = new Date().toISOString();
   await db
     .from("conversations")
     .update({
-      last_message_at: new Date().toISOString(),
+      last_message_at: now,
       unread_agent_count:
         senderType === "visitor" ? (conversation.unread_agent_count ?? 0) + 1 : conversation.unread_agent_count,
-      ...(reopens ? { status: "follow_up", closed_at: null, resolved_at: null } : {}),
+      // The original resolution and closing times are history — they stay put,
+      // and the return visit is recorded as its own moment instead.
+      ...(decision.reopens
+        ? {
+            status: "follow_up",
+            escalation_requested: true,
+            requested_agent_at: now,
+            reopened_at: now,
+            reopened_count: (conversation.reopened_count ?? 0) + 1,
+            ...(decision.keepAssignee ? {} : { assigned_to: null }),
+          }
+        : {}),
     })
     .eq("id", conversation.id);
-  if (reopens) {
+  if (decision.reopens) {
     await db.from("conversation_events").insert({
       conversation_id: conversation.id,
       organization_id: conversation.organization_id,
       event_type: "reopened",
-      detail: "Visitor replied after the conversation was closed",
+      detail: decision.keepAssignee
+        ? "Visitor replied after the conversation was closed"
+        : "Visitor replied after the conversation was closed — returned to the queue",
       previous_value: String(conversation.status),
       new_value: "follow_up",
+    });
+    const { notifyStaff } = await import("@/lib/notifications.server");
+    await notifyStaff({
+      organizationId: conversation.organization_id,
+      type: "escalation",
+      severity: "warning",
+      title: `Conversation ${conversation.reference ?? ""} was reopened`.trim(),
+      body: "A visitor replied after this conversation was finished.",
+      link: "/inbox",
+      recordType: "conversations",
+      recordId: conversation.id,
+      ...(decision.keepAssignee && previousAssignee
+        ? { userIds: [previousAssignee] }
+        : conversation.department_id
+          ? { departmentId: conversation.department_id as string }
+          : {}),
     });
   }
   return data;
