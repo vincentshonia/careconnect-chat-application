@@ -525,6 +525,33 @@ describe("authenticated RBAC boundaries", () => {
         .eq("id", ctx.orgB);
       expect(data ?? []).toHaveLength(0);
     });
+
+    /**
+     * `is_super_admin()` was true for a super admin of ANY tenant, so the
+     * organizations delete policy let org A's super admin erase org B — and
+     * every child row cascaded with it. The policy now requires platform-level
+     * authority. Row-level security filters rather than raises, so the proof is
+     * that the statement removes nothing and org B is still there afterwards.
+     */
+    it("cannot delete another tenant's organization", async () => {
+      const { data, error } = await clients['superA']!
+        .from("organizations")
+        .delete()
+        .eq("id", ctx.orgB)
+        .select("id");
+      if (error) {
+        expect(error.message).toMatch(/permission|policy|denied/i);
+      } else {
+        expect(data ?? []).toHaveLength(0);
+      }
+
+      const { data: survivor } = await admin
+        .from("organizations")
+        .select("id")
+        .eq("id", ctx.orgB)
+        .maybeSingle();
+      expect(survivor?.id).toBe(ctx.orgB);
+    });
   });
 
   describe("personal profile updates never grant authority", () => {
