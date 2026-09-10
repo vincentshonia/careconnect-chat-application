@@ -420,13 +420,7 @@ describe("AI-only completion", () => {
 
   afterAll(async () => {
     if (!configured || !aiOrg) return;
-    await db.from("ai_responses").delete().eq("organization_id", aiOrg);
-    await db.from("messages").delete().eq("organization_id", aiOrg);
-    await db.from("conversation_events").delete().eq("organization_id", aiOrg);
-    await db.from("conversations").delete().eq("organization_id", aiOrg);
-    await db.from("departments").delete().eq("organization_id", aiOrg);
-    await db.from("websites").delete().eq("organization_id", aiOrg);
-    await db.from("organizations").delete().eq("id", aiOrg);
+    await purgeSyntheticOrganizations(db, [aiOrg]);
   }, 120_000);
 
   async function ai(dept: string[] | null = null) {
