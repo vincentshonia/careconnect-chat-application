@@ -258,19 +258,11 @@ function WidgetPage() {
   const ensureSession = useCallback(
     async (force = false): Promise<string> => {
       const key = `${storageKey}-session-v2`;
-      if (!force) {
-        let cached = sessionRef.current;
-        if (!cached && typeof window !== "undefined") {
-          try {
-            cached = JSON.parse(window.localStorage.getItem(key) ?? "null");
-          } catch {
-            cached = null;
-          }
-        }
-        if (cached?.token && Date.parse(cached.expiresAt) - 60_000 > Date.now()) {
-          sessionRef.current = cached;
-          return cached.token;
-        }
+      const cached =
+        sessionRef.current ?? safeStorage.getJson<{ token: string; expiresAt: string }>(key);
+      if (!force && cached?.token && Date.parse(cached.expiresAt) - 60_000 > Date.now()) {
+        sessionRef.current = cached;
+        return cached.token;
       }
       const res = await fetch("/api/public/chat/session", {
         method: "POST",
@@ -278,6 +270,9 @@ function WidgetPage() {
         body: JSON.stringify({
           websiteId,
           host: hostOrigin,
+          // Hand back the token being replaced: the server reuses the same
+          // visitor when it is genuine, so older conversations stay reachable.
+          priorSession: cached?.token ?? null,
           meta: {
             currentPage: page,
             landingPage: page,
@@ -289,9 +284,7 @@ function WidgetPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Unable to start a chat session");
       sessionRef.current = { token: json.token, expiresAt: json.expiresAt };
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(key, JSON.stringify(sessionRef.current));
-      }
+      safeStorage.setJson(key, sessionRef.current);
       return json.token as string;
     },
     [storageKey, websiteId, hostOrigin, page, params],
