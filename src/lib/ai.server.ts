@@ -68,9 +68,28 @@ async function gatewayFetch(path: string, body: unknown): Promise<Response> {
 }
 
 export async function embedText(input: string): Promise<number[]> {
-  const res = await gatewayFetch("/embeddings", { model: EMBEDDING_MODEL, input });
-  const json = (await handle(res)) as { data: Array<{ embedding: number[] }> };
-  return json.data[0].embedding;
+  const [vector] = await embedTexts([input]);
+  return vector;
+}
+
+/**
+ * Embed several passages in one gateway call. The endpoint accepts an array,
+ * so a document with ten chunks costs one round trip instead of ten. Very
+ * large documents are split into batches to stay under the provider's cap.
+ */
+export async function embedTexts(inputs: string[], batchSize = 64): Promise<number[][]> {
+  if (!inputs.length) return [];
+  const vectors: number[][] = [];
+  for (let i = 0; i < inputs.length; i += batchSize) {
+    const batch = inputs.slice(i, i + batchSize);
+    const res = await gatewayFetch("/embeddings", { model: EMBEDDING_MODEL, input: batch });
+    const json = (await handle(res)) as {
+      data: Array<{ embedding: number[]; index?: number }>;
+    };
+    const rows = [...json.data].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+    for (const row of rows) vectors.push(row.embedding);
+  }
+  return vectors;
 }
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
