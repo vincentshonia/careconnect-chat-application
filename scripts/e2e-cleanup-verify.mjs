@@ -1,89 +1,109 @@
 #!/usr/bin/env node
 /**
- * CareConnect E2E cleanup verification.
+ * CareConnect E2E / integration cleanup verification.
  *
  * Stage 6 of `bun run release:gate`. The browser suite creates a synthetic
- * `__e2e_`-prefixed tenant per spec and tears it down again. This stage is the
- * independent proof that nothing survived: it sweeps the backend for residual
- * synthetic organizations, profiles, auth users, conversations and runId
- * references, and fails the release if a single row remains.
+ * `__e2e_`-prefixed tenant per spec, and the Vitest integration suites create
+ * `__test_`-prefixed tenants; both tear themselves down. This stage is the
+ * independent proof that nothing survived: it sweeps every configured backend
+ * for residual synthetic organizations, profiles, departments, websites,
+ * conversations and auth users, and fails the release if a single row remains.
  *
  * Read-only. Never prints a credential value.
  */
 import process from "node:process";
 
-const PREFIX = "__e2e_";
+const PREFIXES = ["__e2e_", "__test_"];
+
+const backends = [];
 
 const url = process.env["SUPABASE_URL"];
 const serviceKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 if (!url || !serviceKey) {
-  console.error("E2E CLEANUP VERIFICATION FAILED — SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set.");
+  console.error("CLEANUP VERIFICATION FAILED — SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set.");
   process.exit(1);
+}
+backends.push({ label: "primary", url, serviceKey });
+
+const testUrl = process.env["TEST_SUPABASE_URL"];
+const testServiceKey = process.env["TEST_SUPABASE_SERVICE_ROLE_KEY"];
+if (testUrl && testServiceKey && testUrl.replace(/\/+$/, "") !== url.replace(/\/+$/, "")) {
+  backends.push({ label: "test", url: testUrl, serviceKey: testServiceKey });
 }
 
 const { createClient } = await import("@supabase/supabase-js");
-const db = createClient(url, serviceKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
 
 const findings = [];
 
-async function countLike(label, table, column) {
-  const { count, error } = await db
-    .from(table)
-    .select("id", { count: "exact", head: true })
-    .like(column, `${PREFIX}%`);
-  if (error) {
-    findings.push({ label, count: null, error: error.message });
-    return;
-  }
-  findings.push({ label, count: count ?? 0 });
-}
+async function sweep(backend) {
+  const db = createClient(backend.url, backend.serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 
-await countLike("organizations", "organizations", "name");
-await countLike("profiles", "profiles", "email");
-await countLike("departments", "departments", "name");
-await countLike("websites", "websites", "name");
+  for (const prefix of PREFIXES) {
+    const tag = `[${backend.label}] ${prefix}`;
 
-// Conversations and runId references are resolved through the synthetic orgs
-// (conversations carry no name column of their own).
-const { data: orgs, error: orgError } = await db
-  .from("organizations")
-  .select("id")
-  .like("name", `${PREFIX}%`);
-if (orgError) {
-  findings.push({ label: "conversations", count: null, error: orgError.message });
-} else if ((orgs ?? []).length === 0) {
-  findings.push({ label: "conversations", count: 0 });
-  findings.push({ label: "runId references", count: 0 });
-} else {
-  const ids = orgs.map((o) => o.id);
-  const { count } = await db
-    .from("conversations")
-    .select("id", { count: "exact", head: true })
-    .in("organization_id", ids);
-  findings.push({ label: "conversations", count: count ?? 0 });
-  findings.push({ label: "runId references", count: ids.length });
-}
+    const countLike = async (label, table, column) => {
+      const { count, error } = await db
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .like(column, `${prefix}%`);
+      findings.push(
+        error ? { label: `${tag} ${label}`, count: null, error: error.message } : { label: `${tag} ${label}`, count: count ?? 0 },
+      );
+    };
 
-// Synthetic auth users.
-let authResidual = 0;
-let authError = null;
-try {
-  for (let page = 1; page <= 20; page += 1) {
-    const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 });
-    if (error) {
-      authError = error.message;
-      break;
+    await countLike("organizations", "organizations", "name");
+    await countLike("profiles", "profiles", "email");
+    await countLike("departments", "departments", "name");
+    await countLike("websites", "websites", "name");
+
+    // Conversations are resolved through the synthetic orgs (no name column).
+    const { data: orgs, error: orgError } = await db
+      .from("organizations")
+      .select("id")
+      .like("name", `${prefix}%`);
+    if (orgError) {
+      findings.push({ label: `${tag} conversations`, count: null, error: orgError.message });
+    } else if ((orgs ?? []).length === 0) {
+      findings.push({ label: `${tag} conversations`, count: 0 });
+    } else {
+      const ids = orgs.map((o) => o.id);
+      const { count } = await db
+        .from("conversations")
+        .select("id", { count: "exact", head: true })
+        .in("organization_id", ids);
+      findings.push({ label: `${tag} conversations`, count: count ?? 0 });
     }
-    const users = data?.users ?? [];
-    authResidual += users.filter((u) => (u.email ?? "").startsWith(PREFIX)).length;
-    if (users.length < 200) break;
+
+    // Synthetic auth users.
+    let authResidual = 0;
+    let authError = null;
+    try {
+      for (let page = 1; page <= 20; page += 1) {
+        const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 });
+        if (error) {
+          authError = error.message;
+          break;
+        }
+        const users = data?.users ?? [];
+        authResidual += users.filter((u) => (u.email ?? "").startsWith(prefix)).length;
+        if (users.length < 200) break;
+      }
+    } catch (error) {
+      authError = error instanceof Error ? error.message : "auth sweep failed";
+    }
+    findings.push({
+      label: `${tag} auth users`,
+      count: authError ? null : authResidual,
+      error: authError,
+    });
   }
-} catch (error) {
-  authError = error instanceof Error ? error.message : "auth sweep failed";
 }
-findings.push({ label: "auth users", count: authError ? null : authResidual, error: authError });
+
+for (const backend of backends) {
+  await sweep(backend);
+}
 
 let failed = false;
 for (const f of findings) {
@@ -95,7 +115,7 @@ for (const f of findings) {
 }
 
 if (failed) {
-  console.error("\nE2E CLEANUP VERIFICATION FAILED — synthetic data survived the run.");
+  console.error("\nCLEANUP VERIFICATION FAILED — synthetic data survived the run.");
   process.exit(1);
 }
-console.log("\nE2E CLEANUP VERIFICATION PASSED — no synthetic data remains.");
+console.log("\nCLEANUP VERIFICATION PASSED — no synthetic data remains.");

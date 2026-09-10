@@ -2,7 +2,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { reportScopeFor, canRunSection, NO_DEPARTMENT } from "@/lib/report-scope";
-import { requireTestEnv } from "./helpers/required-env";
+import {
+  purgeSyntheticOrganizations,
+  requireTestBackend,
+  syntheticName,
+} from "./helpers/required-env";
 
 /**
  * Phase 3 scale & reconciliation tests.
@@ -18,13 +22,12 @@ import { requireTestEnv } from "./helpers/required-env";
  *
  * All fixtures are ephemeral and removed in `afterAll`.
  */
-const url = process.env['SUPABASE_URL'] ?? "";
-const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? "";
-const configured = requireTestEnv({ SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: serviceKey });
+const { url, serviceKey } = requireTestBackend();
+const configured = true;
 
-const db = configured
-  ? createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
-  : (null as unknown as SupabaseClient);
+const db = createClient(url, serviceKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+}) as SupabaseClient;
 
 const suffix = Math.random().toString(36).slice(2, 8);
 
@@ -88,9 +91,10 @@ async function insertBatched(table: string, rows: Record<string, unknown>[]) {
 
 
 async function makeOrg(name: string) {
+  const orgName = syntheticName(name, suffix);
   const { data, error } = await db
     .from("organizations")
-    .insert({ name: `${name} ${suffix}`, slug: `${name.toLowerCase()}-${suffix}` })
+    .insert({ name: orgName, slug: orgName.toLowerCase() })
     .select("id")
     .single();
   if (error) throw new Error(`org: ${error.message}`);
@@ -100,7 +104,11 @@ async function makeOrg(name: string) {
 async function makeWebsite(org: string, name: string) {
   const { data, error } = await db
     .from("websites")
-    .insert({ organization_id: org, name: `${name} ${suffix}`, domain: `${name}-${suffix}.test` })
+    .insert({
+      organization_id: org,
+      name: syntheticName(name, suffix),
+      domain: `${name.toLowerCase()}-${suffix}.test`,
+    })
     .select("id")
     .single();
   if (error) throw new Error(`website: ${error.message}`);
@@ -110,7 +118,7 @@ async function makeWebsite(org: string, name: string) {
 async function makeDepartment(org: string, name: string) {
   const { data, error } = await db
     .from("departments")
-    .insert({ organization_id: org, name: `${name} ${suffix}` })
+    .insert({ organization_id: org, name: syntheticName(name, suffix) })
     .select("id")
     .single();
   if (error) throw new Error(`department: ${error.message}`);
@@ -213,15 +221,7 @@ describe("reporting at volume", () => {
 
   afterAll(async () => {
     if (!configured) return;
-    for (const org of [orgA, orgB].filter(Boolean)) {
-      await db.from("ai_responses").delete().eq("organization_id", org);
-      await db.from("messages").delete().eq("organization_id", org);
-      await db.from("conversation_events").delete().eq("organization_id", org);
-      await db.from("conversations").delete().eq("organization_id", org);
-      await db.from("departments").delete().eq("organization_id", org);
-      await db.from("websites").delete().eq("organization_id", org);
-      await db.from("organizations").delete().eq("id", org);
-    }
+    await purgeSyntheticOrganizations(db, [orgA, orgB]);
   }, 240_000);
 
   it("reports the exact total for the tenant", async () => {
@@ -420,13 +420,7 @@ describe("AI-only completion", () => {
 
   afterAll(async () => {
     if (!configured || !aiOrg) return;
-    await db.from("ai_responses").delete().eq("organization_id", aiOrg);
-    await db.from("messages").delete().eq("organization_id", aiOrg);
-    await db.from("conversation_events").delete().eq("organization_id", aiOrg);
-    await db.from("conversations").delete().eq("organization_id", aiOrg);
-    await db.from("departments").delete().eq("organization_id", aiOrg);
-    await db.from("websites").delete().eq("organization_id", aiOrg);
-    await db.from("organizations").delete().eq("id", aiOrg);
+    await purgeSyntheticOrganizations(db, [aiOrg]);
   }, 120_000);
 
   async function ai(dept: string[] | null = null) {

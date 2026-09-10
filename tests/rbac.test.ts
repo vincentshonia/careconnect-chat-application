@@ -2,7 +2,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { permissionsFor, roleTransitionError, type OrgRole } from "@/lib/permissions";
 import { dashboardScopeFor, reportScopeFor } from "@/lib/report-scope";
-import { requireTestEnv } from "./helpers/required-env";
+import {
+  purgeSyntheticOrganizations,
+  purgeSyntheticUsers,
+  requireTestBackend,
+  syntheticEmail,
+  syntheticName,
+} from "./helpers/required-env";
 
 /**
  * Authenticated RBAC integration tests.
@@ -16,14 +22,12 @@ import { requireTestEnv } from "./helpers/required-env";
  *
  * Everything created here is deleted again in `afterAll`.
  */
-const url = process.env['SUPABASE_URL'] ?? "";
-const anonKey = process.env['SUPABASE_PUBLISHABLE_KEY'] ?? "";
-const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? "";
-const configured = requireTestEnv({ SUPABASE_URL: url, SUPABASE_PUBLISHABLE_KEY: anonKey, SUPABASE_SERVICE_ROLE_KEY: serviceKey });
+const { url, anonKey, serviceKey } = requireTestBackend({ publishable: true });
+const configured = true;
 
-const admin = configured
-  ? createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
-  : (null as unknown as SupabaseClient);
+const admin = createClient(url, serviceKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+}) as SupabaseClient;
 
 const suffix = Math.random().toString(36).slice(2, 8);
 const password = `Test!${Math.random().toString(36).slice(2, 12)}Aa1`;
@@ -48,34 +52,36 @@ type Ctx = {
 const ctx = {} as Ctx;
 const clients: Record<string, SupabaseClient> = {};
 
-async function createOrg(name: string) {
+async function createOrg(label: string) {
+  const name = syntheticName(label, suffix);
   const { data, error } = await admin
     .from("organizations")
-    .insert({ name, slug: `${name.toLowerCase()}-${suffix}` })
+    .insert({ name, slug: name.toLowerCase() })
     .select("id")
     .single();
   if (error) throw new Error(`org: ${error.message}`);
   return data.id as string;
 }
 
-async function createDepartment(org: string, name: string) {
+async function createDepartment(org: string, label: string) {
   const { data, error } = await admin
     .from("departments")
-    .insert({ organization_id: org, name })
+    .insert({ organization_id: org, name: syntheticName(label, suffix) })
     .select("id")
     .single();
   if (error) throw new Error(`department: ${error.message}`);
   return data.id as string;
 }
 
-async function createWebsite(org: string, name: string) {
+async function createWebsite(org: string, label: string) {
+  const name = syntheticName(label, suffix);
   const { data, error } = await admin
     .from("websites")
     .insert({
       organization_id: org,
       name,
-      domain: `${name.toLowerCase()}-${suffix}.example.com`,
-      public_key: `pk_test_${suffix}_${name.toLowerCase()}`,
+      domain: `${label.toLowerCase()}-${suffix}.example.test`,
+      public_key: `pk_test_${suffix}_${label.toLowerCase()}`,
     })
     .select("id")
     .single();
@@ -84,19 +90,23 @@ async function createWebsite(org: string, name: string) {
 }
 
 async function createUser(key: string, org: string, role: OrgRole, departments: string[]) {
-  const email = `rbac-${key}-${suffix}@example.test`;
+  const email = syntheticEmail(`rbac_${key}`, suffix);
   const { data, error } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
-    user_metadata: { full_name: `RBAC ${key}` },
+    user_metadata: { full_name: syntheticName(`rbac_${key}`, suffix) },
   });
   if (error || !data.user) throw new Error(`user ${key}: ${error?.message}`);
   const id = data.user.id;
 
-  await admin
-    .from("profiles")
-    .upsert({ id, organization_id: org, full_name: `RBAC ${key}`, email, presence: "available" });
+  await admin.from("profiles").upsert({
+    id,
+    organization_id: org,
+    full_name: syntheticName(`rbac_${key}`, suffix),
+    email,
+    presence: "available",
+  });
   const { error: memberError } = await admin
     .from("organization_memberships")
     .insert({ organization_id: org, user_id: id, role, status: "active" });
@@ -178,12 +188,12 @@ async function scopeForSignedInUser(key: string) {
 describe("authenticated RBAC boundaries", () => {
   beforeAll(async () => {
     ctx.users = {};
-    ctx.orgA = await createOrg(`RbacA${suffix}`);
-    ctx.orgB = await createOrg(`RbacB${suffix}`);
-    ctx.deptA1 = await createDepartment(ctx.orgA, `Intake ${suffix}`);
-    ctx.deptA2 = await createDepartment(ctx.orgA, `Billing ${suffix}`);
-    ctx.websiteA = await createWebsite(ctx.orgA, `SiteA${suffix}`);
-    ctx.websiteB = await createWebsite(ctx.orgB, `SiteB${suffix}`);
+    ctx.orgA = await createOrg("rbacA");
+    ctx.orgB = await createOrg("rbacB");
+    ctx.deptA1 = await createDepartment(ctx.orgA, "intake");
+    ctx.deptA2 = await createDepartment(ctx.orgA, "billing");
+    ctx.websiteA = await createWebsite(ctx.orgA, "siteA");
+    ctx.websiteB = await createWebsite(ctx.orgB, "siteB");
 
     // Full role matrix inside tenant A.
     const userA = await createUser("userA", ctx.orgA, "agent", [ctx.deptA1]);
@@ -217,24 +227,11 @@ describe("authenticated RBAC boundaries", () => {
 
   afterAll(async () => {
     if (!configured) return;
-    for (const org of [ctx.orgA, ctx.orgB].filter(Boolean)) {
-      await admin.from("conversation_events").delete().eq("organization_id", org);
-      await admin.from("messages").delete().eq("organization_id", org);
-      await admin.from("conversations").delete().eq("organization_id", org);
-      await admin.from("department_members").delete().eq("organization_id", org);
-      await admin.from("departments").delete().eq("organization_id", org);
-      await admin.from("websites").delete().eq("organization_id", org);
-      await admin.from("audit_logs").delete().eq("organization_id", org);
-      await admin.from("notifications").delete().eq("organization_id", org);
-      await admin.from("organization_memberships").delete().eq("organization_id", org);
-    }
-    for (const user of Object.values(ctx.users ?? {})) {
-      await admin.from("profiles").delete().eq("id", user.id);
-      await admin.auth.admin.deleteUser(user.id);
-    }
-    for (const org of [ctx.orgA, ctx.orgB].filter(Boolean)) {
-      await admin.from("organizations").delete().eq("id", org);
-    }
+    await purgeSyntheticUsers(
+      admin,
+      Object.values(ctx.users ?? {}).map((user) => ({ id: user.id, email: user.email })),
+    );
+    await purgeSyntheticOrganizations(admin, [ctx.orgA, ctx.orgB]);
   }, 120_000);
 
   describe("cross-tenant denial", () => {

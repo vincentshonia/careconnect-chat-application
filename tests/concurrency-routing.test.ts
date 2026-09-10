@@ -2,7 +2,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFile } from "node:fs/promises";
 import { decideTransfer } from "@/lib/transfer-eligibility";
-import { requireTestEnv } from "./helpers/required-env";
+import {
+  purgeSyntheticOrganizations,
+  purgeSyntheticUsers,
+  requireTestBackend,
+  syntheticEmail,
+  syntheticName,
+} from "./helpers/required-env";
 
 /**
  * Concurrency & routing integration tests (Phase 1 gate).
@@ -15,19 +21,17 @@ import { requireTestEnv } from "./helpers/required-env";
  * All fixtures are ephemeral and removed in `afterAll`; production tenants are
  * never touched.
  */
-const url = process.env['SUPABASE_URL'] ?? "";
-const anonKey = process.env['SUPABASE_PUBLISHABLE_KEY'] ?? "";
-const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? "";
-const configured = requireTestEnv({ SUPABASE_URL: url, SUPABASE_PUBLISHABLE_KEY: anonKey, SUPABASE_SERVICE_ROLE_KEY: serviceKey });
+const { url, anonKey, serviceKey } = requireTestBackend({ publishable: true });
+const configured = true;
 
-const db = configured
-  ? createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
-  : (null as unknown as SupabaseClient);
+const db = createClient(url, serviceKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+}) as SupabaseClient;
 
 const suffix = Math.random().toString(36).slice(2, 8);
 const password = `Test!${Math.random().toString(36).slice(2, 12)}Aa1`;
 
-const createdUsers: string[] = [];
+const createdUsers: { id: string; email: string }[] = [];
 let orgId = "";
 let websiteId = "";
 
@@ -54,7 +58,7 @@ async function route(conversationId: string, departmentId: string) {
 async function makeDepartment(name: string) {
   const { data, error } = await db
     .from("departments")
-    .insert({ organization_id: orgId, name: `${name} ${suffix}` })
+    .insert({ organization_id: orgId, name: syntheticName(name, suffix) })
     .select("id")
     .single();
   if (error) throw new Error(`department: ${error.message}`);
@@ -71,7 +75,7 @@ type StaffOptions = {
 };
 
 async function makeStaff(key: string, options: StaffOptions = {}) {
-  const email = `conc-${key}-${suffix}@example.test`;
+  const email = syntheticEmail(`conc_${key}`, suffix);
   const { data, error } = await db.auth.admin.createUser({
     email,
     password,
@@ -79,12 +83,12 @@ async function makeStaff(key: string, options: StaffOptions = {}) {
   });
   if (error || !data.user) throw new Error(`user ${key}: ${error?.message}`);
   const id = data.user.id;
-  createdUsers.push(id);
+  createdUsers.push({ id, email });
 
   const { error: profileError } = await db.from("profiles").upsert({
     id,
     organization_id: orgId,
-    full_name: `Conc ${key}`,
+    full_name: syntheticName(`conc_${key}`, suffix),
     email,
     presence: options.presence ?? "available",
     status: options.profileStatus ?? "active",
@@ -158,9 +162,10 @@ async function activeCount(userId: string) {
 
 describe("claim & routing concurrency", () => {
   beforeAll(async () => {
+    const orgName = syntheticName("conc", suffix);
     const { data, error } = await db
       .from("organizations")
-      .insert({ name: `Conc ${suffix}`, slug: `conc-${suffix}` })
+      .insert({ name: orgName, slug: orgName.toLowerCase() })
       .select("id")
       .single();
     if (error) throw new Error(`org: ${error.message}`);
@@ -170,8 +175,8 @@ describe("claim & routing concurrency", () => {
       .from("websites")
       .insert({
         organization_id: orgId,
-        name: `ConcSite ${suffix}`,
-        domain: `conc-${suffix}.example.com`,
+        name: syntheticName("concsite", suffix),
+        domain: `conc-${suffix}.example.test`,
         public_key: `pk_conc_${suffix}`,
       })
       .select("id")
@@ -182,24 +187,11 @@ describe("claim & routing concurrency", () => {
 
   afterAll(async () => {
     if (!configured || !orgId) return;
-    await db.from("conversation_events").delete().eq("organization_id", orgId);
-    await db.from("messages").delete().eq("organization_id", orgId);
-    await db.from("conversations").delete().eq("organization_id", orgId);
-    await db.from("notifications").delete().eq("organization_id", orgId);
-    await db.from("audit_logs").delete().eq("organization_id", orgId);
-    await db.from("department_members").delete().eq("organization_id", orgId);
-    await db.from("departments").delete().eq("organization_id", orgId);
-    await db.from("websites").delete().eq("organization_id", orgId);
-    await db.from("organization_memberships").delete().eq("organization_id", orgId);
-    for (const id of createdUsers) {
-      await db.from("notification_preferences").delete().eq("user_id", id);
-      await db.from("profiles").delete().eq("id", id);
-      await db.auth.admin.deleteUser(id);
-    }
-    await db.from("organizations").delete().eq("id", orgId);
     // Teardown deletes dozens of auth users one call at a time; under load the
     // sandbox needs more than the default hook budget to finish, and a hook
     // that is cut short leaves synthetic rows behind for the next run.
+    await purgeSyntheticUsers(db, createdUsers);
+    await purgeSyntheticOrganizations(db, [orgId]);
   }, 300_000);
 
   describe("1. manual claim — many agents, one conversation", () => {
@@ -338,7 +330,7 @@ describe("claim & routing concurrency", () => {
 
     it("an already-authenticated session cannot bypass a mid-session suspension", async () => {
       const department = await makeDepartment("StatusLive");
-      const email = `conc-live-${suffix}@example.test`;
+      const email = syntheticEmail("conc_live", suffix);
       const { data, error } = await db.auth.admin.createUser({
         email,
         password,
@@ -346,10 +338,14 @@ describe("claim & routing concurrency", () => {
       });
       if (error || !data.user) throw new Error(`user: ${error?.message}`);
       const id = data.user.id;
-      createdUsers.push(id);
-      await db
-        .from("profiles")
-        .upsert({ id, organization_id: orgId, full_name: "Conc Live", email, presence: "available" });
+      createdUsers.push({ id, email });
+      await db.from("profiles").upsert({
+        id,
+        organization_id: orgId,
+        full_name: syntheticName("conc_live", suffix),
+        email,
+        presence: "available",
+      });
       await db
         .from("organization_memberships")
         .insert({ organization_id: orgId, user_id: id, role: "agent", status: "active" });
