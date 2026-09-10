@@ -44,6 +44,10 @@ export const testAiAnswerFn = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    requirePermission(actor, "knowledge.edit");
+    const organizationId = requireOrganization(actor);
+
     // RLS check: the caller must be able to see this website in their own org.
     const { data: website, error } = await context.supabase
       .from("websites")
