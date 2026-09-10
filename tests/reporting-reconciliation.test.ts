@@ -812,4 +812,27 @@ describe("staff credit survives a reassignment", () => {
     // Current workload still belongs to the person who holds the chat today.
     expect(Number(now!['assigned_count'])).toBe(1);
   });
+
+  it("self-scope report credits the original responder after reassignment", async () => {
+    // Filtering to the responder alone must still surface the chat they worked
+    // on, even though someone else owns it now.
+    const rows = await rpc<Record<string, unknown>[]>("report_staff", {
+      _org: org,
+      _from: windowFrom,
+      _to: windowTo,
+      _dept: null,
+      _staff: [responder.id],
+      _statuses: null,
+      _website: null,
+      _type: "all",
+      _transfer: "all",
+      _priority: null,
+      _sla: 15,
+    });
+    const original = rows.find((r) => r['user_id'] === responder.id);
+    expect(original).toBeTruthy();
+    expect(Number(original!['avg_response'])).toBe(5);
+    expect(Number(original!['sla_pct'])).toBe(100);
+    expect(Number(original!['avg_handle'])).toBe(38);
+  });
 });
