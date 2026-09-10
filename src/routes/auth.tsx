@@ -45,6 +45,10 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
+  const destination = safeRedirect(redirect) ?? "/inbox";
+  const goToDestination = () =>
+    navigate({ to: destination as never, replace: true });
   // Staff accounts are created by administrators — this page only signs in
   // existing users or emails them a password reset link.
   const [mode, setMode] = useState<"signin" | "forgot">("signin");
@@ -57,9 +61,10 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/inbox", replace: true });
+      if (data.session) void goToDestination();
     });
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, destination]);
 
   async function oauth(provider: "google" | "microsoft") {
     setBusy(true);
@@ -68,11 +73,15 @@ function AuthPage() {
     try {
       const { lovable } = await import("@/integrations/lovable/index");
       const result = await lovable.auth.signInWithOAuth(provider, {
-        redirect_uri: window.location.origin,
+        // Same-origin public URL; the saved path is applied after the session
+        // is hydrated back on this page.
+        redirect_uri: `${window.location.origin}/auth${
+          destination === "/inbox" ? "" : `?redirect=${encodeURIComponent(destination)}`
+        }`,
       });
       if (result.error) throw result.error;
       if (result.redirected) return;
-      navigate({ to: "/inbox", replace: true });
+      void goToDestination();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign in failed");
     } finally {
@@ -90,7 +99,7 @@ function AuthPage() {
       if (mode === "signin") {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) throw err;
-        navigate({ to: "/inbox", replace: true });
+        void goToDestination();
       } else {
         const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
