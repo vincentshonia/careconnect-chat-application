@@ -161,6 +161,10 @@ export const Route = createFileRoute("/api/public/chat/message")({
             crisis: result.crisis,
             suggestHuman: streak >= 2,
             aiResponseId,
+            // The widget renders this bubble immediately; returning the stored
+            // id and timestamp lets it dedupe against the polling feed.
+            messageId: aiMessage.id,
+            createdAt: aiMessage.created_at,
           });
         } catch (error) {
           if (error instanceof AiGatewayError) {
