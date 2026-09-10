@@ -2,7 +2,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { permissionsFor, roleTransitionError, type OrgRole } from "@/lib/permissions";
 import { dashboardScopeFor, reportScopeFor } from "@/lib/report-scope";
-import { requireTestEnv } from "./helpers/required-env";
+import {
+  purgeSyntheticOrganizations,
+  purgeSyntheticUsers,
+  requireTestBackend,
+  syntheticEmail,
+  syntheticName,
+} from "./helpers/required-env";
 
 /**
  * Authenticated RBAC integration tests.
@@ -16,14 +22,12 @@ import { requireTestEnv } from "./helpers/required-env";
  *
  * Everything created here is deleted again in `afterAll`.
  */
-const url = process.env['SUPABASE_URL'] ?? "";
-const anonKey = process.env['SUPABASE_PUBLISHABLE_KEY'] ?? "";
-const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? "";
-const configured = requireTestEnv({ SUPABASE_URL: url, SUPABASE_PUBLISHABLE_KEY: anonKey, SUPABASE_SERVICE_ROLE_KEY: serviceKey });
+const { url, anonKey, serviceKey } = requireTestBackend({ publishable: true });
+const configured = true;
 
-const admin = configured
-  ? createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
-  : (null as unknown as SupabaseClient);
+const admin = createClient(url, serviceKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+}) as SupabaseClient;
 
 const suffix = Math.random().toString(36).slice(2, 8);
 const password = `Test!${Math.random().toString(36).slice(2, 12)}Aa1`;
