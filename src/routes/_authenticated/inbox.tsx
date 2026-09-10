@@ -170,10 +170,10 @@ function InboxPage() {
           q = q.in("status", ["active", "assigned"]);
           break;
         case "closed":
-          q = q.in("status", CLOSED_STATUSES as never[]);
+          q = q.in("status", [...CLOSED_STATUSES] as never[]);
           break;
         default:
-          if (!can("conversation.view_all")) q = q.in("status", OPEN_STATUSES as never[]);
+          if (!can("conversation.view_all")) q = q.in("status", [...OPEN_STATUSES] as never[]);
       }
 
       if (statusFilter) q = q.eq("status", statusFilter as never);
