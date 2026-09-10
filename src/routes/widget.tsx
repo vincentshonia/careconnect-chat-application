@@ -842,6 +842,13 @@ function WidgetPage() {
 
         {view === "chat" && (
           <div className="space-y-3">
+            {!config.businessOpen && config.website.offlineMessage && (
+              // The assistant still answers when the office is closed; this
+              // only sets expectations about reaching a person.
+              <p className="rounded-xl border border-border bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
+                {config.website.offlineMessage}
+              </p>
+            )}
             {messages.map((m) => (
               <MessageBubble
                 key={m.id}
