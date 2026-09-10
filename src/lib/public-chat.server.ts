@@ -103,7 +103,27 @@ export function assertHostAllowed(website: Record<string, any>, hostOrigin: stri
   if (!permitted) throw new PublicChatError(403, "This chat widget is not authorized on this domain");
 }
 
+/**
+ * Widget settings change rarely but are fetched on every page view, so keep a
+ * short per-worker copy. Serverless workers come and go, so this is a
+ * best-effort cache: a stale entry can only be up to a minute old.
+ */
+const WIDGET_CONFIG_TTL_MS = 60_000;
+const widgetConfigCache = new Map<string, { at: number; value: Awaited<ReturnType<typeof buildWidgetConfig>> }>();
+
 export async function loadWidgetConfig(websiteId: string, hostOrigin: string | null) {
+  // The host check must run on every request, so it stays outside the cache.
+  const cached = widgetConfigCache.get(websiteId);
+  if (cached && Date.now() - cached.at < WIDGET_CONFIG_TTL_MS) {
+    await resolveWebsite(websiteId, hostOrigin);
+    return cached.value;
+  }
+  const value = await buildWidgetConfig(websiteId, hostOrigin);
+  widgetConfigCache.set(websiteId, { at: Date.now(), value });
+  return value;
+}
+
+async function buildWidgetConfig(websiteId: string, hostOrigin: string | null) {
   const website = await resolveWebsite(websiteId, hostOrigin);
   const db = admin();
   const [
