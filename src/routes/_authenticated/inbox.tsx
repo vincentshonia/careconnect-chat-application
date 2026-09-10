@@ -168,6 +168,77 @@ function InboxPage() {
     },
   });
 
+  const presence = (presenceQuery.data as { presence?: string } | null)?.presence ?? null;
+  const maxChats =
+    (presenceQuery.data as { max_concurrent_chats?: number } | null)?.max_concurrent_chats ?? null;
+  const agentName = (presenceQuery.data as { full_name?: string } | null)?.full_name ?? null;
+
+  /** How many open chats this agent already owns — the capacity numerator. */
+  const myLoadQuery = useQuery({
+    queryKey: ["my-load", userId],
+    enabled: Boolean(userId),
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("conversations")
+        .select("id", { count: "exact", head: true })
+        .eq("assigned_to", userId!)
+        .not("status", "in", `(${CLOSED_STATUSES.join(",")})`);
+      return count ?? 0;
+    },
+  });
+  const activeChats = myLoadQuery.data ?? 0;
+
+  const setPresence = useMutation({
+    mutationFn: async (next: string) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ presence: next })
+        .eq("id", userId!);
+      if (error) throw error;
+      return next;
+    },
+    onSuccess: (next) => {
+      toast.success(`You're now ${next}`);
+      queryClient.invalidateQueries({ queryKey: ["my-presence", userId] });
+    },
+    onError: (e) => fail(e, "Could not change your status"),
+  });
+
+  /** The organization's first-response target drives the SLA countdown. */
+  const slaQuery = useQuery({
+    queryKey: ["org-sla", organizationId],
+    enabled: Boolean(organizationId),
+    staleTime: 300_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("organizations")
+        .select("sla_first_response_minutes")
+        .eq("id", organizationId!)
+        .maybeSingle();
+      return data?.sla_first_response_minutes ?? DEFAULT_SLA_MINUTES;
+    },
+  });
+  const slaMinutes = slaQuery.data ?? DEFAULT_SLA_MINUTES;
+
+  /** Approved saved replies for this organization. */
+  const templatesQuery = useQuery({
+    queryKey: ["response-templates", organizationId],
+    enabled: Boolean(organizationId),
+    staleTime: 300_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("response_templates")
+        .select("id, name, shortcut, category, body")
+        .eq("approved", true)
+        .order("shortcut", { nullsFirst: false })
+        .range(0, 199);
+      if (error) throw error;
+      return (data ?? []) as ResponseTemplate[];
+    },
+  });
+  const templates = templatesQuery.data ?? [];
+
   /**
    * Queue loading is done by the database, one page at a time: each tab is a
    * filtered, ordered, ranged query so the browser never holds — or filters —
