@@ -31,17 +31,17 @@ function record(name, ok, detail) {
  * every artefact lives inside a synthetic `__e2e_`-prefixed organization
  * created and destroyed by the fixtures.
  *
- * The Vitest integration suites are isolated by *project*: they resolve their
- * connection only from `TEST_SUPABASE_*` and refuse to run against production.
+ * The Vitest integration suites run against the same single Lovable Cloud
+ * backend, isolated by prefix: they refuse to run unless
+ * `ALLOW_INTEGRATION_TESTS_ON_PRIMARY=true` is set, create every fixture with
+ * the `__test_` prefix, and delete strictly by that prefix.
  */
 const BACKEND_ENV = [
   "SUPABASE_URL",
   "SUPABASE_PUBLISHABLE_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
   "WIDGET_SESSION_SECRET",
-  "TEST_SUPABASE_URL",
-  "TEST_SUPABASE_PUBLISHABLE_KEY",
-  "TEST_SUPABASE_SERVICE_ROLE_KEY",
+  "ALLOW_INTEGRATION_TESTS_ON_PRIMARY",
 ];
 
 function present(name) {
@@ -53,12 +53,10 @@ for (const name of BACKEND_ENV) {
   record(`env:${name}`, present(name), "not set (value never printed)");
 }
 
-const normalizeUrl = (value) => (value ?? "").trim().replace(/\/+$/, "").toLowerCase();
 record(
-  "env:TEST_SUPABASE_URL is not the production project",
-  present("TEST_SUPABASE_URL") &&
-    normalizeUrl(process.env["TEST_SUPABASE_URL"]) !== normalizeUrl(process.env["SUPABASE_URL"]),
-  "integration suites create and delete tenants and must point at a dedicated project",
+  "env:ALLOW_INTEGRATION_TESTS_ON_PRIMARY acknowledged",
+  (process.env["ALLOW_INTEGRATION_TESTS_ON_PRIMARY"] ?? "").trim().toLowerCase() === "true",
+  'must be exactly "true" — the integration suites write synthetic tenants into the primary project',
 );
 
 /**
@@ -86,7 +84,10 @@ if (!existsSync(integrationHelper)) {
   const source = readFileSync(integrationHelper, "utf8");
   record(
     "fixtures:integration guard",
-    source.includes('TEST_PREFIX = "__test_"') && source.includes("assertSynthetic"),
+    source.includes('TEST_PREFIX = "__test_"') &&
+      source.includes('E2E_PREFIX = "__e2e_"') &&
+      source.includes("assertSynthetic") &&
+      source.includes("captureProtectedBaseline"),
     "the integration helper must declare the __test_ prefix and guard every destructive call",
   );
 }
@@ -102,9 +103,14 @@ for (const rel of [
   if (!existsSync(full)) continue;
   const source = readFileSync(full, "utf8");
   record(
-    `suite:${rel} uses the dedicated test project`,
+    `suite:${rel} guards the live tenant`,
+    source.includes("captureProtectedBaseline") && source.includes("readProtectedBaseline"),
+    "each integration suite must capture the Pacific Health Group baseline and assert it is unchanged",
+  );
+  record(
+    `suite:${rel} resolves its backend through the guarded helper`,
     source.includes("requireTestBackend") && !/process\.env\[?['"]SUPABASE_/.test(source),
-    "integration suites must resolve credentials via requireTestBackend(), never SUPABASE_*",
+    "integration suites must resolve credentials via requireTestBackend(), never SUPABASE_* directly",
   );
 }
 for (const spec of existsSync(path.join(ROOT, "tests/e2e"))
