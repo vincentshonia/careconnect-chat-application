@@ -64,12 +64,19 @@ export const testAiAnswerFn = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!full.data) throw new Error("Website not found");
 
+    // A test question costs the same as a visitor question, so it counts too.
+    const limits = await mod.orgLimits(organizationId);
+    await mod.enforceAiBudget(organizationId, limits);
+
     const result = await mod.answerQuestion({
       website: full.data as Record<string, unknown>,
       question: data.question,
       history: [],
       conversationId: null,
     });
+
+    await mod.recordUsage(organizationId, "ai_messages", 1);
+
 
     return {
       answer: result.answer,
