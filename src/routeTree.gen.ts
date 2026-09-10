@@ -40,6 +40,7 @@ import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/wi
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as ApiPublicStaffAvatarSplatRouteImport } from './routes/api/public/staff-avatar/$'
 import { Route as ApiPublicHooksSlaCheckRouteImport } from './routes/api/public/hooks/sla-check'
+import { Route as ApiPublicHooksAbandonmentSweepRouteImport } from './routes/api/public/hooks/abandonment-sweep'
 import { Route as ApiPublicChatUploadRouteImport } from './routes/api/public/chat/upload'
 import { Route as ApiPublicChatSessionRouteImport } from './routes/api/public/chat/session'
 import { Route as ApiPublicChatRateRouteImport } from './routes/api/public/chat/rate'
@@ -209,6 +210,12 @@ const ApiPublicHooksSlaCheckRoute = ApiPublicHooksSlaCheckRouteImport.update({
   path: '/api/public/hooks/sla-check',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksAbandonmentSweepRoute =
+  ApiPublicHooksAbandonmentSweepRouteImport.update({
+    id: '/api/public/hooks/abandonment-sweep',
+    path: '/api/public/hooks/abandonment-sweep',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicChatUploadRoute = ApiPublicChatUploadRouteImport.update({
   id: '/api/public/chat/upload',
   path: '/api/public/chat/upload',
@@ -292,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/chat/upload': typeof ApiPublicChatUploadRoute
+  '/api/public/hooks/abandonment-sweep': typeof ApiPublicHooksAbandonmentSweepRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
   '/api/public/staff-avatar/$': typeof ApiPublicStaffAvatarSplatRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -333,6 +341,7 @@ export interface FileRoutesByTo {
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/chat/upload': typeof ApiPublicChatUploadRoute
+  '/api/public/hooks/abandonment-sweep': typeof ApiPublicHooksAbandonmentSweepRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
   '/api/public/staff-avatar/$': typeof ApiPublicStaffAvatarSplatRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -376,6 +385,7 @@ export interface FileRoutesById {
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
   '/api/public/chat/upload': typeof ApiPublicChatUploadRoute
+  '/api/public/hooks/abandonment-sweep': typeof ApiPublicHooksAbandonmentSweepRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
   '/api/public/staff-avatar/$': typeof ApiPublicStaffAvatarSplatRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -419,6 +429,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/rate'
     | '/api/public/chat/session'
     | '/api/public/chat/upload'
+    | '/api/public/hooks/abandonment-sweep'
     | '/api/public/hooks/sla-check'
     | '/api/public/staff-avatar/$'
     | '/lovable/email/transactional/preview'
@@ -460,6 +471,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/rate'
     | '/api/public/chat/session'
     | '/api/public/chat/upload'
+    | '/api/public/hooks/abandonment-sweep'
     | '/api/public/hooks/sla-check'
     | '/api/public/staff-avatar/$'
     | '/lovable/email/transactional/preview'
@@ -502,6 +514,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/rate'
     | '/api/public/chat/session'
     | '/api/public/chat/upload'
+    | '/api/public/hooks/abandonment-sweep'
     | '/api/public/hooks/sla-check'
     | '/api/public/staff-avatar/$'
     | '/lovable/email/transactional/preview'
@@ -526,6 +539,7 @@ export interface RootRouteChildren {
   ApiPublicChatRateRoute: typeof ApiPublicChatRateRoute
   ApiPublicChatSessionRoute: typeof ApiPublicChatSessionRoute
   ApiPublicChatUploadRoute: typeof ApiPublicChatUploadRoute
+  ApiPublicHooksAbandonmentSweepRoute: typeof ApiPublicHooksAbandonmentSweepRoute
   ApiPublicHooksSlaCheckRoute: typeof ApiPublicHooksSlaCheckRoute
   ApiPublicStaffAvatarSplatRoute: typeof ApiPublicStaffAvatarSplatRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
@@ -750,6 +764,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSlaCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/abandonment-sweep': {
+      id: '/api/public/hooks/abandonment-sweep'
+      path: '/api/public/hooks/abandonment-sweep'
+      fullPath: '/api/public/hooks/abandonment-sweep'
+      preLoaderRoute: typeof ApiPublicHooksAbandonmentSweepRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/chat/upload': {
       id: '/api/public/chat/upload'
       path: '/api/public/chat/upload'
@@ -882,6 +903,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicChatRateRoute: ApiPublicChatRateRoute,
   ApiPublicChatSessionRoute: ApiPublicChatSessionRoute,
   ApiPublicChatUploadRoute: ApiPublicChatUploadRoute,
+  ApiPublicHooksAbandonmentSweepRoute: ApiPublicHooksAbandonmentSweepRoute,
   ApiPublicHooksSlaCheckRoute: ApiPublicHooksSlaCheckRoute,
   ApiPublicStaffAvatarSplatRoute: ApiPublicStaffAvatarSplatRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
