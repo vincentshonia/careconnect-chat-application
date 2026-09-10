@@ -67,7 +67,7 @@ _Finish onboarding without needing to be chased._
 
 **Before your first shift**
 
-- [ ] Sign in and change your temporary password
+- [ ] Open my invitation link and set my own password
 - [ ] Set up two-step verification if your organization requires it
 - [ ] Complete My settings: name, display name, languages and timezone
 - [ ] Set your availability to Available
@@ -95,8 +95,8 @@ _Understand where your account comes from and why there is no public sign-up._
 
 **There are exactly two ways you get an account**
 
-- Direct creation — an administrator creates the account and gives you a work email and a one-time temporary password.
-- Invitation link — an administrator sends you a single-use link that expires in 7 days and only works for the email address it was issued to.
+- Added by an administrator — they enter your work email and role, and CareConnect emails you an invitation link.
+- Invitation link — a single-use link that expires in 7 days and only works for the email address it was issued to.
 
 > **Note — Your access comes from your membership**
 >
@@ -121,16 +121,16 @@ _Get from the sign-in screen into the console._
 2. Sign in with the email address the invitation was sent to. Use Continue with Google if that address is a Google account, otherwise use the email and password fields.
 3. The invitation is accepted automatically and you land in the console.
 
-**If you were given a temporary password**
+**If your invitation link was shared with you directly**
 
-1. Go to the console address your administrator gave you and stay on the /auth screen.
-2. Enter your work email and the temporary password exactly as provided.
-3. Select Sign in.
-4. Change the password straight away: open My settings, then Send password reset email, and follow the link.
+1. Open the link your administrator gave you — it looks like /invite?t=… .
+2. If you are not signed in yet, CareConnect takes you to the sign-in screen and brings you straight back to the invitation afterwards.
+3. Set your own password using Forgot your password? on the sign-in screen if you do not have one yet, or use Continue with Google.
+4. Accept the invitation and you land in the console.
 
-> **Warning — Temporary passwords are shown once**
+> **Warning — Invitation links are shown once and expire**
 >
-> Your administrator cannot see the temporary password again after it is created. If you lose it before your first sign-in, use Forgot your password? on the sign-in screen or ask for a new invitation.
+> CareConnect never emails a password. Your administrator cannot see the invitation link again after it is created, and it stops working after 7 days or once it has been used. If yours has expired, ask for a new invitation.
 
 ### 2.3 Two-step verification
 
@@ -1196,7 +1196,7 @@ _Tick every line before you work unsupervised._
 
 **I can do all of this without help**
 
-- [ ] Sign in, complete two-step verification and change my temporary password
+- [ ] Accept my invitation, set my own password and complete two-step verification
 - [ ] Set my availability and understand how it affects routing
 - [ ] Claim a waiting conversation and reply inside the target time
 - [ ] Send and open an attachment safely
