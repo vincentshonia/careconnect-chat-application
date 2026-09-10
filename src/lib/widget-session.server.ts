@@ -72,6 +72,9 @@ export async function signSession(
   return { token: `${body}.${b64url(sig)}`, expiresAt: new Date(payload.exp * 1000).toISOString() };
 }
 
+/** Seven days: how long an expired token may still prove visitor identity. */
+export const RENEWAL_GRACE_SECONDS = 60 * 60 * 24 * 7;
+
 export async function verifySession(token: unknown): Promise<WidgetSessionClaims> {
   if (typeof token !== "string" || token.length < 20 || token.length > 4000) {
     throw new PublicChatError(401, "Chat session is missing or invalid");
