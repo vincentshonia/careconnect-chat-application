@@ -767,8 +767,7 @@ function ServicesCard({ organizationId }: { organizationId: string }) {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error: err } = await supabase.from("services").delete().eq("id", id);
-      if (err) throw err;
+      await deleteService({ data: { id } });
     },
     onSuccess: invalidate,
     onError: (e) => setError(e instanceof Error ? e.message : "Could not delete service"),
@@ -776,10 +775,10 @@ function ServicesCard({ organizationId }: { organizationId: string }) {
 
   const toggle = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: "active" | "inactive" }) => {
-      const { error: err } = await supabase.from("services").update({ status }).eq("id", id);
-      if (err) throw err;
+      await updateService({ data: { id, status } });
     },
     onSuccess: invalidate,
+    onError: (e) => setError(e instanceof Error ? e.message : "Could not update service"),
   });
 
   return (
