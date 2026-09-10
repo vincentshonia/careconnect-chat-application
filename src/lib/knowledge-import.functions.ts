@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveActor, requirePermission } from "@/lib/authz.server";
 import { z } from "zod";
 
 const sourceSchema = z.union([
@@ -26,6 +27,9 @@ export const importKnowledgeSourceFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data, context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    requirePermission(actor, "knowledge.edit");
+
     const { data: profile } = await context.supabase
       .from("profiles")
       .select("organization_id")
@@ -59,19 +63,30 @@ export const importKnowledgeSourceFn = createServerFn({ method: "POST" })
     if (data.mode === "faqs") {
       const faqs = await importer.splitIntoFaqs(text, sourceLabel);
       if (!faqs.length) throw new Error("No FAQs could be derived from that source.");
-      const { error } = await context.supabase.from("faqs").insert(
-        faqs.map((f, i) => ({
-          organization_id: organizationId,
-          category: f.category || "General",
-          question: f.question,
-          answer: f.answer,
-          applies_to_all: true,
-          status: data.status === "published" ? ("active" as const) : ("inactive" as const),
-          sort_order: i,
-        })),
-      );
+      const { data: insertedFaqs, error } = await context.supabase
+        .from("faqs")
+        .insert(
+          faqs.map((f, i) => ({
+            organization_id: organizationId,
+            category: f.category || "General",
+            question: f.question,
+            answer: f.answer,
+            applies_to_all: true,
+            status: data.status === "published" ? ("active" as const) : ("inactive" as const),
+            sort_order: i,
+          })),
+        )
+        .select("id");
       if (error) throw new Error(error.message);
-      return { mode: "faqs" as const, created: faqs.length, indexed: 0, sourceLabel };
+
+      let indexedFaqs = 0;
+      if (data.status === "published") {
+        const { indexFaq } = await import("@/lib/knowledge-index.server");
+        for (const row of insertedFaqs ?? []) {
+          indexedFaqs += (await indexFaq(row.id as string)).chunks;
+        }
+      }
+      return { mode: "faqs" as const, created: faqs.length, indexed: indexedFaqs, sourceLabel };
     }
 
     const articles = await importer.splitIntoArticles(text, sourceLabel);

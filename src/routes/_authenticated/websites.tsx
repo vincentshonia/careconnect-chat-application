@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { RequirePermission } from "@/components/admin/RequirePermission";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  createServiceFn,
+  updateServiceFn,
+  deleteServiceFn,
+} from "@/lib/knowledge-content.functions";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
@@ -743,16 +749,19 @@ function ServicesCard({ organizationId }: { organizationId: string }) {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["widget-services"] });
 
+  const createService = useServerFn(createServiceFn);
+  const updateService = useServerFn(updateServiceFn);
+  const deleteService = useServerFn(deleteServiceFn);
+
   const add = useMutation({
     mutationFn: async () => {
       if (!draft.name.trim()) throw new Error("Service name is required.");
-      const { error: err } = await supabase.from("services").insert({
-        organization_id: organizationId,
-        name: draft.name.trim(),
-        short_description: draft.short_description.trim() || draft.name.trim(),
-        applies_to_all: true,
+      await createService({
+        data: {
+          name: draft.name.trim(),
+          short_description: draft.short_description.trim() || draft.name.trim(),
+        },
       });
-      if (err) throw err;
     },
     onSuccess: () => {
       setDraft({ name: "", short_description: "" });
@@ -764,8 +773,7 @@ function ServicesCard({ organizationId }: { organizationId: string }) {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error: err } = await supabase.from("services").delete().eq("id", id);
-      if (err) throw err;
+      await deleteService({ data: { id } });
     },
     onSuccess: invalidate,
     onError: (e) => setError(e instanceof Error ? e.message : "Could not delete service"),
@@ -773,10 +781,10 @@ function ServicesCard({ organizationId }: { organizationId: string }) {
 
   const toggle = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: "active" | "inactive" }) => {
-      const { error: err } = await supabase.from("services").update({ status }).eq("id", id);
-      if (err) throw err;
+      await updateService({ data: { id, status } });
     },
     onSuccess: invalidate,
+    onError: (e) => setError(e instanceof Error ? e.message : "Could not update service"),
   });
 
   return (

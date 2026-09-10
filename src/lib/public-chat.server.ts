@@ -515,7 +515,13 @@ export {
 
 export type AnswerResult = {
   answer: string;
-  sources: Array<{ articleId: string; title: string; url: string | null }>;
+  sources: Array<{
+    articleId: string | null;
+    sourceType?: string;
+    sourceId?: string;
+    title: string;
+    url: string | null;
+  }>;
   confidence: number;
   escalate: boolean;
   crisis: boolean;
@@ -633,11 +639,19 @@ export async function answerQuestion(opts: {
     ? parsed.used_sources.map((n) => relevant[n - 1]).filter(Boolean)
     : relevant.slice(0, 2);
 
+  // Articles, FAQs and services all land here, so identity is the source pair,
+  // not the (now optional) article id.
   const sources = Array.from(
     new Map(
       used.map((m) => [
-        m.article_id,
-        { articleId: m.article_id as string, title: m.title as string, url: (m.source_url ?? null) as string | null },
+        `${m.source_type ?? "article"}:${m.source_id ?? m.article_id}`,
+        {
+          articleId: (m.article_id ?? null) as string | null,
+          sourceType: (m.source_type ?? "article") as string,
+          sourceId: (m.source_id ?? m.article_id) as string,
+          title: m.title as string,
+          url: (m.source_url ?? null) as string | null,
+        },
       ]),
     ).values(),
   );

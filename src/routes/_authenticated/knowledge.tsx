@@ -7,7 +7,8 @@ import { Pager } from "@/components/admin/Pager";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
-import { reindexArticleFn } from "@/lib/admin.functions";
+import { reindexArticleFn, reindexAllFn } from "@/lib/admin.functions";
+import { createFaqFn, deleteFaqFn } from "@/lib/knowledge-content.functions";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { KnowledgeImport } from "@/components/admin/KnowledgeImport";
 import { Button } from "@/components/ui/button";
@@ -37,12 +38,41 @@ type Faq = Database["public"]["Tables"]["faqs"]["Row"];
 
 const STATUSES: Article["status"][] = ["draft", "pending_review", "approved", "published", "archived"];
 
+function ReindexAllButton() {
+  const session = useSessionContext();
+  const reindexAll = useServerFn(reindexAllFn);
+  const [result, setResult] = useState<string | null>(null);
+
+  const run = useMutation({
+    mutationFn: async () => await reindexAll({}),
+    onSuccess: (r) =>
+      setResult(
+        `Re-indexed ${r.articles} articles, ${r.faqs} FAQs and ${r.services} services into ${r.chunks} searchable pieces.`,
+      ),
+    onError: (e) => setResult(e instanceof Error ? e.message : "Could not rebuild the index."),
+  });
+
+  if (!session.data?.can("knowledge.edit")) return null;
+
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-3">
+      <Button variant="outline" size="sm" disabled={run.isPending} onClick={() => run.mutate()}>
+        {run.isPending ? "Rebuilding…" : "Reindex all"}
+      </Button>
+      <p className="text-xs text-muted-foreground">
+        {result ?? "Rebuilds the assistant's search index from articles, FAQs and services."}
+      </p>
+    </div>
+  );
+}
+
 function KnowledgePage() {
   return (
     <AdminShell
       title="Knowledge base"
-      description="Articles feed the AI chatbot through vector search; FAQs appear in the widget."
+      description="Articles, FAQs and services all feed the AI chatbot through vector search."
     >
+      <ReindexAllButton />
       <Tabs defaultValue="articles">
         <TabsList>
           <TabsTrigger value="articles">Articles</TabsTrigger>
@@ -320,18 +350,14 @@ function Faqs() {
 
   const orgId = session.data?.organizationId ?? faqQuery.data?.rows?.[0]?.organization_id ?? null;
 
+  const createFaq = useServerFn(createFaqFn);
+  const deleteFaq = useServerFn(deleteFaqFn);
+
   const create = useMutation({
     mutationFn: async () => {
-      if (!orgId) throw new Error("No organization context available");
-      const { error } = await supabase.from("faqs").insert({
-        organization_id: orgId,
-        category: draft.category,
-        question: draft.question,
-        answer: draft.answer,
-        applies_to_all: true,
-        status: "active",
+      await createFaq({
+        data: { category: draft.category, question: draft.question, answer: draft.answer },
       });
-      if (error) throw error;
       await logAudit({ action: "faq.created", recordType: "faqs", newValue: { category: draft.category, question: draft.question } });
     },
     onSuccess: () => {
@@ -342,8 +368,7 @@ function Faqs() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("faqs").delete().eq("id", id);
-      if (error) throw error;
+      await deleteFaq({ data: { id } });
       await logAudit({ action: "faq.deleted", recordType: "faqs", recordId: id });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["kb-faqs"] }),

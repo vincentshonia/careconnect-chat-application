@@ -99,7 +99,13 @@ type Bubble = {
   id: string;
   role: "visitor" | "bot" | "system";
   text: string;
-  sources?: Array<{ articleId: string; title: string; url: string | null }>;
+  sources?: Array<{
+    articleId?: string | null;
+    sourceType?: string;
+    sourceId?: string;
+    title: string;
+    url: string | null;
+  }>;
   aiResponseId?: string;
   escalate?: boolean;
   author?: string;
@@ -1357,7 +1363,7 @@ function MessageBubble({
         <div className="text-[11px] text-muted-foreground">
           Based on:{" "}
           {bubble.sources.map((s, i) => (
-            <span key={s.articleId}>
+            <span key={s.sourceId ?? s.articleId ?? `${s.title}-${i}`}>
               {i > 0 && ", "}
               {s.url ? (
                 <a className="underline" href={s.url} target="_blank" rel="noreferrer">

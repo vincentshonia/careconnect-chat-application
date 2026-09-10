@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveActor, requireOrganization, requirePermission } from "@/lib/authz.server";
 import { z } from "zod";
 
 /** Re-embed a single knowledge article so the chatbot can retrieve it. */
@@ -7,6 +8,9 @@ export const reindexArticleFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ articleId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    requirePermission(actor, "knowledge.edit");
+
     const { data: article, error } = await context.supabase
       .from("knowledge_articles")
       .select("id")
@@ -19,6 +23,18 @@ export const reindexArticleFn = createServerFn({ method: "POST" })
     return { chunks };
   });
 
+/** Rebuild the whole knowledge index for the caller's organization. */
+export const reindexAllFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    requirePermission(actor, "knowledge.edit");
+    const organizationId = requireOrganization(actor);
+
+    const { reindexOrganization } = await import("@/lib/knowledge-index.server");
+    return await reindexOrganization(organizationId);
+  });
+
 /** Staff-only chatbot test console: run a question through the live RAG pipeline. */
 export const testAiAnswerFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -28,6 +44,10 @@ export const testAiAnswerFn = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    requirePermission(actor, "knowledge.edit");
+    const organizationId = requireOrganization(actor);
+
     // RLS check: the caller must be able to see this website in their own org.
     const { data: website, error } = await context.supabase
       .from("websites")
@@ -44,12 +64,19 @@ export const testAiAnswerFn = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!full.data) throw new Error("Website not found");
 
+    // A test question costs the same as a visitor question, so it counts too.
+    const limits = await mod.orgLimits(organizationId);
+    await mod.enforceAiBudget(organizationId, limits);
+
     const result = await mod.answerQuestion({
       website: full.data as Record<string, unknown>,
       question: data.question,
       history: [],
       conversationId: null,
     });
+
+    await mod.recordUsage(organizationId, "ai_messages", 1);
+
 
     return {
       answer: result.answer,
