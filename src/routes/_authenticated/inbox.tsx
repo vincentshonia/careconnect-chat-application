@@ -554,6 +554,33 @@ function InboxPage() {
     onError: (e) => fail(e, "Could not transfer this conversation"),
   });
 
+  const [slashTerm, setSlashTerm] = useState<string | null>(null);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const slashMatches = useMemo(
+    () => (slashTerm === null ? [] : matchTemplates(templates, slashTerm)),
+    [slashTerm, templates],
+  );
+
+  /**
+   * Insert a saved reply, substituting the visitor and agent names. When the
+   * agent triggered it with "/", the typed shortcut is replaced; from the
+   * picker the wording is appended to whatever they have already written.
+   */
+  const insertTemplate = (template: ResponseTemplate, fromSlash: boolean) => {
+    const body = applyTemplateVars(template.body, {
+      visitorName: contactQuery.data?.full_name ?? null,
+      agentName,
+    });
+    setDraft((current) => {
+      if (!fromSlash) return current ? `${current.replace(/\s*$/, "")}\n${body}` : body;
+      const caret = replyRef.current?.selectionStart ?? current.length;
+      return replaceSlashQuery(current, caret, body);
+    });
+    setSlashTerm(null);
+    setSlashIndex(0);
+    replyRef.current?.focus();
+  };
+
   const isOwner = Boolean(active && active.assigned_to === userId);
   const isClosed = Boolean(active && (CLOSED_STATUSES as readonly string[]).includes(active.status));
   const canClaim =
@@ -829,19 +856,78 @@ function InboxPage() {
                     if (draft.trim()) sendReply.mutate(draft.trim());
                   }}
                 >
-                  <Textarea
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        if (draft.trim() && !sendReply.isPending) sendReply.mutate(draft.trim());
-                      }
-                    }}
-                    placeholder="Reply to the visitor… (Enter to send, Shift+Enter for a new line)"
-                    rows={3}
-                  />
-                  <div className="mt-2 flex justify-end">
+                  <div className="relative">
+                    <Textarea
+                      ref={replyRef}
+                      value={draft}
+                      onChange={(e) => {
+                        setDraft(e.target.value);
+                        setSlashTerm(slashQuery(e.target.value, e.target.selectionStart ?? 0));
+                        setSlashIndex(0);
+                      }}
+                      onKeyDown={(e) => {
+                        if (slashMatches.length > 0) {
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            setSlashIndex((i) => (i + 1) % slashMatches.length);
+                            return;
+                          }
+                          if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            setSlashIndex(
+                              (i) => (i - 1 + slashMatches.length) % slashMatches.length,
+                            );
+                            return;
+                          }
+                          if (e.key === "Escape") {
+                            e.preventDefault();
+                            setSlashTerm(null);
+                            return;
+                          }
+                          if (e.key === "Enter" || e.key === "Tab") {
+                            e.preventDefault();
+                            const picked = slashMatches[slashIndex] ?? slashMatches[0];
+                            if (picked) insertTemplate(picked, true);
+                            return;
+                          }
+                        }
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          if (draft.trim() && !sendReply.isPending) sendReply.mutate(draft.trim());
+                        }
+                      }}
+                      placeholder="Reply to the visitor… (Enter to send, Shift+Enter for a new line, / for a saved reply)"
+                      rows={3}
+                    />
+                    {slashMatches.length > 0 ? (
+                      <ul className="absolute bottom-full left-0 z-20 mb-1 max-h-56 w-full overflow-y-auto rounded-md border border-border bg-popover p-1 shadow-md">
+                        {slashMatches.map((t, i) => (
+                          <li key={t.id}>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                insertTemplate(t, true);
+                              }}
+                              className={`flex w-full flex-col items-start rounded px-2 py-1.5 text-left text-xs hover:bg-accent ${
+                                i === slashIndex ? "bg-accent" : ""
+                              }`}
+                            >
+                              <span className="font-medium">
+                                {t.shortcut ? `/${t.shortcut}` : t.name}
+                              </span>
+                              <span className="line-clamp-1 text-muted-foreground">{t.body}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 flex items-center justify-end gap-2">
+                    <TemplatePicker
+                      templates={templates}
+                      onPick={(t) => insertTemplate(t, false)}
+                    />
                     <Button type="submit" size="sm" disabled={sendReply.isPending || !draft.trim()}>
                       {sendReply.isPending ? "Sending…" : "Send reply"}
                     </Button>
