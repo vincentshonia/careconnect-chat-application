@@ -18,8 +18,8 @@ interface Props {
   fullName?: string
   organizationName?: string
   email?: string
-  tempPassword?: string
-  signInUrl?: string
+  inviteUrl?: string
+  expiresAt?: string
   role?: string
   logoUrl?: string
   primaryColor?: string
@@ -75,15 +75,15 @@ const StaffWelcomeEmail = ({
   fullName,
   organizationName = 'your care team',
   email,
-  tempPassword,
-  signInUrl = 'https://chat.mypacifichealth.com/auth',
+  inviteUrl = 'https://chat.mypacifichealth.com/invite',
+  expiresAt,
   role,
   logoUrl,
   primaryColor,
 }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Your CareConnect account is ready — here is your temporary password</Preview>
+    <Preview>You have been invited to CareConnect — accept your invitation</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section
@@ -104,15 +104,14 @@ const StaffWelcomeEmail = ({
 
         <Heading style={heading}>Welcome{fullName ? `, ${fullName}` : ''} 👋</Heading>
         <Text style={paragraph}>
-          An account has been created for you on CareConnect, the communication workspace for{' '}
-          {organizationName}. You can sign in right away with the temporary credentials below.
+          You have been invited to CareConnect, the communication workspace for{' '}
+          {organizationName}. Use the invitation link below to set up your own sign-in — no
+          password is ever sent by email.
         </Text>
 
         <Section style={credBox}>
           <Text style={credLabel}>Email</Text>
           <Text style={credValue}>{email ?? '—'}</Text>
-          <Text style={credLabel}>Temporary password</Text>
-          <Text style={credValue}>{tempPassword ?? '—'}</Text>
           {role ? (
             <>
               <Text style={credLabel}>Role</Text>
@@ -122,19 +121,20 @@ const StaffWelcomeEmail = ({
         </Section>
 
         <Section>
-          <Button href={signInUrl} style={{ ...button, backgroundColor: primaryColor || button.backgroundColor }}>
-            Sign in to CareConnect
+          <Button href={inviteUrl} style={{ ...button, backgroundColor: primaryColor || button.backgroundColor }}>
+            Accept your invitation
           </Button>
         </Section>
 
         <Hr style={hr} />
 
         <Text style={note}>
-          For your security, change this temporary password immediately after your first sign-in.
+          This invitation can be used once, only by this email address, and
+          {expiresAt ? ` expires on ${new Date(expiresAt).toLocaleDateString('en-US')}.` : ' expires automatically.'}
         </Text>
         <Text style={note}>
           If you weren't expecting this invitation, please contact your administrator and do not
-          use the credentials above.
+          use the link above.
         </Text>
       </Container>
     </Body>
@@ -143,14 +143,14 @@ const StaffWelcomeEmail = ({
 
 export const template = {
   component: StaffWelcomeEmail,
-  subject: 'Welcome to CareConnect — your account is ready',
+  subject: 'Welcome to CareConnect — accept your invitation',
   displayName: 'Staff welcome',
   previewData: {
     fullName: 'Maria Lopez',
     organizationName: 'Pacific Health Group',
     email: 'maria@example.com',
-    tempPassword: 'Ph!TempPassw0rd9',
-    signInUrl: 'https://chat.mypacifichealth.com/auth',
+    inviteUrl: 'https://chat.mypacifichealth.com/invite?t=example-token',
+    expiresAt: '2026-09-16T00:00:00.000Z',
     role: 'agent',
     primaryColor: '#0f766e',
   },
