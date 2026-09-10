@@ -538,3 +538,69 @@ describe("reporting scope cannot be widened from the client", () => {
     expect(scope.departmentIds).toEqual([]);
   });
 });
+
+/* ----------------------- calendar days follow the org clock ---------------- */
+
+describe("report days follow the organization timezone", () => {
+  let tzOrg = "";
+  let tzSite = "";
+
+  // 2025-06-10 23:30 Pacific is already 2025-06-11 in UTC. The report must
+  // count it on the Pacific day the visitor actually wrote on.
+  const created = new Date(Date.UTC(2025, 5, 11, 6, 30, 0)).toISOString();
+
+  beforeAll(async () => {
+    tzOrg = await makeOrg("ScaleTZ");
+    tzSite = await makeWebsite(tzOrg, "scaletz");
+    const { error } = await db.from("conversations").insert({
+      organization_id: tzOrg,
+      website_id: tzSite,
+      reference: `TZ-${suffix}-1`,
+      created_at: created,
+      last_message_at: created,
+      status: "resolved",
+    } as never);
+    if (error) throw new Error(`tz conversation: ${error.message}`);
+  }, 120_000);
+
+  afterAll(async () => {
+    if (!configured || !tzOrg) return;
+    await purgeSyntheticOrganizations(db, [tzOrg]);
+  }, 120_000);
+
+  async function volume(tz: string) {
+    return rpc<Record<string, unknown>>("report_volume", {
+      _org: tzOrg,
+      _from: new Date(Date.UTC(2025, 5, 1)).toISOString(),
+      _to: new Date(Date.UTC(2025, 6, 1)).toISOString(),
+      _dept: null,
+      _staff: null,
+      _statuses: null,
+      _website: null,
+      _type: null,
+      _transfer: null,
+      _priority: null,
+      _tz: tz,
+    });
+  }
+
+  it("counts a 23:30 Pacific conversation on the Pacific day", async () => {
+    const d = await volume("America/Los_Angeles");
+    const days = d['by_day'] as { day: string; conversations: number }[];
+    expect(days.map((r) => r.day)).toEqual(["2025-06-10"]);
+    expect(Number(days[0]!.conversations)).toBe(1);
+    expect(d['peak_day']).toBe("2025-06-10");
+  });
+
+  it("buckets the hour on the Pacific clock too", async () => {
+    const d = await volume("America/Los_Angeles");
+    const hours = d['by_hour'] as { hour: number }[];
+    expect(hours.map((h) => Number(h.hour))).toEqual([23]);
+  });
+
+  it("still reports the UTC day when asked for UTC", async () => {
+    const d = await volume("UTC");
+    const days = d['by_day'] as { day: string }[];
+    expect(days.map((r) => r.day)).toEqual(["2025-06-11"]);
+  });
+});

@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatDateInZone } from "@/lib/org-time";
 
 
 export const Route = createFileRoute("/_authenticated/staff")({
@@ -355,7 +356,7 @@ function StaffPage() {
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 The link is single use, only works for this email address, and expires on{" "}
-                {new Date(createdInvitation.expiresAt).toLocaleDateString()}. It will not be shown
+                {formatDateInZone(createdInvitation.expiresAt)}. It will not be shown
                 again — no password is created or sent.
               </p>
               <p className="mt-2 text-xs">

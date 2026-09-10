@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDateInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/knowledge")({
   head: () => ({
@@ -206,7 +207,7 @@ function Articles() {
                     <Badge variant="outline">{a.status}</Badge>
                   </div>
                   <p className="mt-1 truncate text-xs text-muted-foreground">
-                    Updated {new Date(a.updated_at).toLocaleDateString()}
+                    Updated {formatDateInZone(a.updated_at)}
                   </p>
                 </button>
               </li>

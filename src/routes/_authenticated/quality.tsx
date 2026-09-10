@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Pager } from "@/components/admin/Pager";
+import { formatDateInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/quality")({
   head: () => ({
@@ -356,7 +357,7 @@ function QualityPage() {
                   <span className="text-muted-foreground">{r.reviewer_name ?? "Reviewer"}</span>
                   <span className="truncate text-muted-foreground">{r.coaching_notes ?? ""}</span>
                   <span className="ml-auto text-xs text-muted-foreground">
-                    {new Date(r.created_at).toLocaleDateString()}
+                    {formatDateInZone(r.created_at)}
                   </span>
                 </li>
               ))}

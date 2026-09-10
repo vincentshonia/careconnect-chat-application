@@ -283,14 +283,89 @@ export function dateRangeInZone(fromDate: string, toDate: string, timeZone: stri
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
-/** Format an instant for display in the org's timezone. */
-export function formatInZone(value: string | number | Date | null | undefined, timeZone: string): string {
-  if (!value) return "—";
+/**
+ * The timezone every screen formats in. Set once from the signed-in staff
+ * member's organization so a date never renders in the viewer's device
+ * timezone, which would disagree with the reports.
+ */
+let displayZone = DEFAULT_TIMEZONE;
+
+export function setDisplayTimeZone(timeZone: string | null | undefined): void {
+  displayZone = safeTimeZone(timeZone);
+}
+
+export function displayTimeZone(): string {
+  return displayZone;
+}
+
+function toDate(value: string | number | Date | null | undefined): Date | null {
+  if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function format(
+  value: string | number | Date | null | undefined,
+  timeZone: string | undefined,
+  options: Intl.DateTimeFormatOptions,
+): string {
+  const date = toDate(value);
+  if (!date) return "—";
   return new Intl.DateTimeFormat("en-US", {
-    timeZone: safeTimeZone(timeZone),
-    dateStyle: "medium",
-    timeStyle: "short",
+    timeZone: safeTimeZone(timeZone ?? displayZone),
+    ...options,
   }).format(date);
+}
+
+/** Date and time, in the org's timezone. */
+export function formatInZone(
+  value: string | number | Date | null | undefined,
+  timeZone?: string,
+): string {
+  return format(value, timeZone, { dateStyle: "medium", timeStyle: "short" });
+}
+
+/** Date only, in the org's timezone. */
+export function formatDateInZone(
+  value: string | number | Date | null | undefined,
+  timeZone?: string,
+): string {
+  return format(value, timeZone, { dateStyle: "medium" });
+}
+
+/** Clock time only, in the org's timezone. */
+export function formatTimeInZone(
+  value: string | number | Date | null | undefined,
+  timeZone?: string,
+): string {
+  return format(value, timeZone, { timeStyle: "short" });
+}
+
+/** Compact "Mon 5, 3:20 PM" used by the report charts and tables. */
+export function formatShortInZone(
+  value: string | number | Date | null | undefined,
+  timeZone?: string,
+): string {
+  return format(value, timeZone, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** Today's calendar date (YYYY-MM-DD) in the given zone. */
+export function todayInZone(timeZone?: string, now: Date = new Date()): string {
+  const p = zonedParts(now, safeTimeZone(timeZone ?? displayZone));
+  return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
+}
+
+/** Is a due date already past, judged by the org's calendar? */
+export function isOverdueInZone(
+  dueDate: string | null | undefined,
+  timeZone?: string,
+  now: Date = new Date(),
+): boolean {
+  if (!dueDate) return false;
+  return dueDate.slice(0, 10) < todayInZone(timeZone, now);
 }

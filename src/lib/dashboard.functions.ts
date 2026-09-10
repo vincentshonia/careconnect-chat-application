@@ -79,6 +79,8 @@ export const getDashboardMetricsFn = createServerFn({ method: "POST" })
       _prev_from: prevFrom,
       _prev_to: prevTo,
       _sla: slaMinutes,
+      // Day/hour buckets and "today" follow the organization's clock.
+      _tz: timeZone,
     });
     if (error) {
       console.error("[dashboard] rpc failed", error.message);

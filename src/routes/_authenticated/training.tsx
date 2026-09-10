@@ -57,6 +57,7 @@ import {
 } from "@/lib/training/progress";
 import { printGuide } from "@/lib/training/print";
 import type { GuideRole } from "@/lib/training/types";
+import { formatDateInZone } from "@/lib/org-time";
 import {
   TRAINING_APP_BUILD,
   TRAINING_GUIDE_VERSION,
@@ -411,9 +412,9 @@ function TrainingPage() {
               <ShieldCheck className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
               <p className="text-sm text-muted-foreground">
                 {reviewFlag?.status === "needs_review"
-                  ? `Flagged as needing an update${reviewFlag.by ? ` by ${reviewFlag.by}` : ""} on ${new Date(reviewFlag.at).toLocaleDateString()}.`
+                  ? `Flagged as needing an update${reviewFlag.by ? ` by ${reviewFlag.by}` : ""} on ${formatDateInZone(reviewFlag.at)}.`
                   : reviewFlag?.status === "reviewed"
-                    ? `Checked against this console${reviewFlag.by ? ` by ${reviewFlag.by}` : ""} on ${new Date(reviewFlag.at).toLocaleDateString()}.`
+                    ? `Checked against this console${reviewFlag.by ? ` by ${reviewFlag.by}` : ""} on ${formatDateInZone(reviewFlag.at)}.`
                     : "This guide has not been checked against your console yet."}
               </p>
               {canReview ? (

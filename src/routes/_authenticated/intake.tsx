@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatDateInZone, formatInZone, isOverdueInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/intake")({
   head: () => ({
@@ -36,6 +37,9 @@ export const Route = createFileRoute("/_authenticated/intake")({
 type Intake = Database["public"]["Tables"]["intake_requests"]["Row"];
 type Stage = Database["public"]["Enums"]["intake_stage"];
 type IntakeType = Database["public"]["Enums"]["intake_type"];
+
+/** Stages where a due date no longer matters. */
+const CLOSED_STAGES: Stage[] = ["approved", "denied", "withdrawn"];
 
 const STAGES: Stage[] = [
   "new",
@@ -321,9 +325,15 @@ function IntakePage() {
                   <td className="px-4 py-2">{label(i.request_type)}</td>
                   <td className="px-4 py-2">
                     <Badge variant="outline">{label(i.stage)}</Badge>
+                    {/* Overdue is judged by the organization's calendar day. */}
+                    {isOverdueInZone(i.due_date) && !CLOSED_STAGES.includes(i.stage) ? (
+                      <Badge variant="destructive" className="ml-2">
+                        Overdue
+                      </Badge>
+                    ) : null}
                   </td>
                   <td className="px-4 py-2 text-muted-foreground">
-                    {new Date(i.created_at).toLocaleDateString()}
+                    {formatDateInZone(i.created_at)}
                   </td>
                 </tr>
               ))}
@@ -415,7 +425,12 @@ function IntakePage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Due date</Label>
+                <Label className="flex items-center gap-2">
+                  Due date
+                  {isOverdueInZone(active.due_date) && !CLOSED_STAGES.includes(active.stage) ? (
+                    <Badge variant="destructive">Overdue</Badge>
+                  ) : null}
+                </Label>
                 <Input
                   type="date"
                   value={active.due_date ?? ""}
@@ -450,7 +465,7 @@ function IntakePage() {
                       ) : null}
                       {e.detail ? <p className="mt-1 text-muted-foreground">{e.detail}</p> : null}
                       <p className="mt-1 text-muted-foreground">
-                        {new Date(e.created_at).toLocaleString()}
+                        {formatInZone(e.created_at)}
                       </p>
                     </li>
                   ))}

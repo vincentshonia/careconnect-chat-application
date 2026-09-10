@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/notifications")({
   head: () => ({
@@ -177,7 +178,7 @@ function NotificationsPage() {
                 </Badge>
                 <span className="text-sm font-medium">{n.title}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {new Date(n.created_at).toLocaleString()}
+                  {formatInZone(n.created_at)}
                 </span>
               </div>
               {n.body ? <p className="mt-2 text-sm text-muted-foreground">{n.body}</p> : null}
