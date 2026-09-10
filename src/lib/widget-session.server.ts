@@ -75,7 +75,10 @@ export async function signSession(
 /** Seven days: how long an expired token may still prove visitor identity. */
 export const RENEWAL_GRACE_SECONDS = 60 * 60 * 24 * 7;
 
-export async function verifySession(token: unknown): Promise<WidgetSessionClaims> {
+async function verifySigned(
+  token: unknown,
+  graceSeconds: number,
+): Promise<WidgetSessionClaims> {
   if (typeof token !== "string" || token.length < 20 || token.length > 4000) {
     throw new PublicChatError(401, "Chat session is missing or invalid");
   }
@@ -104,8 +107,29 @@ export async function verifySession(token: unknown): Promise<WidgetSessionClaims
   if (!claims?.sid || !claims.wid || !claims.org) {
     throw new PublicChatError(401, "Chat session is invalid");
   }
-  if (claims.exp * 1000 < Date.now()) {
+  if (typeof claims.exp !== "number" || !Number.isFinite(claims.exp)) {
+    throw new PublicChatError(401, "Chat session is invalid");
+  }
+  if ((claims.exp + graceSeconds) * 1000 < Date.now()) {
     throw new PublicChatError(401, "Chat session has expired");
   }
   return claims;
+}
+
+export async function verifySession(token: unknown): Promise<WidgetSessionClaims> {
+  return verifySigned(token, 0);
+}
+
+/**
+ * Same signature check, but a token that expired recently is still accepted.
+ *
+ * Only session renewal uses this: an expired-but-genuine token is proof the
+ * browser is the same visitor, so renewal can keep the existing visitor row
+ * instead of creating a duplicate. It never grants access to conversation data.
+ */
+export async function verifySessionForRenewal(
+  token: unknown,
+  graceSeconds: number = RENEWAL_GRACE_SECONDS,
+): Promise<WidgetSessionClaims> {
+  return verifySigned(token, Math.max(0, graceSeconds));
 }
