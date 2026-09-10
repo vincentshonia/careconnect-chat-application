@@ -743,16 +743,19 @@ function ServicesCard({ organizationId }: { organizationId: string }) {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["widget-services"] });
 
+  const createService = useServerFn(createServiceFn);
+  const updateService = useServerFn(updateServiceFn);
+  const deleteService = useServerFn(deleteServiceFn);
+
   const add = useMutation({
     mutationFn: async () => {
       if (!draft.name.trim()) throw new Error("Service name is required.");
-      const { error: err } = await supabase.from("services").insert({
-        organization_id: organizationId,
-        name: draft.name.trim(),
-        short_description: draft.short_description.trim() || draft.name.trim(),
-        applies_to_all: true,
+      await createService({
+        data: {
+          name: draft.name.trim(),
+          short_description: draft.short_description.trim() || draft.name.trim(),
+        },
       });
-      if (err) throw err;
     },
     onSuccess: () => {
       setDraft({ name: "", short_description: "" });
