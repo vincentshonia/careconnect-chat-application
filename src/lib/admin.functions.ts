@@ -86,3 +86,34 @@ export const testAiAnswerFn = createServerFn({ method: "POST" })
       sources: result.sources,
     };
   });
+
+/**
+ * Health of the scheduled background jobs: the last 12 outbound calls the
+ * database made, with the job they belong to and how each one ended.
+ */
+export const cronHealthFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    requirePermission(actor, "settings.manage");
+
+    // Cron and pg_net internals are not exposed to signed-in roles, so this
+    // read goes through a backend-only function after the check above.
+    const { admin } = await import("@/lib/public-chat.server");
+    const { data, error } = await admin().rpc("cron_health");
+    if (error) throw new Error(error.message);
+
+    return ((data ?? []) as {
+      job_name: string | null;
+      status_code: number | null;
+      error_msg: string | null;
+      timed_out: boolean | null;
+      created: string;
+    }[]).map((row) => ({
+      jobName: row.job_name ?? "Unknown job",
+      statusCode: row.status_code,
+      errorMsg: row.error_msg,
+      timedOut: Boolean(row.timed_out),
+      created: row.created,
+    }));
+  });

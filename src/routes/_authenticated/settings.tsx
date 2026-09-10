@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useServerFn } from "@tanstack/react-start";
+import { cronHealthFn } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -284,7 +286,75 @@ function SettingsPage() {
           ) : null}
         </div>
       </form>
+
+      <ScheduledJobsCard />
     </AdminShell>
+  );
+}
+
+/** Recent results of the automatic background jobs, newest first. */
+function ScheduledJobsCard() {
+  const runCronHealth = useServerFn(cronHealthFn);
+  const health = useQuery({
+    queryKey: ["cron-health"],
+    queryFn: () => runCronHealth({}),
+    refetchOnWindowFocus: false,
+  });
+
+  return (
+    <section className="mt-8 max-w-3xl space-y-3 rounded-xl border border-border bg-card p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold">Scheduled jobs</h2>
+          <p className="text-xs text-muted-foreground">
+            The last automatic checks the system ran on its own. "OK" means the check completed.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={() => void health.refetch()}>
+          Refresh
+        </Button>
+      </div>
+
+      {health.isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : health.isError ? (
+        <p className="text-sm text-destructive">
+          {health.error instanceof Error ? health.error.message : "Could not load job history."}
+        </p>
+      ) : (health.data ?? []).length === 0 ? (
+        <p className="text-sm text-muted-foreground">No runs recorded yet.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase text-muted-foreground">
+                <th className="py-2 pr-3 font-medium">Job</th>
+                <th className="py-2 pr-3 font-medium">Result</th>
+                <th className="py-2 pr-3 font-medium">Details</th>
+                <th className="py-2 font-medium">When</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(health.data ?? []).map((row, index) => {
+                const ok = row.statusCode !== null && row.statusCode < 400;
+                return (
+                  <tr key={`${row.created}-${index}`} className="border-t border-border align-top">
+                    <td className="py-2 pr-3">{row.jobName}</td>
+                    <td className={`py-2 pr-3 ${ok ? "text-muted-foreground" : "text-destructive"}`}>
+                      {row.timedOut ? "Timed out" : ok ? `OK (${row.statusCode})` : row.statusCode ?? "Failed"}
+                    </td>
+                    <td className="py-2 pr-3 text-xs text-muted-foreground">{row.errorMsg || "—"}</td>
+                    <td className="py-2 text-xs text-muted-foreground">
+                      {new Date(row.created).toLocaleString()}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
