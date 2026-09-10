@@ -356,43 +356,83 @@ function WidgetPage() {
   }, [messages, view]);
 
   /* -------------------------- live agent polling ------------------------ */
+  // Each conversation keeps its own "newest message seen" marker, so opening
+  // the waiting view never re-renders bubbles the visitor already read.
   useEffect(() => {
-    if (!conversationId || view !== "waiting") return;
+    if (!conversationId || view !== "waiting" || ended) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let delay = POLL_MIN_MS;
+    let lastMessageAt = Date.now();
+
     const tick = async () => {
       const request = async (token: string) => {
         const qs = new URLSearchParams({ c: conversationId, s: token, h: hostOrigin ?? "" });
-        if (lastSeen.current) qs.set("since", lastSeen.current);
+        const since = lastSeenByConversation.current[conversationId];
+        if (since) qs.set("since", since);
         return fetch(`/api/public/chat/poll?${qs.toString()}`);
       };
-      let res = await request(await ensureSession());
-      if (res.status === 401) res = await request(await ensureSession(true));
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.connected && data.agentName) {
-        setAgentName(data.agentName);
-        setAgentAvatar(data.agentAvatarUrl ?? null);
-        setLiveStatus("Representative connected");
-      }
-      const incoming = (data.messages ?? []).filter(
-        (m: any) => m.sender_type === "agent" || m.sender_type === "ai",
-      );
-      if (incoming.length) {
-        lastSeen.current = incoming[incoming.length - 1].created_at;
-        setMessages((prev) => [
-          ...prev,
-          ...incoming.map((m: any) => ({
-            id: m.id,
-            role: "bot" as const,
-            text: m.body,
-            author: m.sender_name ?? "Representative",
-          })),
-        ]);
+      try {
+        let res = await request(await ensureSession());
+        if (res.status === 401) res = await request(await ensureSession(true));
+        if (cancelled) return;
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+
+        if (data.status) setConvStatus(data.status as string);
+        if (data.connected && data.agentName) {
+          setAgentName(data.agentName);
+          setAgentAvatar(data.agentAvatarUrl ?? null);
+          setLiveStatus("Representative connected");
+        }
+        const incoming = (data.messages ?? []).filter(
+          (m: any) => m.sender_type === "agent" || m.sender_type === "ai",
+        );
+        if (incoming.length) {
+          lastMessageAt = Date.now();
+          delay = POLL_MIN_MS;
+          lastSeenByConversation.current[conversationId] = incoming[incoming.length - 1].created_at;
+          if (incoming.some((m: any) => m.sender_type === "agent")) setAgentReplied(true);
+          setMessages((prev) => {
+            const known = new Set(prev.map((p) => p.id));
+            const fresh = incoming
+              .filter((m: any) => !known.has(m.id))
+              .map((m: any) => ({
+                id: m.id,
+                role: "bot" as const,
+                text: m.body,
+                author: m.sender_name ?? "Representative",
+              }));
+            return fresh.length ? [...prev, ...fresh] : prev;
+          });
+        }
+        // A finished conversation stops the loop and drops the saved thread.
+        if (isConversationEnded(data.status)) {
+          safeStorage.remove(threadKey);
+          return;
+        }
+      } catch {
+        /* transient network error — try again on the next tick */
+      } finally {
+        if (!cancelled) {
+          delay = nextPollDelay(delay, Date.now() - lastMessageAt);
+          timer = setTimeout(tick, delay);
+        }
       }
     };
+
     void tick();
-    const interval = setInterval(tick, 5000);
-    return () => clearInterval(interval);
-  }, [conversationId, view, ensureSession, hostOrigin]);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [conversationId, view, ended, ensureSession, hostOrigin, threadKey]);
+
+  // A conversation that just ended should not keep a stale saved copy around.
+  useEffect(() => {
+    if (ended) safeStorage.remove(threadKey);
+  }, [ended, threadKey]);
 
   const brand = config?.website.primaryColor ?? "#0f766e";
   const radius = config?.website.borderRadius ?? 16;
