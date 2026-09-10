@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { RequirePermission } from "@/components/admin/RequirePermission";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  createServiceFn,
+  updateServiceFn,
+  deleteServiceFn,
+} from "@/lib/knowledge-content.functions";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
