@@ -972,6 +972,210 @@ function InboxPage() {
   );
 }
 
+/** Wait time, SLA countdown, priority, department and unread marker for a row. */
+function QueueMeta({
+  conversation,
+  now,
+  slaMinutes,
+  departmentName,
+}: {
+  conversation: Conversation;
+  now: number;
+  slaMinutes: number;
+  departmentName: string | null;
+}) {
+  const waited = waitingMinutes(conversation, now);
+  const remaining = waited === null ? null : Math.round(slaMinutes - waited);
+  const tone =
+    remaining === null
+      ? "text-muted-foreground"
+      : remaining < 0
+        ? "text-destructive"
+        : remaining <= 5
+          ? "text-amber-600 dark:text-amber-500"
+          : "text-muted-foreground";
+
+  return (
+    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+      {waited !== null ? (
+        <span className="font-medium text-destructive">
+          Waiting {waitLabel(conversation.first_human_requested_at ?? conversation.requested_agent_at)}
+        </span>
+      ) : null}
+      {remaining !== null ? (
+        <span className={tone}>
+          {remaining < 0 ? `${Math.abs(remaining)} min over target` : `${remaining} min left`}
+        </span>
+      ) : null}
+      <span className="text-muted-foreground">{conversation.priority}</span>
+      {departmentName ? <span className="text-muted-foreground">{departmentName}</span> : null}
+      {conversation.unread_agent_count > 0 ? (
+        <span
+          aria-label={`${conversation.unread_agent_count} unread visitor messages`}
+          className="inline-flex h-2 w-2 rounded-full bg-primary"
+        />
+      ) : null}
+    </p>
+  );
+}
+
+/** Searchable list of approved saved replies. */
+function TemplatePicker({
+  templates,
+  onPick,
+}: {
+  templates: ResponseTemplate[];
+  onPick: (template: ResponseTemplate) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [term, setTerm] = useState("");
+  const matches = matchTemplates(templates, term, 50);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" size="sm" variant="outline">
+          Templates
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Saved replies</DialogTitle>
+          <DialogDescription>
+            Approved wording for common questions. In the reply box you can also type “/” followed
+            by the shortcut.
+          </DialogDescription>
+        </DialogHeader>
+        <Input
+          autoFocus
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          placeholder="Search saved replies"
+        />
+        <ul className="max-h-72 space-y-1 overflow-y-auto">
+          {matches.length === 0 ? (
+            <li className="p-2 text-sm text-muted-foreground">No saved replies match that.</li>
+          ) : (
+            matches.map((t) => (
+              <li key={t.id}>
+                <button
+                  type="button"
+                  className="w-full rounded-md border border-border p-2 text-left hover:bg-accent"
+                  onClick={() => {
+                    onPick(t);
+                    setOpen(false);
+                  }}
+                >
+                  <span className="text-sm font-medium">
+                    {t.name}
+                    {t.shortcut ? (
+                      <span className="ml-2 text-xs text-muted-foreground">/{t.shortcut}</span>
+                    ) : null}
+                  </span>
+                  <span className="mt-1 line-clamp-2 block text-xs text-muted-foreground">
+                    {t.body}
+                  </span>
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Deliberate transfer: pick a department, add a handover note, confirm. */
+function TransferDialog({
+  departments,
+  currentDepartmentId,
+  busy,
+  onConfirm,
+}: {
+  departments: Array<{ id: string; name: string }>;
+  currentDepartmentId: string | null;
+  busy: boolean;
+  onConfirm: (departmentId: string, note?: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [departmentId, setDepartmentId] = useState("");
+  const [note, setNote] = useState("");
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          setDepartmentId("");
+          setNote("");
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button type="button" size="sm" variant="outline" disabled={busy}>
+          {busy ? "Transferring…" : "Transfer…"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Transfer this conversation</DialogTitle>
+          <DialogDescription>
+            The chat moves to the chosen department's queue and the visitor is told it was handed
+            over.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="transfer-dept">Department</Label>
+            <select
+              id="transfer-dept"
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="">Choose a department…</option>
+              {departments
+                .filter((d) => d.id !== currentDepartmentId)
+                .map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="transfer-note">Note for the receiving team (optional)</Label>
+            <Textarea
+              id="transfer-note"
+              rows={3}
+              maxLength={500}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="What has been done so far, and what is needed next?"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={!departmentId || busy}
+            onClick={() => {
+              onConfirm(departmentId, note.trim() || undefined);
+              setOpen(false);
+            }}
+          >
+            Transfer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 type Attachment = { path: string; name: string; type: string; size: number };
 
 function formatSize(bytes: number) {
