@@ -6,6 +6,7 @@ import { resolveWidgetTabs } from "@/lib/widget-tabs";
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { chatComplete, embedText, AiGatewayError, CHAT_MODEL } from "./ai.server";
+import { detectCrisis, applyConfidenceBand, LOW_CONFIDENCE_REPLY } from "./ai-confidence";
 
 type Admin = SupabaseClient<any, "public", any>;
 
