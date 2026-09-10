@@ -4,9 +4,12 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { reportScopeFor, canRunSection, NO_DEPARTMENT } from "@/lib/report-scope";
 import {
   purgeSyntheticOrganizations,
+  purgeSyntheticUsers,
   requireTestBackend,
+  syntheticEmail,
   syntheticName,
 } from "./helpers/required-env";
+
 
 /**
  * Phase 3 scale & reconciliation tests.
