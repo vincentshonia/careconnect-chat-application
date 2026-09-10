@@ -178,7 +178,7 @@ const AGENT_GUIDE: Guide = {
         "Giving clinical advice or promising eligibility, coverage or approval",
       ],
       firstDay: [
-        "Sign in and change your temporary password",
+        "Open my invitation link and set my own password",
         "Set up two-step verification if your organization requires it",
         "Complete My settings: name, display name, languages and timezone",
         "Set your availability to Available",
@@ -228,7 +228,7 @@ const AGENT_GUIDE: Guide = {
         "Do not write anything in a staff note you would not want the member to read.",
       ],
       checklist: [
-        "Sign in, complete two-step verification and change my temporary password",
+        "Accept my invitation, set my own password and complete two-step verification",
         "Set my availability and understand how it affects routing",
         "Claim a waiting conversation and reply inside the target time",
         "Send and open an attachment safely",
@@ -641,14 +641,14 @@ const ADMINISTRATOR_GUIDE: Guide = {
     wrapUpChapter({
       id: "administrator",
       mistakes: [
-        "Creating an account and closing the dialog without copying the temporary password — it cannot be shown again.",
+        "Closing the dialog without copying the invitation link — it cannot be shown again.",
         "Disabling a leaver's account before reassigning their open conversations and intake requests.",
         "Publishing a website without a catch-all routing rule, so unmatched escalations wait with nobody to answer them.",
         "Changing the organization timezone quietly — every report, “today” figure and business-hours calculation moves with it.",
         "Giving someone a higher role “temporarily” and never reviewing it.",
       ],
       dos: [
-        "Prefer an invitation link over a temporary password when the person has a working mailbox.",
+        "Check the work email carefully before inviting — the link only works for that address.",
         "Give the lowest role that lets someone do their job, and review roles when duties change.",
         "Keep every department staffed, with hours and holidays that match reality.",
         "Read the audit log weekly and ask about anything you cannot explain.",
@@ -661,7 +661,7 @@ const ADMINISTRATOR_GUIDE: Guide = {
       ],
       checklist: [
         "Everything on the Manager checklist",
-        "Create a staff account and send an invitation, and know when to use each",
+        "Invite a staff member and re-issue an invitation when one expires",
         "Change a role, department membership and capacity, and explain the effect",
         "Disable and re-enable an account, in the right order relative to their open work",
         "Configure a website: branding, welcome copy, tabs and the embed snippet",
@@ -673,15 +673,15 @@ const ADMINISTRATOR_GUIDE: Guide = {
     }),
     knowledgeCheck("administrator", [
       {
-        question: "You create a staff account directly. What happens to the temporary password?",
+        question: "You add a staff member. What does CareConnect send them?",
         options: [
-          "It is emailed automatically",
-          "It is shown once and cannot be retrieved later",
-          "It never expires",
-          "It is stored in the audit log",
+          "A temporary password",
+          "A single-use invitation link that expires after 7 days",
+          "Nothing — they sign up themselves",
+          "Their password, stored in the audit log",
         ],
         answer: 1,
-        why: "Copy it at creation and deliver it through an approved channel — or send an invitation link instead.",
+        why: "CareConnect never emails passwords. The invitation link is single use, tied to that email address, and expires.",
       },
       {
         question: "Someone leaves the organization today. What is the correct order?",

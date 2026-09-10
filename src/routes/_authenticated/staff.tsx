@@ -65,9 +65,10 @@ function StaffPage() {
     title: "",
     phone: "",
   });
-  const [createdCredentials, setCreatedCredentials] = useState<{
+  const [createdInvitation, setCreatedInvitation] = useState<{
     email: string;
-    tempPassword: string;
+    inviteUrl: string;
+    expiresAt: string;
     emailed: boolean;
     emailError: string | null;
   } | null>(null);
@@ -84,9 +85,10 @@ function StaffPage() {
         },
       }),
     onSuccess: (result) => {
-      setCreatedCredentials({
+      setCreatedInvitation({
         email: result.email,
-        tempPassword: result.tempPassword,
+        inviteUrl: result.inviteUrl,
+        expiresAt: result.expiresAt,
         emailed: result.emailed,
         emailError: result.emailError,
       });
@@ -263,7 +265,7 @@ function StaffPage() {
             <div>
               <h2 className="text-sm font-semibold">Add a staff member</h2>
               <p className="text-xs text-muted-foreground">
-                Creates the account immediately with a one-time temporary password you share with them.
+                Sends a single-use invitation link. They set their own password when they accept it.
               </p>
             </div>
             <Button type="button" variant={showForm ? "outline" : "default"} onClick={() => setShowForm((v) => !v)}>
@@ -330,7 +332,7 @@ function StaffPage() {
               </div>
               <div className="flex items-end">
                 <Button type="submit" disabled={addStaff.isPending}>
-                  {addStaff.isPending ? "Creating…" : "Create account"}
+                  {addStaff.isPending ? "Sending…" : "Send invitation"}
                 </Button>
               </div>
               {addStaff.error ? (
@@ -341,23 +343,25 @@ function StaffPage() {
             </form>
           ) : null}
 
-          {createdCredentials ? (
+          {createdInvitation ? (
             <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
-              <p className="text-sm font-medium">Account created — share these details once</p>
+              <p className="text-sm font-medium">Invitation created</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Email: <span className="font-mono">{createdCredentials.email}</span>
+                Email: <span className="font-mono">{createdInvitation.email}</span>
               </p>
-              <p className="text-sm text-muted-foreground">
-                Temporary password:{" "}
-                <span className="font-mono">{createdCredentials.tempPassword}</span>
+              <p className="text-sm break-all text-muted-foreground">
+                Invitation link:{" "}
+                <span className="font-mono">{createdInvitation.inviteUrl}</span>
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
-                This password will not be shown again. Ask them to sign in at /auth and change it from Security.
+                The link is single use, only works for this email address, and expires on{" "}
+                {new Date(createdInvitation.expiresAt).toLocaleDateString()}. It will not be shown
+                again — no password is created or sent.
               </p>
               <p className="mt-2 text-xs">
-                {createdCredentials.emailed
-                  ? "A welcome email with these details was sent to them."
-                  : `Welcome email not sent${createdCredentials.emailError ? ` — ${createdCredentials.emailError}` : ""}. Share the password directly.`}
+                {createdInvitation.emailed
+                  ? "An invitation email was sent to them."
+                  : `Invitation email not sent${createdInvitation.emailError ? ` — ${createdInvitation.emailError}` : ""}. Share the link directly through an approved channel.`}
               </p>
 
               <Button
@@ -365,7 +369,7 @@ function StaffPage() {
                 size="sm"
                 variant="outline"
                 className="mt-2"
-                onClick={() => setCreatedCredentials(null)}
+                onClick={() => setCreatedInvitation(null)}
               >
                 Dismiss
               </Button>

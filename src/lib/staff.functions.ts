@@ -1,10 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  createStaffInput,
-  staffAccessInput,
-  generateTempPassword,
-} from "@/lib/staff-helpers";
+import { createStaffInput, staffAccessInput } from "@/lib/staff-helpers";
+import { issueInvitation } from "@/lib/invitations.functions";
 import {
   resolveActor,
   requirePermission,
@@ -17,8 +14,12 @@ import { ROLE_RANK, roleTransitionError, type OrgRole } from "@/lib/permissions"
 const APP_ORIGIN = "https://chat.mypacifichealth.com";
 
 /**
- * Administrator-only: create a staff account directly with a temporary password.
- * The caller must be rank 4+ and cannot create a role above their own rank.
+ * Administrator-only: invite a staff member.
+ *
+ * No account and no password are ever created here. The person receives a
+ * single-use, expiring invitation link bound to their email address, and the
+ * account is provisioned when they accept it. The caller must hold
+ * staff.create and cannot invite a role above their own rank.
  */
 export const createStaffFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -59,78 +60,29 @@ export const createStaffFn = createServerFn({ method: "POST" })
       .maybeSingle();
     if (existing) throw new Error("A staff member with that email already exists");
 
-    const tempPassword = generateTempPassword();
-    const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    // Same single-use, email-bound token as the invitations card.
+    const invitation = await issueInvitation(context, {
+      organizationId,
       email,
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: { full_name: data.fullName },
+      role: data.role,
+      title: data.title,
+      departmentIds,
+      expiresInDays: 7,
     });
-    if (createError || !created.user) {
-      throw new Error(createError?.message ?? "Could not create the account");
-    }
-    const newUserId = created.user.id;
-
-    // The signup trigger seeds a profile + default role; normalise both here.
-    const { error: profileError } = await supabaseAdmin.from("profiles").upsert(
-      {
-        id: newUserId,
-        organization_id: organizationId,
-        full_name: data.fullName,
-        email,
-        title: data.title || null,
-        phone: data.phone || null,
-      },
-      { onConflict: "id" },
-    );
-    if (profileError) throw new Error(profileError.message);
-
-    await supabaseAdmin.from("user_roles").delete().eq("user_id", newUserId);
-    const { error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .insert({ user_id: newUserId, role: data.role, organization_id: organizationId });
-    if (roleError) throw new Error(roleError.message);
-
-    // Explicit tenant membership is what actually grants access to the org.
-    const { error: membershipError } = await supabaseAdmin
-      .from("organization_memberships")
-      .upsert(
-        {
-          organization_id: organizationId,
-          user_id: newUserId,
-          role: data.role,
-          status: "active",
-          title: data.title || null,
-          invited_by: context.userId,
-          accepted_at: new Date().toISOString(),
-        },
-        { onConflict: "organization_id,user_id" },
-      );
-    if (membershipError) throw new Error(membershipError.message);
-
-    if (departmentIds.length) {
-      await supabaseAdmin.from("department_members").insert(
-        departmentIds.map((departmentId) => ({
-          user_id: newUserId,
-          department_id: departmentId,
-          organization_id: organizationId,
-        })),
-      );
-    }
+    const inviteUrl = `${APP_ORIGIN}/invite?t=${invitation.token}`;
 
     await supabaseAdmin.from("audit_logs").insert({
       organization_id: organizationId,
       actor_id: context.userId,
       actor_name: callerProfile?.full_name ?? null,
-      action: "staff.created",
-      record_type: "profiles",
-      record_id: newUserId,
+      action: "staff.invited",
+      record_type: "organization_invitations",
       new_value: { email, role: data.role, full_name: data.fullName },
     });
 
-    // Welcome email with the temporary password. A failure here must never
-    // undo the account that was just created — the password is still shown
-    // once in the admin UI as a fallback.
+    // Welcome email carrying the invitation link only — never a password. A
+    // failure here must not undo the invitation; the link is still shown once
+    // in the admin UI as a fallback.
     let emailed = false;
     let emailError: string | null = null;
     try {
@@ -142,14 +94,14 @@ export const createStaffFn = createServerFn({ method: "POST" })
 
       const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
       const result = await sendTemplateEmail("staff-welcome", email, {
-        idempotencyKey: `staff-welcome-${newUserId}`,
+        idempotencyKey: `staff-invite-${invitation.expiresAt}-${email}`,
         templateData: {
           fullName: data.fullName,
           organizationName: org?.name ?? "your care team",
           email,
-          tempPassword,
           role: data.role,
-          signInUrl: `${APP_ORIGIN}/auth`,
+          inviteUrl,
+          expiresAt: invitation.expiresAt,
           logoUrl: org?.logo_url
             ? org.logo_url.startsWith("http")
               ? org.logo_url
@@ -161,11 +113,11 @@ export const createStaffFn = createServerFn({ method: "POST" })
       emailed = result.sent;
       if (!result.sent) emailError = "This address is blocked from receiving email.";
     } catch (error) {
-      emailError = error instanceof Error ? error.message : "Could not send the welcome email";
-      console.error("[staff.created] welcome email failed", emailError);
+      emailError = error instanceof Error ? error.message : "Could not send the invitation email";
+      console.error("[staff.invited] invitation email failed", emailError);
     }
 
-    return { userId: newUserId, email, tempPassword, emailed, emailError };
+    return { email, inviteUrl, expiresAt: invitation.expiresAt, emailed, emailError };
   });
 
 

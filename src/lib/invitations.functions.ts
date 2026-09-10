@@ -59,6 +59,44 @@ export const listInvitationsFn = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+/**
+ * Shared invitation issuer. Writes the invitation through the caller's own
+ * RLS-scoped client and returns the single-use raw token, which is never
+ * stored. Used by createInvitationFn and by staff creation.
+ */
+export async function issueInvitation(
+  context: { supabase: any; userId: string },
+  params: {
+    organizationId: string;
+    email: string;
+    role: string;
+    title?: string | null;
+    departmentIds?: string[];
+    expiresInDays?: number;
+  },
+) {
+  const email = params.email.toLowerCase();
+  const token = randomToken();
+  const tokenHash = await sha256Hex(token);
+  const expiresAt = new Date(
+    Date.now() + (params.expiresInDays ?? 7) * 86_400_000,
+  ).toISOString();
+
+  const { error } = await context.supabase.from("organization_invitations").insert({
+    organization_id: params.organizationId,
+    email,
+    role: params.role,
+    title: params.title || null,
+    department_ids: params.departmentIds ?? [],
+    token_hash: tokenHash,
+    invited_by: context.userId,
+    expires_at: expiresAt,
+  });
+  if (error) throw new Error(error.message);
+
+  return { token, email, expiresAt };
+}
+
 export const createInvitationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => createInput.parse(input))
@@ -68,8 +106,6 @@ export const createInvitationFn = createServerFn({ method: "POST" })
     if ((ROLE_RANK[data.role] ?? 99) > caller.rank) {
       throw new Error("You cannot invite someone at a higher role than your own");
     }
-
-    const email = data.email.toLowerCase();
 
     // Departments must be visible under the caller's own RLS scope.
     let departmentIds: string[] = [];
@@ -81,23 +117,14 @@ export const createInvitationFn = createServerFn({ method: "POST" })
       departmentIds = (depts ?? []).map((d: { id: string }) => d.id);
     }
 
-    const token = randomToken();
-    const tokenHash = await sha256Hex(token);
-    const expiresAt = new Date(Date.now() + data.expiresInDays * 86_400_000).toISOString();
-
-    const { error } = await context.supabase.from("organization_invitations").insert({
-      organization_id: caller.organizationId,
-      email,
+    return issueInvitation(context, {
+      organizationId: caller.organizationId,
+      email: data.email,
       role: data.role,
-      title: data.title || null,
-      department_ids: departmentIds,
-      token_hash: tokenHash,
-      invited_by: context.userId,
-      expires_at: expiresAt,
+      title: data.title,
+      departmentIds,
+      expiresInDays: data.expiresInDays,
     });
-    if (error) throw new Error(error.message);
-
-    return { token, email, expiresAt };
   });
 
 export const revokeInvitationFn = createServerFn({ method: "POST" })

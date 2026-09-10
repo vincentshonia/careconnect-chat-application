@@ -24,8 +24,8 @@ export const accessChapter: Chapter = {
           kind: "bullets",
           title: "There are exactly two ways you get an account",
           items: [
-            "Direct creation — an administrator creates the account and gives you a work email and a one-time temporary password.",
-            "Invitation link — an administrator sends you a single-use link that expires in 7 days and only works for the email address it was issued to.",
+            "Added by an administrator — they enter your work email and role, and CareConnect emails you an invitation link.",
+            "Invitation link — a single-use link that expires in 7 days and only works for the email address it was issued to.",
           ],
         },
         {
@@ -53,19 +53,19 @@ export const accessChapter: Chapter = {
         },
         {
           kind: "steps",
-          title: "If you were given a temporary password",
+          title: "If your invitation link was shared with you directly",
           items: [
-            "Go to the console address your administrator gave you and stay on the /auth screen.",
-            "Enter your work email and the temporary password exactly as provided.",
-            "Select Sign in.",
-            "Change the password straight away: open My settings, then Send password reset email, and follow the link.",
+            "Open the link your administrator gave you — it looks like /invite?t=… .",
+            "If you are not signed in yet, CareConnect takes you to the sign-in screen and brings you straight back to the invitation afterwards.",
+            "Set your own password using Forgot your password? on the sign-in screen if you do not have one yet, or use Continue with Google.",
+            "Accept the invitation and you land in the console.",
           ],
         },
         {
           kind: "callout",
           tone: "warning",
-          title: "Temporary passwords are shown once",
-          text: "Your administrator cannot see the temporary password again after it is created. If you lose it before your first sign-in, use Forgot your password? on the sign-in screen or ask for a new invitation.",
+          title: "Invitation links are shown once and expire",
+          text: "CareConnect never emails a password. Your administrator cannot see the invitation link again after it is created, and it stops working after 7 days or once it has been used. If yours has expired, ask for a new invitation.",
         },
       ],
     },

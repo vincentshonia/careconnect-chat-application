@@ -231,14 +231,14 @@ export const staffChapter: Chapter = {
       blocks: [
         {
           kind: "steps",
-          title: "Create the account directly",
+          title: "Invite a teammate from the staff page",
           items: [
             "Select Add staff.",
             "Enter their work email and full name.",
             "Choose the role — grant the lowest role that lets them do the job.",
             "Assign departments and set maximum simultaneous chats.",
-            "Create the account. A temporary password is shown once — copy it and deliver it through a channel your organization approves.",
-            "Tell them to change it immediately after signing in.",
+            "Send the invitation. CareConnect emails a single-use link and shows it once — copy it if you need to deliver it another way.",
+            "No password is ever created or emailed; they set their own when they accept.",
           ],
         },
         {
@@ -253,8 +253,8 @@ export const staffChapter: Chapter = {
         {
           kind: "callout",
           tone: "privacy",
-          title: "Never share a temporary password insecurely",
-          text: "Do not send it by SMS, personal email or a public channel. If in doubt, use an invitation link instead.",
+          title: "Never share an invitation link insecurely",
+          text: "Do not send it by SMS, personal email or a public channel. The link grants access to your organization until it is used or expires.",
         },
       ],
     },

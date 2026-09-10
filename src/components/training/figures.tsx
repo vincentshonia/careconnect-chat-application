@@ -1169,7 +1169,7 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
     alt: "Staff screen with search and filters, the add-staff form, invitation card and a teammate row showing role, presence, capacity, departments and account access controls.",
     markers: [
       "Search and filters: role, department and account status (Active, Disabled, Removed, All accounts).",
-      "Add a staff member — creates the account immediately and shows a one-time temporary password.",
+      "Add a staff member — sends a single-use invitation link and shows it once.",
       "Invite a teammate — a single-use link that expires in 7 days.",
       "Per-teammate controls: role, presence and maximum simultaneous chats.",
       "Departments — select a name to add or remove that person; this is what drives routing.",
