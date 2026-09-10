@@ -380,6 +380,8 @@ function ReportsPage() {
         <p className="mt-2 text-[11px] text-muted-foreground">{filterSummary}</p>
       </div>
 
+      <DefinitionsPanel />
+
       <nav className="mb-4 flex flex-wrap gap-1 border-b border-border pb-2">
         {TABS.filter((t) => !sections || sections.includes(t.id)).map((t) => (
           <button
