@@ -58,7 +58,7 @@ async function route(conversationId: string, departmentId: string) {
 async function makeDepartment(name: string) {
   const { data, error } = await db
     .from("departments")
-    .insert({ organization_id: orgId, name: `${name} ${suffix}` })
+    .insert({ organization_id: orgId, name: syntheticName(name, suffix) })
     .select("id")
     .single();
   if (error) throw new Error(`department: ${error.message}`);
@@ -75,7 +75,7 @@ type StaffOptions = {
 };
 
 async function makeStaff(key: string, options: StaffOptions = {}) {
-  const email = `conc-${key}-${suffix}@example.test`;
+  const email = syntheticEmail(`conc_${key}`, suffix);
   const { data, error } = await db.auth.admin.createUser({
     email,
     password,
@@ -83,12 +83,12 @@ async function makeStaff(key: string, options: StaffOptions = {}) {
   });
   if (error || !data.user) throw new Error(`user ${key}: ${error?.message}`);
   const id = data.user.id;
-  createdUsers.push(id);
+  createdUsers.push({ id, email });
 
   const { error: profileError } = await db.from("profiles").upsert({
     id,
     organization_id: orgId,
-    full_name: `Conc ${key}`,
+    full_name: syntheticName(`conc_${key}`, suffix),
     email,
     presence: options.presence ?? "available",
     status: options.profileStatus ?? "active",
