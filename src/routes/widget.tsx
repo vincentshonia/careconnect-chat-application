@@ -981,8 +981,14 @@ function WidgetPage() {
               </div>
 
             )}
-            {conversationId && !sending && messages.filter((m) => m.role === "bot").length >= 2 && (
-              <SatisfactionPrompt conversationId={conversationId} brand={brand} chatPost={chatPost} />
+            {ended && <EndedNotice brand={brand} onRestart={startNewChat} />}
+            {shouldShowRating({ conversationId, status: convStatus, agentReplied, dismissed: ratingDismissed, sending }) && (
+              <SatisfactionPrompt
+                conversationId={conversationId!}
+                brand={brand}
+                chatPost={chatPost}
+                onDismiss={dismissRating}
+              />
             )}
           </div>
         )}
