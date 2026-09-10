@@ -96,7 +96,7 @@ export async function handoffToHumans(input: {
 
   if (
     existing?.escalation_requested &&
-    ["waiting", "assigned", "active"].includes(String(existing.status))
+    !["resolved", "closed", "abandoned"].includes(String(existing.status))
   ) {
     const { data: currentDept } = existing.department_id
       ? await db.from("departments").select("id, name").eq("id", existing.department_id).maybeSingle()

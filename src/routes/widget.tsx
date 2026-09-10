@@ -108,6 +108,7 @@ type Bubble = {
   }>;
   aiResponseId?: string;
   escalate?: boolean;
+  suggestHuman?: boolean;
   author?: string;
   attachment?: { name: string; url: string | null; type: string };
 };
