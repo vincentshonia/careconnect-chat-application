@@ -18,6 +18,7 @@ import {
 import { BarList, ColumnChart, DataTable, Panel, fmtMin, fmtNum } from "@/components/reports/primitives";
 import { Delta, Kpi, MetricRow, SkeletonGrid, age, maybe, num, type Json } from "@/components/dashboard/pieces";
 import { toast } from "sonner";
+import { TIP } from "@/lib/metrics-dictionary";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -54,18 +55,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const PRESENCE = ["available", "busy", "away", "offline"] as const;
 
-const TIP = {
-  firstResponse:
-    "Average time between the human assistance request and the first staff reply on conversations you handled.",
-  claim:
-    "Average time a visitor waits in the human queue before you claim the conversation.",
-  sla: "Percentage of applicable conversations answered within the configured SLA target.",
-  handled:
-    "Conversations you actually worked: claimed, replied to, resolved or closed during the period.",
-  completion: "Completed conversations divided by conversations you handled in the period.",
-  handle: "Average time from claim to resolution or closure.",
-  capacity: "Active chats against the maximum your administrator configured.",
-};
+// Tooltip copy is shared with the Reports "Definitions" panel.
 
 function greeting() {
   const h = new Date().getHours();
