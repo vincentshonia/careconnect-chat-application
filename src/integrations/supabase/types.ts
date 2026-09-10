@@ -24,6 +24,7 @@ export type Database = {
           escalated: boolean
           id: string
           message_id: string | null
+          metadata: Json
           model: string | null
           organization_id: string
           question: string
@@ -40,6 +41,7 @@ export type Database = {
           escalated?: boolean
           id?: string
           message_id?: string | null
+          metadata?: Json
           model?: string | null
           organization_id: string
           question: string
@@ -56,6 +58,7 @@ export type Database = {
           escalated?: boolean
           id?: string
           message_id?: string | null
+          metadata?: Json
           model?: string | null
           organization_id?: string
           question?: string
@@ -1150,6 +1153,7 @@ export type Database = {
           article_id: string | null
           chunk_index: number
           content: string
+          content_tsv: unknown
           created_at: string
           embedding: string | null
           id: string
@@ -1162,6 +1166,7 @@ export type Database = {
           article_id?: string | null
           chunk_index?: number
           content: string
+          content_tsv?: unknown
           created_at?: string
           embedding?: string | null
           id?: string
@@ -1174,6 +1179,7 @@ export type Database = {
           article_id?: string | null
           chunk_index?: number
           content?: string
+          content_tsv?: unknown
           created_at?: string
           embedding?: string | null
           id?: string
@@ -2211,6 +2217,7 @@ export type Database = {
           landing_page: string | null
           last_seen_at: string
           organization_id: string
+          preferred_language: string | null
           referrer: string | null
           region: string | null
           session_token: string
@@ -2228,6 +2235,7 @@ export type Database = {
           landing_page?: string | null
           last_seen_at?: string
           organization_id: string
+          preferred_language?: string | null
           referrer?: string | null
           region?: string | null
           session_token: string
@@ -2245,6 +2253,7 @@ export type Database = {
           landing_page?: string | null
           last_seen_at?: string
           organization_id?: string
+          preferred_language?: string | null
           referrer?: string | null
           region?: string | null
           session_token?: string
@@ -2595,6 +2604,29 @@ export type Database = {
           source_type: string
           source_url: string
           title: string
+        }[]
+      }
+      match_knowledge_hybrid: {
+        Args: {
+          _embedding: string
+          _k?: number
+          _org: string
+          _query: string
+          _website: string
+        }
+        Returns: {
+          article_id: string
+          chunk_id: string
+          content: string
+          fused_score: number
+          similarity: number
+          source_id: string
+          source_type: string
+          source_url: string
+          text_rank: number
+          text_score: number
+          title: string
+          vector_rank: number
         }[]
       }
       my_department_ids: {
