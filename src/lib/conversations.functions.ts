@@ -388,7 +388,7 @@ export const reassignConversationFn = createServerFn({ method: "POST" })
       severity: data.userId ? "critical" : "warning",
       title: newName ? `Chat assigned to ${newName}` : "Chat returned to the queue",
       body: `By ${actor.fullName ?? "a supervisor"}`,
-      link: "/inbox",
+      link: `/inbox?c=${data.conversationId}`,
       recordType: "conversations",
       recordId: conversation.id,
     });
