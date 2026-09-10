@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ReassignDialog } from "@/components/admin/ReassignDialog";
+import { formatInZone, formatTimeInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   // `?c=<id>` lets report drill-downs open a specific conversation.
@@ -525,7 +526,7 @@ function InboxPage() {
                       {ownershipLabel(c)}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {c.reference} · {new Date(c.last_message_at).toLocaleString()}
+                      {c.reference} · {formatInZone(c.last_message_at)}
                     </p>
                     {tab === "waiting" ? (
                       <p className="mt-0.5 text-xs font-medium text-destructive">
@@ -651,7 +652,7 @@ function InboxPage() {
                   >
                     <p className="mb-1 text-xs opacity-70">
                       {m.sender_name ?? m.sender_type} ·{" "}
-                      {new Date(m.created_at).toLocaleTimeString()}
+                      {formatTimeInZone(m.created_at)}
                     </p>
                     <p className="whitespace-pre-wrap">{m.body}</p>
                     {(m.metadata as { attachment?: Attachment } | null)?.attachment ? (

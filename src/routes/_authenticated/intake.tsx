@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatDateInZone, formatInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/intake")({
   head: () => ({
@@ -323,7 +324,7 @@ function IntakePage() {
                     <Badge variant="outline">{label(i.stage)}</Badge>
                   </td>
                   <td className="px-4 py-2 text-muted-foreground">
-                    {new Date(i.created_at).toLocaleDateString()}
+                    {formatDateInZone(i.created_at)}
                   </td>
                 </tr>
               ))}
@@ -450,7 +451,7 @@ function IntakePage() {
                       ) : null}
                       {e.detail ? <p className="mt-1 text-muted-foreground">{e.detail}</p> : null}
                       <p className="mt-1 text-muted-foreground">
-                        {new Date(e.created_at).toLocaleString()}
+                        {formatInZone(e.created_at)}
                       </p>
                     </li>
                   ))}

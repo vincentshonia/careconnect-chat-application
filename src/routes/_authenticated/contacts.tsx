@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDateInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/contacts")({
   head: () => ({
@@ -235,8 +236,8 @@ function ContactsPage() {
               <div>
                 <h2 className="text-lg font-semibold">{active.full_name}</h2>
                 <p className="text-sm text-muted-foreground">
-                  First contact {new Date(active.first_contact_at).toLocaleDateString()} · Last activity{" "}
-                  {new Date(active.last_contact_at).toLocaleDateString()}
+                  First contact {formatDateInZone(active.first_contact_at)} · Last activity{" "}
+                  {formatDateInZone(active.last_contact_at)}
                 </p>
               </div>
 

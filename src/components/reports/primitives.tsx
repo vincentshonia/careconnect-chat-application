@@ -1,5 +1,6 @@
 /** Shared presentation pieces for the reporting console. */
 import type { ReactNode } from "react";
+import { formatShortInZone } from "@/lib/org-time";
 
 export function fmtNum(value: unknown, suffix = ""): string {
   if (value === null || value === undefined || value === "") return "—";
@@ -22,9 +23,9 @@ export function fmtMin(value: unknown): string {
 
 export function fmtDate(value: unknown): string {
   if (!value) return "—";
-  const d = new Date(String(value));
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  // Always the organization's clock, so charts and tables agree with the
+  // "Times shown in ..." note.
+  return formatShortInZone(String(value));
 }
 
 export function Stat({

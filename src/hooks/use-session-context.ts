@@ -8,7 +8,7 @@ import {
   type Permission,
   type PlatformRole,
 } from "@/lib/permissions";
-import { DEFAULT_TIMEZONE, safeTimeZone } from "@/lib/org-time";
+import { DEFAULT_TIMEZONE, safeTimeZone, setDisplayTimeZone } from "@/lib/org-time";
 
 export type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -64,6 +64,9 @@ export function useSessionContext() {
           .maybeSingle();
         timezone = safeTimeZone(org?.timezone);
       }
+      // Every screen formats dates in the organization's timezone, not the
+      // viewer's device timezone.
+      setDisplayTimeZone(timezone);
 
       const rank = role ? ROLE_RANK[role] : 0;
 

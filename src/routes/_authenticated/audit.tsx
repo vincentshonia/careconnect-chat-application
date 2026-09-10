@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { saveCsv } from "@/lib/csv";
+import { formatInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/audit")({
   head: () => ({
@@ -120,7 +121,7 @@ function AuditPage() {
             {rows.map((r) => (
               <tr key={r.id}>
                 <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">
-                  {new Date(r.created_at).toLocaleString()}
+                  {formatInZone(r.created_at)}
                 </td>
                 <td className="px-4 py-2">{r.actor_name ?? "System"}</td>
                 <td className="px-4 py-2">
