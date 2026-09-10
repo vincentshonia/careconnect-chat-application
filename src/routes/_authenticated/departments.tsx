@@ -203,6 +203,22 @@ function DepartmentsTab() {
         </Button>
       </form>
 
+      {(() => {
+        const fallback = (list.data ?? []).find((d) => d.is_default);
+        if (!fallback) return null;
+        const fallbackCount = (members.data ?? []).filter((m) => m.department_id === fallback.id).length;
+        if (fallbackCount > 0) return null;
+        return (
+          <div
+            role="alert"
+            className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          >
+            The default department “{fallback.name}” has no members. Conversations that fall back to it cannot be
+            routed to anyone — add at least one team member.
+          </div>
+        );
+      })()}
+
       <ul className="divide-y divide-border rounded-xl border border-border">
         {(list.data ?? []).map((d) => {
           const count = (members.data ?? []).filter((m) => m.department_id === d.id).length;
@@ -215,6 +231,7 @@ function DepartmentsTab() {
                 </p>
               </div>
               {d.is_default ? <Badge>Default</Badge> : null}
+              {count === 0 ? <Badge variant="destructive">No members — routing will fail</Badge> : null}
               <Badge variant="outline">{d.status}</Badge>
               <div className="ml-auto flex gap-2">
                 <Button
