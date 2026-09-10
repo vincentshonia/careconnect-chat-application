@@ -27,16 +27,21 @@ function record(name, ok, detail) {
  * ------------------------------------------------------------------ */
 
 /**
- * Both the Vitest integration suites and the browser E2E suite run against the
- * shared backend. The E2E suite is isolated by tenant, not by project: every
- * artefact lives inside a synthetic `__e2e_`-prefixed organization created and
- * destroyed by the fixtures.
+ * The browser E2E suite runs against the primary backend, isolated by tenant:
+ * every artefact lives inside a synthetic `__e2e_`-prefixed organization
+ * created and destroyed by the fixtures.
+ *
+ * The Vitest integration suites are isolated by *project*: they resolve their
+ * connection only from `TEST_SUPABASE_*` and refuse to run against production.
  */
 const BACKEND_ENV = [
   "SUPABASE_URL",
   "SUPABASE_PUBLISHABLE_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
   "WIDGET_SESSION_SECRET",
+  "TEST_SUPABASE_URL",
+  "TEST_SUPABASE_PUBLISHABLE_KEY",
+  "TEST_SUPABASE_SERVICE_ROLE_KEY",
 ];
 
 function present(name) {
@@ -47,6 +52,14 @@ function present(name) {
 for (const name of BACKEND_ENV) {
   record(`env:${name}`, present(name), "not set (value never printed)");
 }
+
+const normalizeUrl = (value) => (value ?? "").trim().replace(/\/+$/, "").toLowerCase();
+record(
+  "env:TEST_SUPABASE_URL is not the production project",
+  present("TEST_SUPABASE_URL") &&
+    normalizeUrl(process.env["TEST_SUPABASE_URL"]) !== normalizeUrl(process.env["SUPABASE_URL"]),
+  "integration suites create and delete tenants and must point at a dedicated project",
+);
 
 /**
  * Safety interlock for the tenant-isolation model: the fixture module must
@@ -62,6 +75,36 @@ if (!existsSync(fixtureFile)) {
     "fixtures:synthetic tenant guard",
     source.includes('E2E_PREFIX = "__e2e_"') && source.includes("assertSynthetic"),
     "fixtures must declare the __e2e_ prefix and guard every destructive call with it",
+  );
+}
+
+/** The integration helper must declare the `__test_` prefix and guard deletes. */
+const integrationHelper = path.join(ROOT, "tests/helpers/required-env.ts");
+if (!existsSync(integrationHelper)) {
+  record("fixtures:integration guard", false, "tests/helpers/required-env.ts is absent");
+} else {
+  const source = readFileSync(integrationHelper, "utf8");
+  record(
+    "fixtures:integration guard",
+    source.includes('TEST_PREFIX = "__test_"') && source.includes("assertSynthetic"),
+    "the integration helper must declare the __test_ prefix and guard every destructive call",
+  );
+}
+
+/** No integration suite may resolve its connection from the production vars. */
+for (const rel of [
+  "tests/rbac.test.ts",
+  "tests/tenant-isolation.test.ts",
+  "tests/concurrency-routing.test.ts",
+  "tests/reporting-reconciliation.test.ts",
+]) {
+  const full = path.join(ROOT, rel);
+  if (!existsSync(full)) continue;
+  const source = readFileSync(full, "utf8");
+  record(
+    `suite:${rel} uses the dedicated test project`,
+    source.includes("requireTestBackend") && !/process\.env\[?['"]SUPABASE_/.test(source),
+    "integration suites must resolve credentials via requireTestBackend(), never SUPABASE_*",
   );
 }
 for (const spec of existsSync(path.join(ROOT, "tests/e2e"))
