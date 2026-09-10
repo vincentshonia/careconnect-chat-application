@@ -2,6 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
 import { resolveWidgetTabs, tabIconPath } from "@/lib/widget-tabs";
+import {
+  isConversationEnded,
+  nextPollDelay,
+  POLL_MIN_MS,
+  safeStorage,
+  shouldShowRating,
+} from "@/lib/widget-client";
 
 const BRAND_LOGO_URL = brandLogoAsset.url;
 
