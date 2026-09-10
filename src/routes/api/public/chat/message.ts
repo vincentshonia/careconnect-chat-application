@@ -67,10 +67,13 @@ export const Route = createFileRoute("/api/public/chat/message")({
             .from("messages")
             .select("id, sender_type, body")
             .eq("conversation_id", conversation.id)
-            .order("created_at")
+            .order("created_at", { ascending: false })
             .limit(20);
           const history = (prior ?? [])
+            .slice()
+            .reverse()
             .filter((m: { id: string }) => m.id !== visitorMessage.id)
+            .filter((m: { sender_type: string }) => m.sender_type !== "system")
             .map((m: { sender_type: string; body: string }) => ({
               role: (m.sender_type === "visitor" ? "user" : "assistant") as "user" | "assistant",
               content: m.body,
@@ -105,9 +108,10 @@ export const Route = createFileRoute("/api/public/chat/message")({
             result,
           });
 
-          if (result.escalate) {
-            // Run the complete human hand-off: route to a department, alert the
-            // team and expose the chat in the Waiting queue for claiming.
+          // Only genuine crisis language pulls a human in automatically. Other
+          // low-confidence answers stay with the assistant and simply offer the
+          // "Connect me" buttons, so the human queue is not flooded.
+          if (result.crisis) {
             const { handoffToHumans } = await import("@/lib/handoff.server");
             await handoffToHumans({
               conversationId: conversation.id,
@@ -115,12 +119,22 @@ export const Route = createFileRoute("/api/public/chat/message")({
               websiteId: website.id,
               departmentId: conversation.department_id ?? null,
               currentDepartmentId: conversation.department_id ?? null,
-              matchValue: result.crisis ? "crisis" : "ai_escalation",
-              reason: result.crisis
-                ? "Crisis language detected — human assistance required"
-                : "The assistant could not answer confidently",
+              matchValue: "crisis",
+              reason: "Crisis language detected — human assistance required",
               eventType: "ai_escalation",
             });
+          }
+
+          // Track consecutive shaky answers so the widget can emphasise the
+          // "Connect me" button once the assistant has struggled twice.
+          const metadata = (conversation.metadata ?? {}) as Record<string, unknown>;
+          const priorStreak = Number(metadata["ai_low_confidence_streak"] ?? 0) || 0;
+          const streak = result.crisis ? priorStreak : result.escalate ? priorStreak + 1 : 0;
+          if (!result.crisis && streak !== priorStreak) {
+            await db
+              .from("conversations")
+              .update({ metadata: { ...metadata, ai_low_confidence_streak: streak } as never })
+              .eq("id", conversation.id);
           }
 
           return Response.json({
@@ -130,6 +144,7 @@ export const Route = createFileRoute("/api/public/chat/message")({
             confidence: result.confidence,
             escalate: result.escalate,
             crisis: result.crisis,
+            suggestHuman: streak >= 2,
             aiResponseId,
           });
         } catch (error) {
