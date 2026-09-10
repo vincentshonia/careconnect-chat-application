@@ -221,6 +221,17 @@ function WidgetPage() {
     });
   }, [restored, conversationId, messages, ended, threadKey]);
 
+  /* Rating dismissal is remembered per conversation, not per page view. */
+  const ratingKey = conversationId ? `${storageKey}-rated-${conversationId}` : null;
+  const [ratingDismissed, setRatingDismissed] = useState(false);
+  useEffect(() => {
+    setRatingDismissed(ratingKey ? safeStorage.get(ratingKey) === "1" : false);
+  }, [ratingKey]);
+  const dismissRating = useCallback(() => {
+    if (ratingKey) safeStorage.set(ratingKey, "1");
+    setRatingDismissed(true);
+  }, [ratingKey]);
+
   /** Forget the finished chat and start over from the welcome message. */
   const startNewChat = useCallback(() => {
     safeStorage.remove(threadKey);
