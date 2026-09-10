@@ -1100,6 +1100,11 @@ function HomeView({
 
       {/* --------------------------- content --------------------------- */}
       <div className="-mt-6 flex-1 space-y-3 rounded-t-3xl bg-background px-4 pb-5 pt-4">
+        {!config.businessOpen && config.website.offlineMessage && (
+          <p className="rounded-2xl border border-border/60 bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
+            {config.website.offlineMessage}
+          </p>
+        )}
         <button
           onClick={onStartChat}
           className="group flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card p-4 text-left shadow-panel transition duration-200 hover:-translate-y-0.5"
