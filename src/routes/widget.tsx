@@ -448,16 +448,20 @@ function WidgetPage() {
 
   const dismissTeaser = () => {
     setShowTeaser(false);
-    window.localStorage.setItem(`${storageKey}-dismissed`, String(Date.now()));
+    safeStorage.set(`${storageKey}-dismissed`, String(Date.now()));
   };
 
   const closeWidget = () => {
     setOpen(false);
-    window.localStorage.setItem(`${storageKey}-dismissed`, String(Date.now()));
+    safeStorage.set(`${storageKey}-dismissed`, String(Date.now()));
   };
 
   const sendQuestion = async (text: string) => {
     if (!text.trim() || !config) return;
+    // One guard for both the Enter key and the send button: without it two
+    // fast presses each started their own conversation.
+    if (inFlight.current) return;
+    inFlight.current = true;
     setView("chat");
     setInput("");
     setMessages((prev) => [...prev, { id: uid(), role: "visitor", text }]);
