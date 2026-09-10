@@ -915,23 +915,32 @@ function WidgetPage() {
 
         {view === "waiting" && (
           <div className="space-y-3">
-            <div className="rounded-xl border border-border bg-card p-4 text-center">
-              <p className="text-sm font-semibold text-card-foreground">{liveStatus ?? "Connecting you"}</p>
-              {agentName && <p className="mt-1 text-xs text-muted-foreground">You are chatting with {agentName}.</p>}
-              {!agentName && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  You can keep typing below — a representative will see everything you send.
-                </p>
-              )}
-            </div>
+            {ended ? (
+              <EndedNotice brand={brand} onRestart={startNewChat} />
+            ) : (
+              <div className="rounded-xl border border-border bg-card p-4 text-center">
+                <p className="text-sm font-semibold text-card-foreground">{liveStatus ?? "Connecting you"}</p>
+                {agentName && <p className="mt-1 text-xs text-muted-foreground">You are chatting with {agentName}.</p>}
+                {!agentName && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    You can keep typing below — a representative will see everything you send.
+                  </p>
+                )}
+              </div>
+            )}
             {messages
               .filter((m) => m.role !== "system")
               .map((m) => (
                 <MessageBubble key={m.id} bubble={m} brand={brand} onRate={rateAnswer} onAction={() => {}} />
               ))}
-            {/* A visitor who reached a human must still be able to rate the chat. */}
-            {conversationId && !sending && (
-              <SatisfactionPrompt conversationId={conversationId} brand={brand} chatPost={chatPost} />
+            {/* Only ask for a rating once a person replied or the chat ended. */}
+            {shouldShowRating({ conversationId, status: convStatus, agentReplied, dismissed: ratingDismissed, sending }) && (
+              <SatisfactionPrompt
+                conversationId={conversationId!}
+                brand={brand}
+                chatPost={chatPost}
+                onDismiss={dismissRating}
+              />
             )}
           </div>
 
