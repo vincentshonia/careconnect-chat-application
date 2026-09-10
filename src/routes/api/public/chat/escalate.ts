@@ -43,42 +43,87 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             : await mod.ensureConversation(website, ctx.visitor, null);
           const db = mod.admin();
 
-          // De-duplicate contacts on email or phone within the organization.
-          const { data: existing } = await db
-            .from("contacts")
-            .select("id")
-            .eq("organization_id", website.organization_id)
-            .or(`email.ilike.${input.email},phone.eq.${input.phone}`)
-            .maybeSingle();
+          // De-duplicate contacts within the organization using two separate
+          // parameterized lookups. Values are never interpolated into a filter
+          // string, so a visitor cannot smuggle operators into the query.
+          const { normalizeEmail, normalizePhone, visitorSuppliedDetails, appendNote } = await import(
+            "@/lib/contact-normalize"
+          );
+          const normalizedEmail = normalizeEmail(input.email);
+          const normalizedPhone = normalizePhone(input.phone);
+          const now = new Date().toISOString();
 
-          const contactPayload = {
-            organization_id: website.organization_id,
-            website_id: website.id,
-            full_name: input.fullName,
-            phone: input.phone,
-            email: input.email,
-            county: input.county ?? null,
-            health_plan: input.healthPlan ?? null,
-            service_interest: input.serviceInterest ?? null,
-            preferred_language: input.preferredLanguage ?? "English",
-            consent_given: true,
-            consent_at: new Date().toISOString(),
-            last_contact_at: new Date().toISOString(),
-            lead_status: "new",
-          };
+          let existingId: string | null = null;
+          if (normalizedEmail) {
+            const { data } = await db
+              .from("contacts")
+              .select("id")
+              .eq("organization_id", website.organization_id)
+              .ilike("email", normalizedEmail)
+              .limit(1);
+            existingId = data?.[0]?.id ?? null;
+          }
+          if (!existingId && normalizedPhone) {
+            const { data } = await db
+              .from("contacts")
+              .select("id")
+              .eq("organization_id", website.organization_id)
+              .eq("phone", normalizedPhone)
+              .limit(1);
+            existingId = data?.[0]?.id ?? null;
+          }
 
-          let contactId = existing?.id as string | undefined;
+          let contactId = existingId ?? undefined;
           if (contactId) {
-            await db.from("contacts").update(contactPayload).eq("id", contactId);
+            // Never let an anonymous visitor rewrite an existing member's
+            // identity fields. Only touch the last-contact timestamp and, when
+            // consent was granted, the consent fields.
+            await db
+              .from("contacts")
+              .update({
+                last_contact_at: now,
+                consent_given: true,
+                consent_at: now,
+              })
+              .eq("id", contactId);
           } else {
             const { data: created, error } = await db
               .from("contacts")
-              .insert(contactPayload)
+              .insert({
+                organization_id: website.organization_id,
+                website_id: website.id,
+                full_name: input.fullName,
+                phone: normalizedPhone ?? input.phone,
+                email: normalizedEmail ?? input.email,
+                county: input.county ?? null,
+                health_plan: input.healthPlan ?? null,
+                service_interest: input.serviceInterest ?? null,
+                preferred_language: input.preferredLanguage ?? "English",
+                consent_given: true,
+                consent_at: now,
+                last_contact_at: now,
+                lead_status: "new",
+              })
               .select("id")
               .single();
             if (error) return Response.json({ error: "Could not save your details." }, { status: 500 });
             contactId = created.id;
           }
+
+          // When the contact already existed, the newly typed details go to
+          // staff as an intake note instead of overwriting the record.
+          const intakeNotes = existingId
+            ? appendNote(
+                input.reason ?? null,
+                visitorSuppliedDetails({
+                  fullName: input.fullName,
+                  county: input.county,
+                  healthPlan: input.healthPlan,
+                  serviceInterest: input.serviceInterest,
+                  preferredLanguage: input.preferredLanguage,
+                }),
+              )
+            : (input.reason ?? null);
 
           // The visitor's chosen department wins; otherwise routing rules, then default.
           const { resolveDepartment } = await import("@/lib/handoff.server");
@@ -130,14 +175,14 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             request_type: typeMap[input.kind] ?? "general",
             priority: input.kind === "live_agent" ? "high" : "normal",
             full_name: input.fullName,
-            email: input.email,
-            phone: input.phone,
+            email: normalizedEmail ?? input.email,
+            phone: normalizedPhone ?? input.phone,
             county: input.county ?? null,
             health_plan: input.healthPlan ?? null,
             service_interest: input.serviceInterest ?? null,
             preferred_language: input.preferredLanguage ?? "English",
             source: "widget",
-            notes: input.reason ?? null,
+            notes: intakeNotes,
           });
 
           // Full human hand-off: department routing, staff alerts and — only
