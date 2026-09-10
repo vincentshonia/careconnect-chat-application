@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatDateInZone, formatInZone } from "@/lib/org-time";
+import { formatDateInZone, formatInZone, isOverdueInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/intake")({
   head: () => ({
@@ -322,6 +322,12 @@ function IntakePage() {
                   <td className="px-4 py-2">{label(i.request_type)}</td>
                   <td className="px-4 py-2">
                     <Badge variant="outline">{label(i.stage)}</Badge>
+                    {/* Overdue is judged by the organization's calendar day. */}
+                    {isOverdueInZone(i.due_date) && !CLOSED_STAGES.includes(i.stage) ? (
+                      <Badge variant="destructive" className="ml-2">
+                        Overdue
+                      </Badge>
+                    ) : null}
                   </td>
                   <td className="px-4 py-2 text-muted-foreground">
                     {formatDateInZone(i.created_at)}
@@ -416,7 +422,12 @@ function IntakePage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Due date</Label>
+                <Label className="flex items-center gap-2">
+                  Due date
+                  {isOverdueInZone(active.due_date) && !CLOSED_STAGES.includes(active.stage) ? (
+                    <Badge variant="destructive">Overdue</Badge>
+                  ) : null}
+                </Label>
                 <Input
                   type="date"
                   value={active.due_date ?? ""}
