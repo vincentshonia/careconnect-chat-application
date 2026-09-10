@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { applyQueueFilter } from "@/lib/conversation-status";
 
 /**
  * How many conversations are still waiting for a human to pick them up.
@@ -15,13 +16,10 @@ export function useWaitingCount() {
     refetchInterval: 60_000,
     staleTime: 30_000,
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from("conversations")
-        .select("id", { count: "exact", head: true })
-        // Same vocabulary as the database's claimable_conversation_statuses().
-        .in("status", ["new", "waiting", "escalated", "follow_up"])
-
-        .is("assigned_to", null);
+      // One shared definition of "waiting for a human" — see QUEUE_PREDICATE.
+      const { count, error } = await applyQueueFilter(
+        supabase.from("conversations").select("id", { count: "exact", head: true }),
+      );
       if (error) throw error;
       return count ?? 0;
     },

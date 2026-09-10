@@ -3,6 +3,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  applyQueueFilter,
+  CLOSED_STATUSES,
+  OPEN_STATUSES,
+  QUEUE_STATUSES,
+  waitLabel,
+} from "@/lib/conversation-status";
 import { transferConversationFn } from "@/lib/routing.functions";
 import {
   attachmentUrlFn,
@@ -53,6 +60,7 @@ type Conversation = {
   department_id: string | null;
   escalation_requested: boolean;
   last_message_at: string;
+  requested_agent_at: string | null;
   organization_id: string;
   website_id: string;
   visitor_type: string;
@@ -61,18 +69,6 @@ type Conversation = {
 
 type Tab = "waiting" | "mine" | "department" | "active" | "closed" | "all";
 
-const OPEN_STATUSES = [
-  "new",
-  "waiting",
-  "assigned",
-  "active",
-  "escalated",
-  "pending_visitor",
-  "pending_internal",
-  "follow_up",
-];
-const CLOSED_STATUSES = ["closed", "resolved", "archived", "spam"];
-const CLAIMABLE_STATUSES = ["new", "waiting", "escalated", "follow_up"];
 
 const STATUS_LABEL: Record<string, string> = {
   new: "AI handling",
@@ -87,10 +83,11 @@ const STATUS_LABEL: Record<string, string> = {
   closed: "Closed",
   spam: "Spam",
   archived: "Archived",
+  abandoned: "Abandoned",
 };
 
 function statusTone(status: string) {
-  if (CLOSED_STATUSES.includes(status)) return "secondary" as const;
+  if ((CLOSED_STATUSES as readonly string[]).includes(status)) return "secondary" as const;
   if (status === "escalated" || status === "waiting") return "destructive" as const;
   return "default" as const;
 }
@@ -152,13 +149,14 @@ function InboxPage() {
       let q = supabase
         .from("conversations")
         .select(
-          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, organization_id, website_id, visitor_type, contact_id",
+          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id",
           { count: "exact" },
         );
 
       switch (tab) {
         case "waiting":
-          q = q.is("assigned_to", null).in("status", CLAIMABLE_STATUSES as never[]);
+          // The one shared definition of "waiting for a human".
+          q = applyQueueFilter(q);
           break;
         case "mine":
           q = q.eq("assigned_to", userId ?? "").not("status", "in", `(${CLOSED_STATUSES.join(",")})`);
@@ -172,10 +170,10 @@ function InboxPage() {
           q = q.in("status", ["active", "assigned"]);
           break;
         case "closed":
-          q = q.in("status", CLOSED_STATUSES as never[]);
+          q = q.in("status", [...CLOSED_STATUSES] as never[]);
           break;
         default:
-          if (!can("conversation.view_all")) q = q.in("status", OPEN_STATUSES as never[]);
+          if (!can("conversation.view_all")) q = q.in("status", [...OPEN_STATUSES] as never[]);
       }
 
       if (statusFilter) q = q.eq("status", statusFilter as never);
@@ -184,8 +182,16 @@ function InboxPage() {
         if (term) q = q.or(`reference.ilike.%${term}%,subject.ilike.%${term}%`);
       }
 
-      const { data, error, count } = await q
-        .order("last_message_at", { ascending: false })
+      // Longest wait first in the queue; newest activity first everywhere else.
+      // `id` is a stable tiebreaker so paging cannot duplicate or skip a row.
+      const ordered =
+        tab === "waiting"
+          ? q
+              .order("requested_agent_at", { ascending: true, nullsFirst: true })
+              .order("id", { ascending: true })
+          : q.order("last_message_at", { ascending: false });
+
+      const { data, error, count } = await ordered
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
       if (error) throw error;
       return { rows: (data ?? []) as Conversation[], total: count ?? 0 };
@@ -203,7 +209,7 @@ function InboxPage() {
       const { data, error } = await supabase
         .from("conversations")
         .select(
-          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, organization_id, website_id, visitor_type, contact_id",
+          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id",
         )
         .eq("id", activeId!)
         .maybeSingle();
@@ -431,12 +437,13 @@ function InboxPage() {
   });
 
   const isOwner = Boolean(active && active.assigned_to === userId);
-  const isClosed = Boolean(active && CLOSED_STATUSES.includes(active.status));
+  const isClosed = Boolean(active && (CLOSED_STATUSES as readonly string[]).includes(active.status));
   const canClaim =
     Boolean(active) &&
     !active!.assigned_to &&
     !isClosed &&
-    CLAIMABLE_STATUSES.includes(active!.status) &&
+    (QUEUE_STATUSES as readonly string[]).includes(active!.status) &&
+    active!.escalation_requested &&
     can("conversation.claim");
   // Mirror the server contract exactly: an unassigned conversation must be
   // claimed before anyone — supervisors included — can reply. Offering the
@@ -520,6 +527,11 @@ function InboxPage() {
                     <p className="truncate text-xs text-muted-foreground">
                       {c.reference} · {new Date(c.last_message_at).toLocaleString()}
                     </p>
+                    {tab === "waiting" ? (
+                      <p className="mt-0.5 text-xs font-medium text-destructive">
+                        Waiting {waitLabel(c.requested_agent_at)}
+                      </p>
+                    ) : null}
                   </button>
                 </li>
               ))}

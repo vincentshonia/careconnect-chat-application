@@ -425,6 +425,7 @@ export type Database = {
           outcome: string | null
           priority: Database["public"]["Enums"]["conversation_priority"]
           reference: string
+          reopened_at: string | null
           reopened_count: number
           requested_agent_at: string | null
           resolved_at: string | null
@@ -464,6 +465,7 @@ export type Database = {
           outcome?: string | null
           priority?: Database["public"]["Enums"]["conversation_priority"]
           reference?: string
+          reopened_at?: string | null
           reopened_count?: number
           requested_agent_at?: string | null
           resolved_at?: string | null
@@ -503,6 +505,7 @@ export type Database = {
           outcome?: string | null
           priority?: Database["public"]["Enums"]["conversation_priority"]
           reference?: string
+          reopened_at?: string | null
           reopened_count?: number
           requested_agent_at?: string | null
           resolved_at?: string | null
@@ -2662,6 +2665,7 @@ export type Database = {
           outcome: string | null
           priority: Database["public"]["Enums"]["conversation_priority"]
           reference: string
+          reopened_at: string | null
           reopened_count: number
           requested_agent_at: string | null
           resolved_at: string | null
@@ -2863,6 +2867,7 @@ export type Database = {
         | "closed"
         | "spam"
         | "archived"
+        | "abandoned"
       entity_status: "active" | "inactive" | "suspended" | "archived"
       intake_stage:
         | "new"
@@ -3036,6 +3041,7 @@ export const Constants = {
         "closed",
         "spam",
         "archived",
+        "abandoned",
       ],
       entity_status: ["active", "inactive", "suspended", "archived"],
       intake_stage: [
