@@ -554,6 +554,40 @@ describe("authenticated RBAC boundaries", () => {
     });
   });
 
+  describe("audit log attribution", () => {
+    /**
+     * The audit log is written from the browser, so a tampered client could
+     * previously claim an action was taken by somebody else. A BEFORE INSERT
+     * trigger now overwrites actor_id/actor_name from the authenticated
+     * session, and the insert policy rejects any other actor_id.
+     */
+    it("stores the caller's own id when the client forges actor_id", async () => {
+      const caller = ctx.users['userA']!;
+      const victim = ctx.users['userB']!;
+
+      const action = `test.audit.forgery.${suffix}`;
+      const { error } = await clients['userA']!.from("audit_logs").insert({
+        organization_id: ctx.orgA,
+        actor_id: victim.id,
+        actor_name: "Somebody Else",
+        action,
+      });
+      expect(error).toBeNull();
+
+      const { data: row } = await admin
+        .from("audit_logs")
+        .select("actor_id, actor_name")
+        .eq("action", action)
+        .maybeSingle();
+
+      expect(row?.actor_id).toBe(caller.id);
+      expect(row?.actor_id).not.toBe(victim.id);
+      expect(row?.actor_name).not.toBe("Somebody Else");
+    });
+  });
+
+
+
   describe("personal profile updates never grant authority", () => {
     for (const key of ["userA", "adminA", "superA"] as const) {
       it(`${key} cannot move themselves to another organization`, async () => {
