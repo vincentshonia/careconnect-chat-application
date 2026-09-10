@@ -332,7 +332,7 @@ function WidgetPage() {
       return;
     }
 
-    const dismissedAt = Number(window.localStorage.getItem(`${storageKey}-dismissed`) ?? 0);
+    const dismissedAt = Number(safeStorage.get(`${storageKey}-dismissed`) ?? 0);
     const days = config.website.triggerRepeatDays || 0;
     const suppressed =
       dismissedAt > 0 && (days === 0 || Date.now() - dismissedAt < days * 86400000);
