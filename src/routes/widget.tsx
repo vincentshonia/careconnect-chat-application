@@ -1389,14 +1389,18 @@ function MessageBubble({
           ))}
         </div>
       )}
-      {bubble.escalate && (
+      {(bubble.escalate || bubble.suggestHuman) && (
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => onAction("connect")}
-            className="rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white"
+            className={
+              bubble.suggestHuman
+                ? "rounded-lg px-3 py-2 text-xs font-bold text-white"
+                : "rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white"
+            }
             style={{ background: brand }}
           >
-            Connect me
+            {bubble.suggestHuman ? "Talk to a representative" : "Connect me"}
           </button>
           <button
             onClick={() => onAction("message")}
