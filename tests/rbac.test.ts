@@ -52,34 +52,36 @@ type Ctx = {
 const ctx = {} as Ctx;
 const clients: Record<string, SupabaseClient> = {};
 
-async function createOrg(name: string) {
+async function createOrg(label: string) {
+  const name = syntheticName(label, suffix);
   const { data, error } = await admin
     .from("organizations")
-    .insert({ name, slug: `${name.toLowerCase()}-${suffix}` })
+    .insert({ name, slug: name.toLowerCase() })
     .select("id")
     .single();
   if (error) throw new Error(`org: ${error.message}`);
   return data.id as string;
 }
 
-async function createDepartment(org: string, name: string) {
+async function createDepartment(org: string, label: string) {
   const { data, error } = await admin
     .from("departments")
-    .insert({ organization_id: org, name })
+    .insert({ organization_id: org, name: syntheticName(label, suffix) })
     .select("id")
     .single();
   if (error) throw new Error(`department: ${error.message}`);
   return data.id as string;
 }
 
-async function createWebsite(org: string, name: string) {
+async function createWebsite(org: string, label: string) {
+  const name = syntheticName(label, suffix);
   const { data, error } = await admin
     .from("websites")
     .insert({
       organization_id: org,
       name,
-      domain: `${name.toLowerCase()}-${suffix}.example.com`,
-      public_key: `pk_test_${suffix}_${name.toLowerCase()}`,
+      domain: `${label.toLowerCase()}-${suffix}.example.test`,
+      public_key: `pk_test_${suffix}_${label.toLowerCase()}`,
     })
     .select("id")
     .single();
@@ -88,7 +90,7 @@ async function createWebsite(org: string, name: string) {
 }
 
 async function createUser(key: string, org: string, role: OrgRole, departments: string[]) {
-  const email = `rbac-${key}-${suffix}@example.test`;
+  const email = syntheticEmail(`rbac_${key}`, suffix);
   const { data, error } = await admin.auth.admin.createUser({
     email,
     password,
