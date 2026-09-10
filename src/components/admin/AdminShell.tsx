@@ -67,7 +67,8 @@ const navGroups = [
         to: "/reports",
         label: "Reports",
         icon: BarChart3,
-        perms: ["reports.team", "reports.organization", "reports.platform"],
+        // Agents may open Reports too — the page scopes them to their own numbers.
+        perms: ["reports.self", "reports.team", "reports.organization", "reports.platform"],
       },
     ],
   },

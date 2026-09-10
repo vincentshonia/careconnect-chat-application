@@ -18,6 +18,7 @@ import {
 import { BarList, ColumnChart, DataTable, Panel, fmtMin, fmtNum } from "@/components/reports/primitives";
 import { Delta, Kpi, MetricRow, SkeletonGrid, age, maybe, num, type Json } from "@/components/dashboard/pieces";
 import { toast } from "sonner";
+import { TIP } from "@/lib/metrics-dictionary";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -54,18 +55,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const PRESENCE = ["available", "busy", "away", "offline"] as const;
 
-const TIP = {
-  firstResponse:
-    "Average time between the human assistance request and the first staff reply on conversations you handled.",
-  claim:
-    "Average time a visitor waits in the human queue before you claim the conversation.",
-  sla: "Percentage of applicable conversations answered within the configured SLA target.",
-  handled:
-    "Conversations you actually worked: claimed, replied to, resolved or closed during the period.",
-  completion: "Completed conversations divided by conversations you handled in the period.",
-  handle: "Average time from claim to resolution or closure.",
-  capacity: "Active chats against the maximum your administrator configured.",
-};
+// Tooltip copy is shared with the Reports "Definitions" panel.
 
 function greeting() {
   const h = new Date().getHours();
@@ -236,7 +226,7 @@ function DashboardPage() {
             <Kpi label="Active" value={fmtNum(current['org_active'])} to="/inbox" search={{ tab: "active" }} />
             <Kpi label="Agent requested" value={fmtNum(current['org_agent_requested'])} tone={num(current['org_agent_requested']) ? "warn" : "default"} to="/inbox" search={{ tab: "waiting" }} />
             <Kpi label="Completed today" value={fmtNum(current['org_completed_today'])} tone="good" to="/inbox" search={{ tab: "closed" }} />
-            <Kpi label="SLA risk" value={fmtNum(current['org_sla_risk'])} tone={num(current['org_sla_risk']) ? "critical" : "default"} tooltip={TIP.sla} to="/inbox" search={{ tab: "waiting" }} />
+            <Kpi label="SLA risk" value={fmtNum(current['org_sla_risk'])} tone={num(current['org_sla_risk']) ? "critical" : "default"} tooltip={TIP.slaRisk} to="/inbox" search={{ tab: "waiting" }} />
             <Kpi label="Open intakes" value={fmtNum(current['org_open_intakes'])} to="/intake" />
           </div>
         ) : (
@@ -249,7 +239,7 @@ function DashboardPage() {
               label="SLA risk"
               value={fmtNum(current['my_sla_risk'])}
               tone={num(current['my_sla_risk']) ? "critical" : "default"}
-              tooltip={TIP.sla}
+              tooltip={TIP.slaRisk}
               to="/inbox"
               search={{ tab: "mine" }}
             />

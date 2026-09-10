@@ -13,6 +13,7 @@ import { BarList, ColumnChart, DataTable, Panel, Stat, fmtDate, fmtMin, fmtNum }
 import { Pager } from "@/components/admin/Pager";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { CONVERSATION_STATUSES, statusLabel } from "@/lib/conversation-status";
+import { METRIC_DEFINITIONS } from "@/lib/metrics-dictionary";
 import {
   DATE_PRESETS,
   dateRangeInZone,
@@ -380,6 +381,8 @@ function ReportsPage() {
         <p className="mt-2 text-[11px] text-muted-foreground">{filterSummary}</p>
       </div>
 
+      <DefinitionsPanel />
+
       <nav className="mb-4 flex flex-wrap gap-1 border-b border-border pb-2">
         {TABS.filter((t) => !sections || sections.includes(t.id)).map((t) => (
           <button
@@ -405,6 +408,40 @@ function ReportsPage() {
       {allowed("ai") ? <AiTab {...tabProps} /> : null}
       {allowed("intake") ? <IntakeTab {...tabProps} /> : null}
     </AdminShell>
+  );
+}
+
+/**
+ * Plain-language explanation of every number on this page. The text comes from
+ * the shared metrics dictionary, which the dashboard tooltips also use.
+ */
+function DefinitionsPanel() {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="mb-4 rounded-xl border border-border bg-card">
+      <h2>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls="report-definitions"
+          className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm font-semibold"
+        >
+          Definitions — how these numbers are calculated
+          <span aria-hidden className="text-xs text-muted-foreground">{open ? "Hide" : "Show"}</span>
+        </button>
+      </h2>
+      <div id="report-definitions" hidden={!open} className="border-t border-border px-4 py-3">
+        <dl className="grid gap-3 sm:grid-cols-2">
+          {METRIC_DEFINITIONS.map((d) => (
+            <div key={d.id} id={`definition-${d.id}`}>
+              <dt className="text-xs font-semibold">{d.term}</dt>
+              <dd className="text-xs text-muted-foreground">{d.text}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
   );
 }
 
