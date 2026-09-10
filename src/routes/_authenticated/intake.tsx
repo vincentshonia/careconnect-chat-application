@@ -38,6 +38,9 @@ type Intake = Database["public"]["Tables"]["intake_requests"]["Row"];
 type Stage = Database["public"]["Enums"]["intake_stage"];
 type IntakeType = Database["public"]["Enums"]["intake_type"];
 
+/** Stages where a due date no longer matters. */
+const CLOSED_STAGES: Stage[] = ["approved", "denied", "withdrawn"];
+
 const STAGES: Stage[] = [
   "new",
   "in_review",
