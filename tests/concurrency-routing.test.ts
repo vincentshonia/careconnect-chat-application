@@ -3,11 +3,14 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFile } from "node:fs/promises";
 import { decideTransfer } from "@/lib/transfer-eligibility";
 import {
+  captureProtectedBaseline,
   purgeSyntheticOrganizations,
   purgeSyntheticUsers,
+  readProtectedBaseline,
   requireTestBackend,
   syntheticEmail,
   syntheticName,
+  type ProtectedBaseline,
 } from "./helpers/required-env";
 
 /**
@@ -34,6 +37,16 @@ const password = `Test!${Math.random().toString(36).slice(2, 12)}Aa1`;
 const createdUsers: { id: string; email: string }[] = [];
 let orgId = "";
 let websiteId = "";
+let baseline: ProtectedBaseline | null = null;
+
+/** Deletes every fixture; safe mid-setup and safe to call twice. */
+async function teardown() {
+  await purgeSyntheticUsers(db, createdUsers.splice(0, createdUsers.length));
+  if (orgId) {
+    await purgeSyntheticOrganizations(db, [orgId]);
+    orgId = "";
+  }
+}
 
 type ClaimResult = { ok?: boolean; code?: string; message?: string; assigned_to?: string };
 
@@ -162,36 +175,48 @@ async function activeCount(userId: string) {
 
 describe("claim & routing concurrency", () => {
   beforeAll(async () => {
-    const orgName = syntheticName("conc", suffix);
-    const { data, error } = await db
-      .from("organizations")
-      .insert({ name: orgName, slug: orgName.toLowerCase() })
-      .select("id")
-      .single();
-    if (error) throw new Error(`org: ${error.message}`);
-    orgId = data.id as string;
+    baseline = await captureProtectedBaseline(db);
+    expect(baseline.organizationId).toBeTruthy();
+    try {
+      const orgName = syntheticName("conc", suffix);
+      const { data, error } = await db
+        .from("organizations")
+        .insert({ name: orgName, slug: orgName.toLowerCase() })
+        .select("id")
+        .single();
+      if (error) throw new Error(`org: ${error.message}`);
+      orgId = data.id as string;
 
-    const { data: site, error: siteError } = await db
-      .from("websites")
-      .insert({
-        organization_id: orgId,
-        name: syntheticName("concsite", suffix),
-        domain: `conc-${suffix}.example.test`,
-        public_key: `pk_conc_${suffix}`,
-      })
-      .select("id")
-      .single();
-    if (siteError) throw new Error(`website: ${siteError.message}`);
-    websiteId = site.id as string;
+      const { data: site, error: siteError } = await db
+        .from("websites")
+        .insert({
+          organization_id: orgId,
+          name: syntheticName("concsite", suffix),
+          domain: `conc-${suffix}.example.test`,
+          public_key: `pk_conc_${suffix}`,
+        })
+        .select("id")
+        .single();
+      if (siteError) throw new Error(`website: ${siteError.message}`);
+      websiteId = site.id as string;
+    } catch (error) {
+      await teardown();
+      throw error;
+    }
   }, 120_000);
 
   afterAll(async () => {
-    if (!configured || !orgId) return;
+    if (!configured) return;
     // Teardown deletes dozens of auth users one call at a time; under load the
     // sandbox needs more than the default hook budget to finish, and a hook
     // that is cut short leaves synthetic rows behind for the next run.
-    await purgeSyntheticUsers(db, createdUsers);
-    await purgeSyntheticOrganizations(db, [orgId]);
+    await teardown();
+    if (baseline) {
+      const after = await readProtectedBaseline(db, baseline);
+      expect(after.conversations).toBe(baseline.conversations);
+      expect(after.contacts).toBe(baseline.contacts);
+      expect(after.memberships).toBe(baseline.memberships);
+    }
   }, 300_000);
 
   describe("1. manual claim — many agents, one conversation", () => {
