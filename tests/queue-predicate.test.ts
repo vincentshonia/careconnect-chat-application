@@ -67,6 +67,27 @@ describe("reopening a finished chat", () => {
     ).toBe(false);
   });
 
+  it("only re-queues a human when a person was involved before", () => {
+    expect(
+      decideReopen({
+        senderType: "visitor",
+        status: "closed",
+        assignedTo: null,
+        assigneePresence: null,
+        firstHumanRequestedAt: null,
+      }).toHuman,
+    ).toBe(false);
+    expect(
+      decideReopen({
+        senderType: "visitor",
+        status: "closed",
+        assignedTo: null,
+        assigneePresence: null,
+        firstHumanRequestedAt: "2026-09-01T00:00:00Z",
+      }).toHuman,
+    ).toBe(true);
+  });
+
   it("keeps an available owner and requeues an unavailable one", () => {
     expect(
       decideReopen({
@@ -74,6 +95,7 @@ describe("reopening a finished chat", () => {
         status: "closed",
         assignedTo: "u1",
         assigneePresence: "available",
+        firstHumanRequestedAt: "2026-09-01T00:00:00Z",
       }).keepAssignee,
     ).toBe(true);
     for (const presence of ["busy", "away", "offline", null]) {
@@ -83,6 +105,7 @@ describe("reopening a finished chat", () => {
           status: "closed",
           assignedTo: "u1",
           assigneePresence: presence,
+          firstHumanRequestedAt: "2026-09-01T00:00:00Z",
         }).keepAssignee,
       ).toBe(false);
     }
