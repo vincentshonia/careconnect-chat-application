@@ -2,7 +2,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFile } from "node:fs/promises";
 import { decideTransfer } from "@/lib/transfer-eligibility";
-import { requireTestEnv } from "./helpers/required-env";
+import {
+  purgeSyntheticOrganizations,
+  purgeSyntheticUsers,
+  requireTestBackend,
+  syntheticEmail,
+  syntheticName,
+} from "./helpers/required-env";
 
 /**
  * Concurrency & routing integration tests (Phase 1 gate).
