@@ -460,6 +460,7 @@ export async function insertMessage(
     status: String(conversation.status),
     assignedTo: previousAssignee,
     assigneePresence,
+    firstHumanRequestedAt: (conversation.first_human_requested_at as string | null) ?? null,
   });
   const now = new Date().toISOString();
   await db
@@ -471,18 +472,26 @@ export async function insertMessage(
       // The original resolution and closing times are history — they stay put,
       // and the return visit is recorded as its own moment instead.
       ...(decision.reopens
-        ? {
-            status: "follow_up",
-            escalation_requested: true,
-            requested_agent_at: now,
-            reopened_at: now,
-            reopened_count: (conversation.reopened_count ?? 0) + 1,
-            ...(decision.keepAssignee ? {} : { assigned_to: null }),
-          }
+        ? decision.toHuman
+          ? {
+              status: "follow_up",
+              escalation_requested: true,
+              requested_agent_at: now,
+              reopened_at: now,
+              reopened_count: (conversation.reopened_count ?? 0) + 1,
+              ...(decision.keepAssignee ? {} : { assigned_to: null }),
+            }
+          : {
+              // Nobody was ever involved: the assistant simply carries on.
+              status: "new",
+              escalation_requested: false,
+              reopened_at: now,
+              reopened_count: (conversation.reopened_count ?? 0) + 1,
+            }
         : {}),
     })
     .eq("id", conversation.id);
-  if (decision.reopens) {
+  if (decision.reopens && decision.toHuman) {
     await db.from("conversation_events").insert({
       conversation_id: conversation.id,
       organization_id: conversation.organization_id,
