@@ -1566,17 +1566,17 @@ function SatisfactionPrompt({
   conversationId,
   brand,
   chatPost,
+  onDismiss,
 }: {
   conversationId: string;
   brand: string;
   chatPost: (path: string, body: Record<string, unknown>) => Promise<Response>;
+  onDismiss: () => void;
 }) {
   const [score, setScore] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const [done, setDone] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
 
-  if (dismissed) return null;
 
   if (done) {
     return (
