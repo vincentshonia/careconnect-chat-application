@@ -28,6 +28,8 @@ export type Database = {
           model: string | null
           organization_id: string
           question: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           sources: Json
           visitor_feedback: string | null
           website_id: string | null
@@ -45,6 +47,8 @@ export type Database = {
           model?: string | null
           organization_id: string
           question: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           sources?: Json
           visitor_feedback?: string | null
           website_id?: string | null
@@ -62,6 +66,8 @@ export type Database = {
           model?: string | null
           organization_id?: string
           question?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           sources?: Json
           visitor_feedback?: string | null
           website_id?: string | null
@@ -2487,6 +2493,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ai_review_queue: {
+        Args: { _limit?: number; _offset?: number; _org: string }
+        Returns: {
+          ai_response_id: string
+          answer: string
+          confidence: number
+          last_asked_at: string
+          occurrences: number
+          question: string
+          question_key: string
+          total_count: number
+          visitor_feedback: string
+        }[]
+      }
       assign_round_robin: {
         Args: { _conversation: string; _department: string }
         Returns: Json
