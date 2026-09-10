@@ -1,19 +1,40 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+/** Hard cap per run, so a backlog can never make one call run long. */
+const MAX_CANDIDATES = 200;
+/** Insert size per round-trip. */
+const INSERT_BATCH = 500;
+/** Above this, the run is slow enough to be worth a log line. */
+const SLOW_RUN_MS = 4000;
+
+type Row = {
+  id: string;
+  organization_id: string;
+  department_id: string | null;
+  assigned_to: string | null;
+  reference: string;
+  requested_agent_at: string | null;
+  first_human_requested_at: string | null;
+};
+
 /**
  * Scheduled sweep: flag conversations where a visitor asked for a person and
  * still has no first human reply after the organization's target, and alert
  * the assignee (or the department) once per conversation.
+ *
+ * Everything is done in batched queries — no per-conversation round trips —
+ * so the run finishes well inside the caller's HTTP timeout.
  */
 export const Route = createFileRoute("/api/public/hooks/sla-check")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const startedAt = Date.now();
         // Shared-secret gate: this endpoint sweeps every tenant, so it must
         // never be callable by an anonymous visitor.
         const provided = request.headers.get("x-careconnect-secret") ?? "";
         const { admin } = await import("@/lib/public-chat.server");
-        const { notifyStaff } = await import("@/lib/notifications.server");
+        const { alertRecipients } = await import("@/lib/assignment.server");
         const { DEFAULT_SLA_MINUTES, waitingMinutes } = await import("@/lib/sla");
         const db = admin();
 
@@ -50,17 +71,8 @@ export const Route = createFileRoute("/api/public/hooks/sla-check")({
           .in("status", ["waiting", "escalated", "assigned", "follow_up"])
           .or("assigned_to.is.null,first_agent_response_at.is.null")
           .order("requested_agent_at", { ascending: true, nullsFirst: true })
-          .limit(500);
+          .limit(MAX_CANDIDATES);
 
-        type Row = {
-          id: string;
-          organization_id: string;
-          department_id: string | null;
-          assigned_to: string | null;
-          reference: string;
-          requested_agent_at: string | null;
-          first_human_requested_at: string | null;
-        };
         const rows = (waiting ?? []) as Row[];
 
         const breached = rows.filter((row) => {
@@ -85,35 +97,77 @@ export const Route = createFileRoute("/api/public/hooks/sla-check")({
           }
         }
 
-        let alerted = 0;
-        for (const row of breached) {
-          if (alreadyAlerted.has(row.id)) continue;
+        const pending = breached.filter((row) => !alreadyAlerted.has(row.id));
+
+        // Resolve eligible recipients once per (organization, department) pair
+        // rather than once per conversation.
+        const audienceCache = new Map<string, string[]>();
+        async function recipients(organizationId: string, departmentId: string | null) {
+          const key = `${organizationId}:${departmentId ?? ""}`;
+          const cached = audienceCache.get(key);
+          if (cached) return cached;
+          const ids = await alertRecipients(organizationId, departmentId, "inapp_sla_breach");
+          audienceCache.set(key, ids);
+          return ids;
+        }
+
+        const notificationRows: Record<string, unknown>[] = [];
+        const notifiedConversations = new Set<string>();
+
+        for (const row of pending) {
           const target = targetByOrg.get(row.organization_id) ?? DEFAULT_SLA_MINUTES;
           const minutes = Math.round(waitingMinutes(row) ?? 0);
 
           // The person who owns it, or the team it belongs to — never everyone.
-          const audience = row.assigned_to
-            ? { userIds: [row.assigned_to] }
-            : row.department_id
-              ? { departmentId: row.department_id }
-              : null;
-          if (!audience) continue;
+          let ids: string[];
+          if (row.assigned_to) {
+            const eligible = new Set(await recipients(row.organization_id, null));
+            ids = eligible.has(row.assigned_to) ? [row.assigned_to] : [];
+          } else if (row.department_id) {
+            ids = await recipients(row.organization_id, row.department_id);
+          } else {
+            ids = [];
+          }
+          if (ids.length === 0) continue;
 
-          await notifyStaff({
-            organizationId: row.organization_id,
-            type: "sla_breach",
-            severity: "warning",
-            title: `Conversation ${row.reference} has waited ${minutes} min`,
-            body: `No agent reply yet — the first-response target is ${target} minutes.`,
-            link: `/inbox?c=${row.id}`,
-            recordType: "conversations",
-            recordId: row.id,
-            ...audience,
-          });
-          alerted += 1;
+          for (const userId of ids) {
+            notificationRows.push({
+              organization_id: row.organization_id,
+              user_id: userId,
+              type: "sla_breach",
+              severity: "warning",
+              title: `Conversation ${row.reference} has waited ${minutes} min`,
+              body: `No agent reply yet — the first-response target is ${target} minutes.`,
+              link: `/inbox?c=${row.id}`,
+              record_type: "conversations",
+              record_id: row.id,
+            });
+          }
+          notifiedConversations.add(row.id);
         }
 
-        return Response.json({ checked: rows.length, alerted });
+        for (let i = 0; i < notificationRows.length; i += INSERT_BATCH) {
+          const { error } = await db
+            .from("notifications")
+            .insert(notificationRows.slice(i, i + INSERT_BATCH));
+          if (error) {
+            console.warn("[sla-check] notification batch insert failed", error);
+            break;
+          }
+        }
+
+        const durationMs = Date.now() - startedAt;
+        if (durationMs > SLOW_RUN_MS) {
+          console.warn(
+            `[sla-check] slow run: ${durationMs}ms for ${rows.length} candidates, ${notifiedConversations.size} notified`,
+          );
+        }
+
+        return Response.json({
+          processed: rows.length,
+          notified: notifiedConversations.size,
+          durationMs,
+        });
       },
     },
   },
