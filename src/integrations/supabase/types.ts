@@ -1147,31 +1147,40 @@ export type Database = {
       }
       knowledge_chunks: {
         Row: {
-          article_id: string
+          article_id: string | null
           chunk_index: number
           content: string
           created_at: string
           embedding: string | null
           id: string
           organization_id: string
+          source_id: string | null
+          source_type: string
+          website_id: string | null
         }
         Insert: {
-          article_id: string
+          article_id?: string | null
           chunk_index?: number
           content: string
           created_at?: string
           embedding?: string | null
           id?: string
           organization_id: string
+          source_id?: string | null
+          source_type?: string
+          website_id?: string | null
         }
         Update: {
-          article_id?: string
+          article_id?: string | null
           chunk_index?: number
           content?: string
           created_at?: string
           embedding?: string | null
           id?: string
           organization_id?: string
+          source_id?: string | null
+          source_type?: string
+          website_id?: string | null
         }
         Relationships: [
           {
@@ -1186,6 +1195,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_chunks_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
             referencedColumns: ["id"]
           },
         ]
@@ -2575,6 +2591,8 @@ export type Database = {
           chunk_id: string
           content: string
           similarity: number
+          source_id: string
+          source_type: string
           source_url: string
           title: string
         }[]
@@ -2623,6 +2641,17 @@ export type Database = {
         }[]
       }
       refresh_report_statistics: { Args: never; Returns: undefined }
+      replace_chunks: {
+        Args: {
+          _article_id: string
+          _chunks: Json
+          _org: string
+          _source_id: string
+          _source_type: string
+          _website_id: string
+        }
+        Returns: number
+      }
       report_ai: {
         Args: {
           _dept?: string[]
