@@ -207,33 +207,17 @@ export const replyToConversationFn = createServerFn({ method: "POST" })
     });
     if (error) throw new Error("Could not send that reply");
 
-    const patch: Record<string, unknown> = {
-      status: "active",
-      last_message_at: now,
-      unread_agent_count: 0,
-    };
-    const { data: existing } = await db
-      .from("conversations")
-      .select("first_response_at, first_agent_response_at")
-      .eq("id", conversation.id)
-      .maybeSingle();
-    const isFirstAgentReply = !existing?.first_agent_response_at;
-    if (isFirstAgentReply) patch.first_agent_response_at = now;
-    if (!existing?.first_response_at) patch.first_response_at = now;
+    // Status, first-response timing and the "agent_reply" credit are written
+    // together by the lifecycle routine, so reporting can never disagree.
+    const { transitionConversation } = await import("@/lib/lifecycle.server");
+    await transitionConversation({
+      conversationId: conversation.id,
+      event: "reply",
+      actorId: actor.userId,
+      db,
+      payload: { detail: `First reply by ${name}` },
+    });
 
-    await db.from("conversations").update(patch).eq("id", conversation.id);
-
-    // Reporting credits the first responder from the event log, so the first
-    // agent reply is recorded explicitly rather than inferred from messages.
-    if (isFirstAgentReply) {
-      await db.from("conversation_events").insert({
-        conversation_id: conversation.id,
-        organization_id: conversation.organization_id,
-        actor_id: actor.userId,
-        event_type: "agent_reply",
-        detail: `First reply by ${name}`,
-      });
-    }
 
     await writeAudit(db as never, {
       actor,
