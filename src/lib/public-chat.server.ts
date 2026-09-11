@@ -866,21 +866,33 @@ export async function recordAiResponse(params: {
 export async function startWidgetSession(opts: {
   websiteId?: string | null;
   publicKey?: string | null;
-  /** Browser-reported origin — the value authorization is based on. */
+  /** Browser-reported origin of this request (same-origin for the iframe). */
   host: string | null;
   /** Page-supplied origin: analytics only, never trusted for authorization. */
   clientHost?: string | null;
+  /** Signed proof of the embedding page's origin, issued by /chat/origin. */
+  originProof?: string | null;
   meta: Record<string, any>;
   /** The token being replaced, so a renewal keeps the same visitor. */
   priorSession?: string | null;
 }) {
-  const { newSessionId, signSession, verifySessionForRenewal } = await import(
+  const { newSessionId, signSession, verifySessionForRenewal, verifyOriginProof } = await import(
     "./widget-session.server"
   );
   const clientHint = opts.clientHost ?? null;
+  const proof = opts.originProof ? await verifyOriginProof(opts.originProof) : null;
+  // The proof was issued after a cross-origin check of the embedding page, so
+  // it is the trustworthy host. The request's own origin is only a hint.
+  const provenHost = proof?.host ?? null;
   const website = opts.publicKey
-    ? await resolveWebsiteByKey(opts.publicKey, opts.host, clientHint)
-    : await resolveWebsite(String(opts.websiteId ?? ""), opts.host, clientHint);
+    ? await resolveWebsiteByKey(opts.publicKey, provenHost, clientHint ?? opts.host)
+    : await resolveWebsite(String(opts.websiteId ?? ""), provenHost, clientHint ?? opts.host);
+
+  if (website.dev_mode === false && proof?.wid !== website.id) {
+    throw new PublicChatError(403, "This chat widget is not authorized on this domain");
+  }
+
+
 
 
   // A renewal presents its previous token. When that token is genuine (even if
