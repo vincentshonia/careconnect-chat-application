@@ -115,6 +115,19 @@ function ResetPasswordPage() {
           </p>
         ) : (
           <form onSubmit={submit} className="mt-6 space-y-4">
+            {mode === "signed-in" ? (
+              <div className="space-y-2">
+                <Label htmlFor="current">Current password</Label>
+                <Input
+                  id="current"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="password">New password</Label>
               <Input
