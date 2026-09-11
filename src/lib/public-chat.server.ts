@@ -150,20 +150,28 @@ export function assertHostAllowed(
 const WIDGET_CONFIG_TTL_MS = 60_000;
 const widgetConfigCache = new Map<string, { at: number; value: Awaited<ReturnType<typeof buildWidgetConfig>> }>();
 
-export async function loadWidgetConfig(websiteId: string, hostOrigin: string | null) {
+export async function loadWidgetConfig(
+  websiteId: string,
+  hostOrigin: string | null,
+  clientHint: string | null = null,
+) {
   // The host check must run on every request, so it stays outside the cache.
   const cached = widgetConfigCache.get(websiteId);
   if (cached && Date.now() - cached.at < WIDGET_CONFIG_TTL_MS) {
-    await resolveWebsite(websiteId, hostOrigin);
+    await resolveWebsite(websiteId, hostOrigin, clientHint);
     return cached.value;
   }
-  const value = await buildWidgetConfig(websiteId, hostOrigin);
+  const value = await buildWidgetConfig(websiteId, hostOrigin, clientHint);
   widgetConfigCache.set(websiteId, { at: Date.now(), value });
   return value;
 }
 
-async function buildWidgetConfig(websiteId: string, hostOrigin: string | null) {
-  const website = await resolveWebsite(websiteId, hostOrigin);
+async function buildWidgetConfig(
+  websiteId: string,
+  hostOrigin: string | null,
+  clientHint: string | null = null,
+) {
+  const website = await resolveWebsite(websiteId, hostOrigin, clientHint);
   const db = admin();
   const [
     { data: org },
