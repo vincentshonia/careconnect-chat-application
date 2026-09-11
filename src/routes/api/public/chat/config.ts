@@ -6,11 +6,14 @@ export const Route = createFileRoute("/api/public/chat/config")({
       GET: async ({ request }) => {
         const url = new URL(request.url);
         const websiteId = url.searchParams.get("w") ?? "";
-        const host = url.searchParams.get("h");
+        // `h` is what the page claimed (analytics only). Authorization uses the
+        // signed origin proof issued to the loader script.
+        const clientHint = url.searchParams.get("h");
         const mod = await import("@/lib/public-chat.server");
         try {
           await mod.enforceRateLimit(`cfg:ip:${mod.clientIp(request)}`, 60, 60);
-          const config = await mod.loadWidgetConfig(websiteId, host);
+          const proven = await mod.provenHost(url.searchParams.get("op"), websiteId);
+          const config = await mod.loadWidgetConfig(websiteId, proven, clientHint);
           return Response.json(config, {
             headers: { "Cache-Control": "public, max-age=60" },
           });
