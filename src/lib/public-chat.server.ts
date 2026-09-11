@@ -56,7 +56,32 @@ function isTrustedHost(host: string) {
   );
 }
 
-export async function resolveWebsite(websiteId: string, hostOrigin: string | null) {
+/**
+ * The only origin worth trusting: the one the browser itself reported. API
+ * routes carry `Origin`; document/script requests (the /widget page and
+ * widget.js) carry `Referer`. Anything the page hands us in a `h` parameter is
+ * attacker-controlled and used for analytics only.
+ */
+export function verifiedOrigin(request: Request): string | null {
+  return request.headers.get("origin") ?? request.headers.get("referer") ?? null;
+}
+
+export function matchesAllowedDomains(website: Record<string, any>, host: string | null) {
+  const allowed: string[] = website.allowed_domains ?? [];
+  return (
+    !!host &&
+    allowed.some((d) => {
+      const clean = String(d).toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
+      return !!clean && (host === clean || host.endsWith(`.${clean}`));
+    })
+  );
+}
+
+export async function resolveWebsite(
+  websiteId: string,
+  hostOrigin: string | null,
+  clientHint: string | null = null,
+) {
   if (!/^[0-9a-f-]{36}$/i.test(websiteId)) throw new PublicChatError(400, "Invalid website id");
   const { data: website, error } = await admin()
     .from("websites")
@@ -66,12 +91,16 @@ export async function resolveWebsite(websiteId: string, hostOrigin: string | nul
   if (error) throw new PublicChatError(500, "Could not load website configuration");
   if (!website || website.status !== "active") throw new PublicChatError(404, "Website not found");
 
-  assertHostAllowed(website, hostOrigin);
+  assertHostAllowed(website, hostOrigin, clientHint);
   return website;
 }
 
 /** Resolve a website by its public widget key (preferred over raw ids). */
-export async function resolveWebsiteByKey(publicKey: string, hostOrigin: string | null) {
+export async function resolveWebsiteByKey(
+  publicKey: string,
+  hostOrigin: string | null,
+  clientHint: string | null = null,
+) {
   if (!/^cc_pk_[a-f0-9]{16,64}$/i.test(publicKey)) {
     throw new PublicChatError(400, "Invalid widget key");
   }
@@ -82,34 +111,34 @@ export async function resolveWebsiteByKey(publicKey: string, hostOrigin: string 
     .maybeSingle();
   if (error) throw new PublicChatError(500, "Could not load website configuration");
   if (!website || website.status !== "active") throw new PublicChatError(404, "Website not found");
-  assertHostAllowed(website, hostOrigin);
+  assertHostAllowed(website, hostOrigin, clientHint);
   return website;
 }
 
 /**
- * Enforce the embedding allow-list. In dev mode Lovable preview hosts and a
- * missing origin are tolerated; once a site is taken out of dev mode the
- * request must come from an explicitly allowed domain.
+ * Enforce the embedding allow-list.
+ *
+ * Live sites (dev_mode false) are authorized purely from the browser-reported
+ * origin: it must match `allowed_domains`. Lovable preview hosts are not
+ * accepted there, and the client-supplied hint is ignored. Sites still in dev
+ * mode keep the tolerant behaviour so the widget can be tried from previews.
  */
-export function assertHostAllowed(website: Record<string, any>, hostOrigin: string | null) {
-  const host = hostOf(hostOrigin);
-  const allowed: string[] = website.allowed_domains ?? [];
-  const matchesAllowList =
-    !!host &&
-    allowed.some((d) => {
-      const clean = d.toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
-      return !!clean && (host === clean || host.endsWith(`.${clean}`));
-    });
-
+export function assertHostAllowed(
+  website: Record<string, any>,
+  hostOrigin: string | null,
+  clientHint: string | null = null,
+) {
   if (website.dev_mode === false) {
+    const host = hostOf(hostOrigin);
     if (!host) throw new PublicChatError(403, "This chat widget requires a known origin");
-    if (!matchesAllowList && !isTrustedHost(host)) {
+    if (!matchesAllowedDomains(website, host)) {
       throw new PublicChatError(403, "This chat widget is not authorized on this domain");
     }
     return;
   }
 
-  const permitted = !host || isTrustedHost(host) || matchesAllowList;
+  const host = hostOf(hostOrigin ?? clientHint);
+  const permitted = !host || isTrustedHost(host) || matchesAllowedDomains(website, host);
   if (!permitted) throw new PublicChatError(403, "This chat widget is not authorized on this domain");
 }
 
