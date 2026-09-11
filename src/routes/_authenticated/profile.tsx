@@ -67,6 +67,7 @@ function PersonalSettingsPage() {
     },
   });
 
+  // Keyed on the profile id so a background refetch cannot discard edits.
   useEffect(() => {
     const p = profile.data;
     if (!p) return;
@@ -81,7 +82,9 @@ function PersonalSettingsPage() {
     });
     setAvatarUrl(p.avatar_url ?? null);
     setShowInWidget(p.show_in_widget_team === true);
-  }, [profile.data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile.data?.id]);
+
 
   // Reflect the saved appearance choice once the profile loads.
   useEffect(() => {
