@@ -8,7 +8,7 @@ import { Pager } from "@/components/admin/Pager";
 import { QueryError } from "@/components/admin/QueryError";
 import { exportCsvFn } from "@/lib/exports.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
+import { updateIntakeFn, addIntakeNoteFn } from "@/lib/intake.functions";
 import { saveCsv } from "@/lib/csv";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";

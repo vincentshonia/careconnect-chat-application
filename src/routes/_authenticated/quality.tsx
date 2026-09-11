@@ -3,7 +3,7 @@ import { RequirePermission } from "@/components/admin/RequirePermission";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
+import { createQaReviewFn } from "@/lib/quality.functions";
 import { saveCsv } from "@/lib/csv";
 import { exportCsvFn } from "@/lib/exports.functions";
 import { useServerFn } from "@tanstack/react-start";
@@ -174,6 +174,7 @@ function QualityPage() {
     },
   });
 
+  const saveQaReview = useServerFn(createQaReviewFn);
   const saveReview = useMutation({
     mutationFn: async () => {
       const orgId = session.data?.organizationId;

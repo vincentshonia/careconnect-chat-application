@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
+import { updateContactFn } from "@/lib/contacts.functions";
 import { saveCsv } from "@/lib/csv";
 import { exportCsvFn } from "@/lib/exports.functions";
 import { useDebounced } from "@/hooks/use-debounced";
