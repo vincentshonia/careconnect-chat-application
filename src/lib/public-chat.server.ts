@@ -66,6 +66,18 @@ export function verifiedOrigin(request: Request): string | null {
   return request.headers.get("origin") ?? request.headers.get("referer") ?? null;
 }
 
+/** Host proven by a signed origin proof, or null when there is no valid proof. */
+export async function provenHost(proofToken: unknown, websiteId?: string): Promise<string | null> {
+  if (!proofToken) return null;
+  const { verifyOriginProof } = await import("./widget-session.server");
+  const claims = await verifyOriginProof(proofToken);
+  if (!claims) return null;
+  if (websiteId && claims.wid !== websiteId) return null;
+  return claims.host;
+}
+
+
+
 export function matchesAllowedDomains(website: Record<string, any>, host: string | null) {
   const allowed: string[] = website.allowed_domains ?? [];
   return (
