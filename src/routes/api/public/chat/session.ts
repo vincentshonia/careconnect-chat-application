@@ -5,6 +5,8 @@ const schema = z.object({
   websiteId: z.string().uuid().nullable().optional(),
   publicKey: z.string().max(120).nullable().optional(),
   host: z.string().max(300).nullable().optional(),
+  /** Signed proof of the embedding page's origin (issued by /chat/origin). */
+  originProof: z.string().max(2000).nullable().optional(),
   meta: z.record(z.any()).optional(),
   /** The token being replaced, so renewal keeps the same visitor. */
   priorSession: z.string().max(4000).nullable().optional(),
