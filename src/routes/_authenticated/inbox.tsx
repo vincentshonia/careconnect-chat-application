@@ -856,15 +856,57 @@ function InboxPage() {
                   ) : null}
 
 
-                  {canReply ? (
+                  {canFinish ? (
                     <>
-                      <Button
-                        size="sm"
-                        onClick={() => resolveConversation.mutate()}
-                        disabled={resolveConversation.isPending}
+                      <Dialog
+                        open={resolveOpen}
+                        onOpenChange={(o) => {
+                          setResolveOpen(o);
+                          if (!o) setDispositionId("");
+                        }}
                       >
-                        Resolve
-                      </Button>
+                        <DialogTrigger asChild>
+                          <Button size="sm">Resolve</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Resolve this conversation</DialogTitle>
+                            <DialogDescription>
+                              Record what happened so reporting shows real outcomes.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-2">
+                            <Label htmlFor="disposition">Outcome</Label>
+                            <select
+                              id="disposition"
+                              value={dispositionId}
+                              onChange={(e) => setDispositionId(e.target.value)}
+                              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                            >
+                              <option value="">Choose an outcome…</option>
+                              {(dispositionsQuery.data ?? []).map((d) => (
+                                <option key={d.id} value={d.id}>
+                                  {d.label}
+                                </option>
+                              ))}
+                            </select>
+                            {dispositionsQuery.error ? (
+                              <p className="text-xs text-destructive">
+                                Outcomes could not be loaded. Try again in a moment.
+                              </p>
+                            ) : null}
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              size="sm"
+                              disabled={!dispositionId || resolveConversation.isPending}
+                              onClick={() => resolveConversation.mutate(dispositionId)}
+                            >
+                              {resolveConversation.isPending ? "Resolving…" : "Resolve"}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                       <Button
                         size="sm"
                         variant="outline"
@@ -875,6 +917,7 @@ function InboxPage() {
                       </Button>
                     </>
                   ) : null}
+
 
                 </div>
               </div>
