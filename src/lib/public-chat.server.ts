@@ -593,6 +593,40 @@ export async function insertMessage(
       userIds: [previousAssignee],
     });
   }
+  // Nobody owns the chat yet but a person is waiting in the queue: every member
+  // of the owning department hears it, not just whoever happens to be looking.
+  // Throttled to one alert per conversation per two minutes so a visitor typing
+  // several short lines does not chime the whole team repeatedly.
+  if (
+    senderType === "visitor" &&
+    !previousAssignee &&
+    !decision.reopens &&
+    ["waiting", "escalated", "follow_up"].includes(String(conversation.status))
+  ) {
+    const since = new Date(Date.now() - 2 * 60_000).toISOString();
+    const { count } = await db
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("record_id", conversation.id)
+      .eq("type", "visitor_reply")
+      .gte("created_at", since);
+    if (!count) {
+      const { notifyStaff } = await import("@/lib/notifications.server");
+      await notifyStaff({
+        organizationId: conversation.organization_id,
+        type: "visitor_reply",
+        severity: "warning",
+        title: `Visitor waiting on ${conversation.reference ?? "a conversation"}`,
+        body: body.slice(0, 140),
+        link: `/inbox?c=${conversation.id}`,
+        recordType: "conversations",
+        recordId: conversation.id,
+        ...(conversation.department_id
+          ? { departmentId: conversation.department_id as string }
+          : {}),
+      });
+    }
+  }
   return data;
 }
 
