@@ -704,6 +704,9 @@ function InboxPage() {
               <option value="available">Available</option>
               <option value="away">Away</option>
               <option value="busy">Busy</option>
+              {/* Offline is a real stored state, so it must be selectable —
+                  otherwise the picker silently displays "Available". */}
+              <option value="offline">Offline</option>
             </select>
             <span
               className={`ml-1 font-medium ${
