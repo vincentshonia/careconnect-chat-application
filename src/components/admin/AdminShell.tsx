@@ -232,6 +232,7 @@ export function AdminShell({
                       className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
                         collapsed ? "justify-center" : ""
                       }`}
+                      activeOptions={{ includeSearch: false }}
                       activeProps={{
                         className:
                           "gradient-brand text-sidebar-primary-foreground font-semibold shadow-glow hover:text-sidebar-primary-foreground",
