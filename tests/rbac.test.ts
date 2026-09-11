@@ -72,7 +72,9 @@ async function createOrg(label: string) {
   const name = syntheticName(label, suffix);
   const { data, error } = await admin
     .from("organizations")
-    .insert({ name, slug: name.toLowerCase() })
+    // Two-step verification is enforced in the database, so synthetic tenants
+    // start with the policy off; the MFA suite turns it on deliberately.
+    .insert({ name, slug: name.toLowerCase(), require_mfa_for_admins: false })
     .select("id")
     .single();
   if (error) throw new Error(`org: ${error.message}`);
