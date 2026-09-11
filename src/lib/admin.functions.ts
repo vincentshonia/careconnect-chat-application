@@ -117,3 +117,86 @@ export const cronHealthFn = createServerFn({ method: "POST" })
       created: row.created,
     }));
   });
+
+/**
+ * Four setup values the Admin hub shows at a glance: whether the default
+ * department can actually receive routed chats, whether admins are required to
+ * use two-step verification, whether the live website is still in test mode,
+ * and how the scheduled background jobs last finished.
+ */
+export const adminStatusFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    requirePermission(actor, "settings.manage");
+    const organizationId = requireOrganization(actor);
+
+    const [orgRes, deptRes, siteRes] = await Promise.all([
+      context.supabase
+        .from("organizations")
+        .select("require_mfa_for_admins")
+        .eq("id", organizationId)
+        .maybeSingle(),
+      context.supabase
+        .from("departments")
+        .select("id, name")
+        .eq("organization_id", organizationId)
+        .eq("is_default", true)
+        .maybeSingle(),
+      context.supabase
+        .from("websites")
+        .select("id, name, domain, dev_mode")
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: true }),
+    ]);
+
+    let defaultDepartmentMembers = 0;
+    if (deptRes.data?.id) {
+      const { count } = await context.supabase
+        .from("department_members")
+        .select("user_id", { count: "exact", head: true })
+        .eq("department_id", deptRes.data.id);
+      defaultDepartmentMembers = count ?? 0;
+    }
+
+    const sites = (siteRes.data ?? []) as {
+      id: string;
+      name: string | null;
+      domain: string | null;
+      dev_mode: boolean;
+    }[];
+    // A production site is anything that is not a preview/sandbox host.
+    const production =
+      sites.find((s) => !/lovable|preview|localhost|\.test$/i.test(s.domain ?? "")) ?? null;
+
+    // Scheduled jobs: keep only the newest result per job.
+    const { admin } = await import("@/lib/public-chat.server");
+    const { data: cron } = await admin().rpc("cron_health");
+    const seen = new Map<string, { statusCode: number | null; created: string; timedOut: boolean }>();
+    for (const row of (cron ?? []) as {
+      job_name: string | null;
+      status_code: number | null;
+      timed_out: boolean | null;
+      created: string;
+    }[]) {
+      const name = row.job_name ?? "Unknown job";
+      if (!seen.has(name)) {
+        seen.set(name, {
+          statusCode: row.status_code,
+          created: row.created,
+          timedOut: Boolean(row.timed_out),
+        });
+      }
+    }
+
+    return {
+      defaultDepartment: deptRes.data
+        ? { id: deptRes.data.id, name: deptRes.data.name, members: defaultDepartmentMembers }
+        : null,
+      requireMfaForAdmins: Boolean(orgRes.data?.require_mfa_for_admins),
+      productionWebsite: production
+        ? { id: production.id, name: production.name, domain: production.domain, devMode: production.dev_mode }
+        : null,
+      jobs: [...seen.entries()].map(([jobName, v]) => ({ jobName, ...v })),
+    };
+  });
