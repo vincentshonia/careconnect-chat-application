@@ -52,6 +52,7 @@ export function SettingsPanel() {
     },
   });
 
+  // Keyed on the organization id so a background refetch cannot discard edits.
   useEffect(() => {
     if (org.data) {
       setForm({
@@ -69,7 +70,9 @@ export function SettingsPanel() {
       });
       setLogoUrl(org.data.logo_url ?? null);
     }
-  }, [org.data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [org.data?.id]);
+
 
   async function handleLogoUpload(file: File) {
     if (!orgId) return;
