@@ -488,7 +488,11 @@ export const closeConversationFn = createServerFn({ method: "POST" })
  */
 export const resolveConversationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => idInput.parse(input))
+  .inputValidator((input: unknown) =>
+    z
+      .object({ conversationId: z.string().uuid(), dispositionId: z.string().uuid() })
+      .parse(input),
+  )
   .handler(async ({ data, context }) => {
     const actor = await resolveActor(context.supabase, context.userId);
     const conversation = await loadConversation(data.conversationId);
@@ -501,10 +505,26 @@ export const resolveConversationFn = createServerFn({ method: "POST" })
 
     const { admin } = await import("@/lib/public-chat.server");
     const db = admin();
+
+    // The outcome must belong to this tenant and still be selectable.
+    const { data: disposition } = await db
+      .from("conversation_dispositions")
+      .select("id, label")
+      .eq("id", data.dispositionId)
+      .eq("organization_id", conversation.organization_id)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!disposition) throw new ForbiddenError("Choose a valid outcome before resolving");
+
     const now = new Date().toISOString();
     await db
       .from("conversations")
-      .update({ status: "resolved", resolved_at: now, resolved_by: actor.userId })
+      .update({
+        status: "resolved",
+        resolved_at: now,
+        resolved_by: actor.userId,
+        disposition_id: disposition.id,
+      })
       .eq("id", conversation.id);
 
     await db.from("conversation_events").insert({
@@ -512,7 +532,7 @@ export const resolveConversationFn = createServerFn({ method: "POST" })
       organization_id: conversation.organization_id,
       actor_id: actor.userId,
       event_type: "resolved",
-      detail: `Resolved by ${actor.fullName ?? "an agent"}`,
+      detail: `Resolved by ${actor.fullName ?? "an agent"} — ${disposition.label}`,
       previous_value: conversation.status,
       new_value: "resolved",
     });
@@ -524,11 +544,12 @@ export const resolveConversationFn = createServerFn({ method: "POST" })
       recordType: "conversations",
       recordId: conversation.id,
       previousValue: { status: conversation.status },
-      newValue: { status: "resolved", resolved_at: now },
+      newValue: { status: "resolved", resolved_at: now, disposition: disposition.label },
     });
 
-    return { ok: true };
+    return { ok: true, disposition: disposition.label };
   });
+
 
 /**
  * Mint a short-lived signed URL for a visitor attachment so the agent can
