@@ -1,12 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { RequirePermission } from "@/components/admin/RequirePermission";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
 import { useSessionContext } from "@/hooks/use-session-context";
-import { AdminShell } from "@/components/admin/AdminShell";
+import { PanelShell } from "@/components/admin/PanelShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +14,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_authenticated/routing")({
-  head: () => ({
-    meta: [
-      { title: "Routing & Templates — Pacific Health Group Support Console" },
-      { name: "description", content: "Route escalations to the right department and manage canned replies." },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
-  component: RoutingPageRoute,
+  // Moved into the Admin hub. The old address still works so existing links,
+  // notifications and the staff manuals keep resolving.
+  beforeLoad: () => {
+    throw redirect({ to: "/admin", search: { tab: "routing" } });
+  },
 });
 
 type Rule = Database["public"]["Tables"]["routing_rules"]["Row"];
@@ -30,17 +26,10 @@ type Template = Database["public"]["Tables"]["response_templates"]["Row"];
 
 const MATCH_TYPES = ["interest", "keyword", "county", "menu_option", "language"];
 
-function RoutingPageRoute() {
-  return (
-    <RequirePermission permission="routing.manage" title="Routing">
-      <RoutingPage />
-    </RequirePermission>
-  );
-}
 
-function RoutingPage() {
+export function RoutingPanel() {
   return (
-    <AdminShell
+    <PanelShell
       title="Routing & templates"
       description="Decide which department receives each escalation, and keep approved replies handy for agents."
     >
@@ -56,7 +45,7 @@ function RoutingPage() {
           <Templates />
         </TabsContent>
       </Tabs>
-    </AdminShell>
+    </PanelShell>
   );
 }
 

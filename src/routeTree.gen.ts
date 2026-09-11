@@ -36,6 +36,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedAiConsoleRouteImport } from './routes/_authenticated/ai-console'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as ApiPublicStaffAvatarSplatRouteImport } from './routes/api/public/staff-avatar/$'
@@ -188,6 +189,11 @@ const AuthenticatedAiConsoleRoute = AuthenticatedAiConsoleRouteImport.update({
   path: '/ai-console',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiPublicWidgetDotjsRoute = ApiPublicWidgetDotjsRouteImport.update({
   id: '/api/public/widget.js',
   path: '/api/public/widget.js',
@@ -270,6 +276,7 @@ export interface FileRoutesByFullPath {
   '/no-access': typeof NoAccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/widget': typeof WidgetRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/ai-console': typeof AuthenticatedAiConsoleRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/contacts': typeof AuthenticatedContactsRoute
@@ -312,6 +319,7 @@ export interface FileRoutesByTo {
   '/no-access': typeof NoAccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/widget': typeof WidgetRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/ai-console': typeof AuthenticatedAiConsoleRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/contacts': typeof AuthenticatedContactsRoute
@@ -356,6 +364,7 @@ export interface FileRoutesById {
   '/no-access': typeof NoAccessRoute
   '/reset-password': typeof ResetPasswordRoute
   '/widget': typeof WidgetRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/ai-console': typeof AuthenticatedAiConsoleRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
@@ -400,6 +409,7 @@ export interface FileRouteTypes {
     | '/no-access'
     | '/reset-password'
     | '/widget'
+    | '/admin'
     | '/ai-console'
     | '/audit'
     | '/contacts'
@@ -442,6 +452,7 @@ export interface FileRouteTypes {
     | '/no-access'
     | '/reset-password'
     | '/widget'
+    | '/admin'
     | '/ai-console'
     | '/audit'
     | '/contacts'
@@ -485,6 +496,7 @@ export interface FileRouteTypes {
     | '/no-access'
     | '/reset-password'
     | '/widget'
+    | '/_authenticated/admin'
     | '/_authenticated/ai-console'
     | '/_authenticated/audit'
     | '/_authenticated/contacts'
@@ -736,6 +748,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAiConsoleRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/widget.js': {
       id: '/api/public/widget.js'
       path: '/api/public/widget.js'
@@ -838,6 +857,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAiConsoleRoute: typeof AuthenticatedAiConsoleRoute
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
@@ -860,6 +880,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAiConsoleRoute: AuthenticatedAiConsoleRoute,
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,

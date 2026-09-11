@@ -1,5 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { RequirePermission } from "@/components/admin/RequirePermission";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -9,7 +8,7 @@ import { Pager } from "@/components/admin/Pager";
 import { exportCsvFn } from "@/lib/exports.functions";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { AdminShell } from "@/components/admin/AdminShell";
+import { PanelShell } from "@/components/admin/PanelShell";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,32 +16,22 @@ import { saveCsv } from "@/lib/csv";
 import { formatInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/audit")({
-  head: () => ({
-    meta: [
-      { title: "Audit Log — Pacific Health Group Support Console" },
-      { name: "description", content: "Immutable record of staff and system actions across the platform." },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
-  component: AuditPageRoute,
+  // Moved into the Admin hub. The old address still works so existing links,
+  // notifications and the staff manuals keep resolving.
+  beforeLoad: () => {
+    throw redirect({ to: "/admin", search: { tab: "audit" } });
+  },
 });
 
 type AuditRow = Database["public"]["Tables"]["audit_logs"]["Row"];
 
-function AuditPageRoute() {
-  return (
-    <RequirePermission permission="audit.view" title="Audit log">
-      <AuditPage />
-    </RequirePermission>
-  );
-}
 
 const PAGE_SIZE = 50;
 
 /** Strip characters that would break a PostgREST `or=` expression. */
 const sanitize = (term: string) => term.trim().replace(/[%,()*]/g, "").slice(0, 80);
 
-function AuditPage() {
+export function AuditPanel() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const debouncedSearch = useDebounced(search, 300);
@@ -89,7 +78,7 @@ function AuditPage() {
   });
 
   return (
-    <AdminShell
+    <PanelShell
       title="Audit log"
       description="Append-only history of configuration and record changes. Entries cannot be edited or deleted."
       actions={
@@ -144,6 +133,6 @@ function AuditPage() {
         </table>
       </div>
       <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} noun="entries" busy={logs.isFetching} />
-    </AdminShell>
+    </PanelShell>
   );
 }

@@ -116,7 +116,7 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
     alt: "Console layout showing the branded sidebar with grouped navigation, a page header with title and description, an alert bell and the main content area.",
     markers: [
       "Your organization's logo or name. Selecting it returns you to the console home.",
-      "Navigation groups: Workspace, Content & AI, and Configuration. You only see items your role allows.",
+      "Navigation groups: Workspace, Content & AI, and Admin. You only see items your role allows.",
       "Red count badges: Inbox shows conversations waiting for a response, Notifications shows your unread alerts.",
       "Page title and one-line description of the screen you are on.",
       "Alert bell — opens Notifications from anywhere.",

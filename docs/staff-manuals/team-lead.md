@@ -196,7 +196,7 @@ _Name every part of the screen you are looking at._
 > Console layout showing the branded sidebar with grouped navigation, a page header with title and description, an alert bell and the main content area.
 >
 > 1. Your organization's logo or name. Selecting it returns you to the console home.
-> 2. Navigation groups: Workspace, Content & AI, and Configuration. You only see items your role allows.
+> 2. Navigation groups: Workspace, Content & AI, and Admin. You only see items your role allows.
 > 3. Red count badges: Inbox shows conversations waiting for a response, Notifications shows your unread alerts.
 > 4. Page title and one-line description of the screen you are on.
 > 5. Alert bell — opens Notifications from anywhere.
@@ -220,7 +220,7 @@ _Name every part of the screen you are looking at._
 
 _Know where to go before you start clicking._
 
-Navigation is grouped into Workspace (day-to-day work), Content & AI (what the assistant knows and how well the team performs) and Configuration (how the platform behaves). You only see items your role allows — the list below marks who sees what.
+Navigation is grouped into Workspace (day-to-day work), Content & AI (what the assistant knows and how well the team performs) and Admin (one page of tabs that controls how the platform behaves). You only see items your role allows — the list below marks who sees what.
 
 *Every navigation item in CareConnect*
 
@@ -236,14 +236,14 @@ Navigation is grouped into Workspace (day-to-day work), Content & AI (what the a
 | AI console | Test the assistant's answer to a question before visitors see it | Manager and above |
 | Quality & QA | Satisfaction scores, transcript review and agent scorecards | Team Lead and above |
 | Reports | Operational reporting and CSV exports | Team Lead and above |
-| Websites | Widget branding, copy, tabs and the embed snippet | Administrator and above |
-| Departments | Departments, business hours and holiday closures | Administrator and above |
-| Routing | Rules that send escalations to a department, plus reply templates | Administrator and above |
-| Staff | Add teammates, set roles, departments and capacity | Team Lead can view; Administrator can change |
-| Organizations | Tenants, brands and their websites | Super Admin and platform administrators |
-| Organization settings | Contact details, chatbot guardrails, compliance notices | Administrator and above |
-| Security | Organization MFA policy and your authenticator | Super Admin and platform administrators |
-| Audit log | Append-only history of who changed what | Administrator and above |
+| Admin → Websites | Widget branding, copy, tabs and the embed snippet | Administrator and above |
+| Admin → Departments | Departments, business hours and holiday closures | Administrator and above |
+| Admin → Routing | Rules that send escalations to a department, plus reply templates | Administrator and above |
+| Admin → Staff | Add teammates, set roles, departments and capacity | Team Lead can view; Administrator can change |
+| Admin → Organizations | Tenants, brands and their websites | Super Admin and platform administrators |
+| Admin → Organization settings | Contact details, chatbot guardrails, compliance notices | Administrator and above |
+| Admin → Security | Organization MFA policy and your authenticator | Super Admin and platform administrators |
+| Admin → Audit log | Append-only history of who changed what | Administrator and above |
 | Help & Training | This training center: guides, checklists and knowledge checks | Everyone |
 
 > **Note — Missing an item you were told about?**

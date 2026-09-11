@@ -2,16 +2,13 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import {
-  Activity,
   Bell,
   Bot,
-  Building2,
   ChevronsLeft,
   ChevronsRight,
   ClipboardList,
   Contact,
   BarChart3,
-  Globe,
   Inbox,
   LayoutDashboard,
   LibraryBig,
@@ -19,14 +16,10 @@ import {
   Menu,
   Moon,
   Sun,
-  Settings,
-  ShieldCheck,
-  Shuffle,
+  Settings2,
   Star,
   UserCog,
   GraduationCap,
-  Users,
-  Users2,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,26 +66,26 @@ const navGroups = [
     ],
   },
   {
-    label: "Configuration",
+    // Every setup screen lives in the Admin hub as a tab: "Admin → Websites",
+    // "Admin → Staff", and so on.
+    label: "Admin",
     items: [
-      { to: "/websites", label: "Websites", icon: Globe, perms: ["website.manage"] },
-      { to: "/departments", label: "Departments", icon: Users2, perms: ["department.manage"] },
-      { to: "/routing", label: "Routing", icon: Shuffle, perms: ["routing.manage"] },
-      { to: "/staff", label: "Staff", icon: Users, perms: ["staff.view"] },
       {
-        to: "/organizations",
-        label: "Organizations",
-        icon: Building2,
-        perms: ["organization.manage", "platform.tenant_admin"],
+        to: "/admin",
+        label: "Admin",
+        icon: Settings2,
+        perms: [
+          "website.manage",
+          "department.manage",
+          "routing.manage",
+          "staff.view",
+          "organization.manage",
+          "platform.tenant_admin",
+          "settings.manage",
+          "security.manage",
+          "audit.view",
+        ],
       },
-      {
-        to: "/settings",
-        label: "Organization settings",
-        icon: Settings,
-        perms: ["settings.manage"],
-      },
-      { to: "/security", label: "Security", icon: ShieldCheck, perms: ["security.manage"] },
-      { to: "/audit", label: "Audit log", icon: Activity, perms: ["audit.view"] },
     ],
   },
 ] as const satisfies readonly {
@@ -239,6 +232,7 @@ export function AdminShell({
                       className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
                         collapsed ? "justify-center" : ""
                       }`}
+                      activeOptions={{ includeSearch: false }}
                       activeProps={{
                         className:
                           "gradient-brand text-sidebar-primary-foreground font-semibold shadow-glow hover:text-sidebar-primary-foreground",

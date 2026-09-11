@@ -1,11 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { RequirePermission } from "@/components/admin/RequirePermission";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
 import { useSessionContext } from "@/hooks/use-session-context";
-import { AdminShell } from "@/components/admin/AdminShell";
+import { PanelShell } from "@/components/admin/PanelShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,25 +13,15 @@ import { useServerFn } from "@tanstack/react-start";
 import { cronHealthFn } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/settings")({
-  head: () => ({
-    meta: [
-      { title: "Settings — Pacific Health Group Support Console" },
-      { name: "description", content: "Organization contact details, AI guardrails and compliance notices." },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
-  component: SettingsPageRoute,
+  // Moved into the Admin hub. The old address still works so existing links,
+  // notifications and the staff manuals keep resolving.
+  beforeLoad: () => {
+    throw redirect({ to: "/admin", search: { tab: "settings" } });
+  },
 });
 
-function SettingsPageRoute() {
-  return (
-    <RequirePermission permission="settings.manage" title="Settings">
-      <SettingsPage />
-    </RequirePermission>
-  );
-}
 
-function SettingsPage() {
+export function SettingsPanel() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
   const orgId = session.data?.organizationId ?? null;
@@ -167,7 +156,7 @@ function SettingsPage() {
   });
 
   return (
-    <AdminShell
+    <PanelShell
       title="Settings"
       description="Organization details, chatbot guardrails, and the compliance language shown to visitors."
     >
@@ -288,7 +277,7 @@ function SettingsPage() {
       </form>
 
       <ScheduledJobsCard />
-    </AdminShell>
+    </PanelShell>
   );
 }
 
