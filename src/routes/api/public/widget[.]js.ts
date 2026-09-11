@@ -19,10 +19,12 @@ export const Route = createFileRoute("/api/public/widget.js")({
 
   var host = encodeURIComponent(window.location.origin);
   var page = encodeURIComponent(window.location.pathname);
+  var originProof = '';
   function mount() {
   var frame = document.createElement('iframe');
   frame.title = 'Customer support chat';
   frame.src = widgetOrigin + '/widget?w=' + encodeURIComponent(id) + '&h=' + host + '&p=' + page +
+    '&op=' + encodeURIComponent(originProof) +
     '&r=' + encodeURIComponent(document.referrer || '') + '&q=' + encodeURIComponent(window.location.search || '');
   frame.setAttribute('allowtransparency', 'true');
   frame.style.cssText = 'position:fixed;bottom:16px;right:16px;width:88px;height:88px;border:0;z-index:2147483000;background:transparent;color-scheme:normal;transition:width .18s ease,height .18s ease;';
