@@ -1,5 +1,5 @@
 /**
- * Configuration chapters: the screens that change how CareConnect behaves for
+ * Admin chapters: the screens that change how CareConnect behaves for
  * everyone else. Every chapter is gated on the permission that actually guards
  * the screen, so these never appear in a guide whose role cannot open them.
  */
@@ -24,7 +24,7 @@ export const websitesChapter: Chapter = {
         {
           kind: "steps",
           items: [
-            "Open Websites from the sidebar.",
+            "Open Admin from the sidebar, then the Websites tab.",
             "Select a website to edit it, or create a new one for a new brand or domain.",
             "Work through the setting groups: Basics, Home, Chat and Navigation.",
             "Watch the live preview beside the settings — it renders exactly what a visitor will see.",
@@ -110,7 +110,7 @@ export const departmentsChapter: Chapter = {
         {
           kind: "steps",
           items: [
-            "Open Departments from the sidebar.",
+            "Open Admin from the sidebar, then the Departments & hours tab.",
             "Create a department with a name staff will recognise on a transfer menu.",
             "Set its business hours per weekday, in the organization's timezone.",
             "Add holiday closures for dates the team is unavailable.",
@@ -161,7 +161,7 @@ export const routingChapter: Chapter = {
         {
           kind: "steps",
           items: [
-            "Open Routing from the sidebar.",
+            "Open Admin from the sidebar, then the Routing & templates tab.",
             "Create a rule that matches on the website and the conversation's topic or intent.",
             "Choose the destination department.",
             "Set the order — rules are evaluated in order, and the first match wins.",
@@ -388,7 +388,7 @@ export const securityChapter: Chapter = {
         {
           kind: "steps",
           items: [
-            "Open Security from the sidebar.",
+            "Open Admin from the sidebar, then the Security tab.",
             "Choose the policy: optional, required for administrators, or required for everyone.",
             "Save. Affected staff are asked to enrol the next time they sign in.",
             "Manage your own enrolled authenticator from the same screen.",
@@ -420,7 +420,7 @@ export const auditChapter: Chapter = {
         {
           kind: "steps",
           items: [
-            "Open Audit log from the sidebar.",
+            "Open Admin from the sidebar, then the Audit log tab.",
             "Filter by action, actor or date range.",
             "Read the entry: who acted, what changed, and the values before and after.",
             "Page through results with Prev and Next.",
