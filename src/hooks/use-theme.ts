@@ -3,7 +3,9 @@ import { useCallback, useEffect, useState } from "react";
 export type Theme = "light" | "dark";
 export type ThemePreference = Theme | "system";
 
-const STORAGE_KEY = "phg-theme";
+// Bumped to v2 so everyone starts on the light theme by default; the toggle
+// still persists an explicit choice.
+const STORAGE_KEY = "phg-theme-v2";
 
 function systemTheme(): Theme {
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
