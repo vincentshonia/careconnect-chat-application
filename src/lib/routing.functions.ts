@@ -60,17 +60,17 @@ export const transferConversationFn = createServerFn({ method: "POST" })
     const { notifyStaff } = await import("@/lib/notifications.server");
     const db = admin();
 
-    await db
-      .from("conversations")
-      .update({
+    const { transitionConversation } = await import("@/lib/lifecycle.server");
+    await transitionConversation({
+      conversationId: conversation.id,
+      event: "transfer",
+      actorId: context.userId,
+      db,
+      payload: {
         department_id: department.id,
-        assigned_to: null,
-        claimed_at: null,
-        status: "waiting",
-        escalation_requested: true,
-      })
-      .eq("id", conversation.id);
-
+        detail: data.note ?? `Transferred to ${department.name}`,
+      },
+    });
 
     await db.from("messages").insert({
       conversation_id: conversation.id,
@@ -81,15 +81,6 @@ export const transferConversationFn = createServerFn({ method: "POST" })
       body: `${actorName} transferred this conversation to ${department.name}${data.note ? ` — ${data.note}` : ""}`,
     });
 
-    await db.from("conversation_events").insert({
-      conversation_id: conversation.id,
-      organization_id: conversation.organization_id,
-      actor_id: context.userId,
-      event_type: "transferred",
-      detail: data.note ?? `Transferred to ${department.name}`,
-      previous_value: conversation.department_id,
-      new_value: department.id,
-    });
 
     // Only auto-assign when the destination department round-robins; a shared
     // queue leaves the chat waiting for the first eligible agent to claim.

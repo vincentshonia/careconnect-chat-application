@@ -132,27 +132,19 @@ export async function handoffToHumans(input: {
     ? await db.from("departments").select("id, name").eq("id", departmentId).maybeSingle()
     : { data: null as { id: string; name: string } | null };
 
-  await db
-    .from("conversations")
-    .update({
+  // Every status/ownership write goes through the one lifecycle routine, which
+  // leaves a chat somebody already owns untouched.
+  const { transitionConversation } = await import("./lifecycle.server");
+  await transitionConversation({
+    conversationId: input.conversationId,
+    event: "handoff",
+    actorId: input.actorId ?? null,
+    db,
+    payload: {
       department_id: departmentId,
-      status: "waiting",
-      is_ai_only: false,
-      escalation_requested: true,
-      escalation_reason: input.reason,
-      requested_agent_at: new Date().toISOString(),
-      first_human_requested_at: existing?.first_human_requested_at ?? new Date().toISOString(),
-    })
-    .eq("id", input.conversationId)
-    .is("assigned_to", null); // never disturb a chat an agent already owns
-
-  await db.from("conversation_events").insert({
-    conversation_id: input.conversationId,
-    organization_id: input.organizationId,
-    actor_id: input.actorId ?? null,
-    event_type: input.eventType ?? "escalation_requested",
-    detail: input.reason,
-    new_value: departmentId,
+      detail: input.reason,
+      event_type: input.eventType ?? "escalation_requested",
+    },
   });
 
   const routingMode = input.forceSharedQueue
@@ -169,10 +161,6 @@ export async function handoffToHumans(input: {
       : null;
 
   if (assigned) {
-    await db
-      .from("conversations")
-      .update({ claimed_at: new Date().toISOString() })
-      .eq("id", input.conversationId);
     await db.from("conversation_events").insert({
       conversation_id: input.conversationId,
       organization_id: input.organizationId,
@@ -181,6 +169,7 @@ export async function handoffToHumans(input: {
       new_value: assigned.userId,
     });
   }
+
 
   const who = input.visitorLabel?.trim() || "A visitor";
   const where = department?.name ? ` — ${department.name}` : "";
