@@ -21,6 +21,8 @@ import {
 import { useSessionContext } from "@/hooks/use-session-context";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { QueryError } from "@/components/admin/QueryError";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
