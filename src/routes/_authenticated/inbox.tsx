@@ -938,7 +938,15 @@ function InboxPage() {
               </div>
 
               <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+                {messagesQuery.error ? (
+                  <QueryError
+                    error={messagesQuery.error}
+                    onRetry={() => messagesQuery.refetch()}
+                    busy={messagesQuery.isFetching}
+                  />
+                ) : null}
                 {(messagesQuery.data ?? []).map((m) => (
+
                   <div
                     key={m.id}
                     className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
