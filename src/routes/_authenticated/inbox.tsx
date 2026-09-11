@@ -21,6 +21,8 @@ import {
 import { useSessionContext } from "@/hooks/use-session-context";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { QueryError } from "@/components/admin/QueryError";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -138,6 +140,10 @@ function InboxPage() {
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
+  const [noteDraft, setNoteDraft] = useState("");
+  const [resolveOpen, setResolveOpen] = useState(false);
+  const [dispositionId, setDispositionId] = useState("");
+
   const debouncedQuery = useDebounced(query, 300);
   const bottomRef = useRef<HTMLDivElement>(null);
   const replyRef = useRef<HTMLTextAreaElement>(null);
@@ -513,15 +519,66 @@ function InboxPage() {
     onError: (e) => fail(e, "Could not close this conversation"),
   });
 
+  /** The outcomes an agent may record when resolving, configured per tenant. */
+  const dispositionsQuery = useQuery({
+    queryKey: ["conversation-dispositions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("conversation_dispositions")
+        .select("id, label")
+        .eq("is_active", true)
+        .order("sort_order")
+        .order("label");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   // Resolving credits the outcome to this agent for reporting; closing does not.
   const resolveConversation = useMutation({
-    mutationFn: async () => resolveFn({ data: { conversationId: active!.id } }),
+    mutationFn: async (dispositionId: string) =>
+      resolveFn({ data: { conversationId: active!.id, dispositionId } }),
     onSuccess: () => {
       toast.success("Conversation resolved");
+      setResolveOpen(false);
       invalidate();
     },
     onError: (e) => fail(e, "Could not resolve this conversation"),
   });
+
+  /** Staff-only notes about the visitor; never shown in the widget. */
+  const notesQuery = useQuery({
+    queryKey: ["internal-notes", activeId],
+    enabled: Boolean(activeId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("internal_notes")
+        .select("id, body, created_at, author_id")
+        .eq("conversation_id", activeId!)
+        .order("created_at", { ascending: false })
+        .range(0, 49);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const addNote = useMutation({
+    mutationFn: async (body: string) => {
+      const { error } = await supabase.from("internal_notes").insert({
+        conversation_id: active!.id,
+        organization_id: active!.organization_id,
+        author_id: userId!,
+        body,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setNoteDraft("");
+      queryClient.invalidateQueries({ queryKey: ["internal-notes", activeId] });
+    },
+    onError: (e) => fail(e, "Could not save that note"),
+  });
+
 
 
 
@@ -607,7 +664,11 @@ function InboxPage() {
     Boolean(active) &&
     !isClosed &&
     (isOwner || (isSupervisor && Boolean(active!.assigned_to)));
+  // Supervisors can finish an unclaimed conversation without taking it over —
+  // otherwise stray tickets can only be tidied up by claiming them first.
+  const canFinish = Boolean(active) && !isClosed && (isOwner || isSupervisor);
   const readOnly = Boolean(active) && !canReply && !canClaim;
+
 
   const tabs: Array<{ key: Tab; label: string }> = [
     { key: "waiting", label: "Waiting" },
@@ -628,6 +689,13 @@ function InboxPage() {
     return name ? `Assigned to ${name}` : "Assigned to a colleague";
 
   }
+
+  const noteAuthorName = (id: string | null) => {
+    if (!id) return "A team member";
+    if (id === userId) return "You";
+    return (staffQuery.data ?? []).find((s) => s.id === id)?.full_name ?? "A team member";
+  };
+
 
   return (
     <AdminShell
@@ -677,10 +745,18 @@ function InboxPage() {
     >
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)_260px]">
         <aside className="max-h-[70vh] overflow-y-auto rounded-xl border border-border">
-          {conversationsQuery.isLoading ? (
+          {conversationsQuery.error ? (
+            <QueryError
+              className="m-3"
+              error={conversationsQuery.error}
+              onRetry={() => conversationsQuery.refetch()}
+              busy={conversationsQuery.isFetching}
+            />
+          ) : conversationsQuery.isLoading ? (
             <p className="p-4 text-sm text-muted-foreground">Loading conversations…</p>
           ) : conversations.length === 0 ? (
             <p className="p-4 text-sm text-muted-foreground">Nothing in this queue right now.</p>
+
           ) : (
             <ul className="divide-y divide-border">
               {conversations.map((c) => (
@@ -797,15 +873,57 @@ function InboxPage() {
                   ) : null}
 
 
-                  {canReply ? (
+                  {canFinish ? (
                     <>
-                      <Button
-                        size="sm"
-                        onClick={() => resolveConversation.mutate()}
-                        disabled={resolveConversation.isPending}
+                      <Dialog
+                        open={resolveOpen}
+                        onOpenChange={(o) => {
+                          setResolveOpen(o);
+                          if (!o) setDispositionId("");
+                        }}
                       >
-                        Resolve
-                      </Button>
+                        <DialogTrigger asChild>
+                          <Button size="sm">Resolve</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Resolve this conversation</DialogTitle>
+                            <DialogDescription>
+                              Record what happened so reporting shows real outcomes.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-2">
+                            <Label htmlFor="disposition">Outcome</Label>
+                            <select
+                              id="disposition"
+                              value={dispositionId}
+                              onChange={(e) => setDispositionId(e.target.value)}
+                              className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                            >
+                              <option value="">Choose an outcome…</option>
+                              {(dispositionsQuery.data ?? []).map((d) => (
+                                <option key={d.id} value={d.id}>
+                                  {d.label}
+                                </option>
+                              ))}
+                            </select>
+                            {dispositionsQuery.error ? (
+                              <p className="text-xs text-destructive">
+                                Outcomes could not be loaded. Try again in a moment.
+                              </p>
+                            ) : null}
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              size="sm"
+                              disabled={!dispositionId || resolveConversation.isPending}
+                              onClick={() => resolveConversation.mutate(dispositionId)}
+                            >
+                              {resolveConversation.isPending ? "Resolving…" : "Resolve"}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                       <Button
                         size="sm"
                         variant="outline"
@@ -817,11 +935,20 @@ function InboxPage() {
                     </>
                   ) : null}
 
+
                 </div>
               </div>
 
               <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+                {messagesQuery.error ? (
+                  <QueryError
+                    error={messagesQuery.error}
+                    onRetry={() => messagesQuery.refetch()}
+                    busy={messagesQuery.isFetching}
+                  />
+                ) : null}
                 {(messagesQuery.data ?? []).map((m) => (
+
                   <div
                     key={m.id}
                     className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
@@ -966,7 +1093,60 @@ function InboxPage() {
               No contact record captured for this conversation yet.
             </p>
           )}
+
+          {active ? (
+            <div className="mt-6 border-t border-border pt-4">
+              <h2 className="text-sm font-semibold">Internal notes</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Only your team can see these — the visitor never does.
+              </p>
+              <form
+                className="mt-3 space-y-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (noteDraft.trim() && userId) addNote.mutate(noteDraft.trim());
+                }}
+              >
+                <Textarea
+                  value={noteDraft}
+                  onChange={(e) => setNoteDraft(e.target.value)}
+                  placeholder="Add a note for the team…"
+                  rows={2}
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="outline"
+                  disabled={addNote.isPending || !noteDraft.trim()}
+                >
+                  {addNote.isPending ? "Saving…" : "Add note"}
+                </Button>
+              </form>
+              {notesQuery.error ? (
+                <QueryError
+                  className="mt-3"
+                  error={notesQuery.error}
+                  onRetry={() => notesQuery.refetch()}
+                  busy={notesQuery.isFetching}
+                />
+              ) : (notesQuery.data ?? []).length === 0 ? (
+                <p className="mt-3 text-sm text-muted-foreground">No notes yet.</p>
+              ) : (
+                <ul className="mt-3 space-y-3">
+                  {(notesQuery.data ?? []).map((n) => (
+                    <li key={n.id} className="rounded-md border border-border p-2 text-sm">
+                      <p className="text-xs text-muted-foreground">
+                        {noteAuthorName(n.author_id)} · {formatInZone(n.created_at)}
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap">{n.body}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
         </aside>
+
       </div>
     </AdminShell>
   );

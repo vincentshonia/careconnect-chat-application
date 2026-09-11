@@ -66,7 +66,10 @@ function NotificationsPage() {
     },
   });
 
+  // Keyed on the loaded record, not the query object, so a refetch cannot
+  // discard toggles the user has not saved yet.
   useEffect(() => {
+    if (!prefs.isSuccess) return;
     const p = prefs.data;
     const next: Record<string, boolean | number> = {
       sla_first_response_minutes: p?.sla_first_response_minutes ?? 15,
@@ -76,7 +79,9 @@ function NotificationsPage() {
       next[`email_${t.key}`] = (p?.[`email_${t.key}`] as boolean) ?? t.key === "escalations";
     }
     setForm(next);
-  }, [prefs.data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefs.isSuccess, prefs.data?.user_id]);
+
 
   const save = useMutation({
     mutationFn: async () => {

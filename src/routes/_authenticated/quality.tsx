@@ -4,7 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
-import { downloadCsv } from "@/lib/csv";
+import { saveCsv } from "@/lib/csv";
+import { exportCsvFn } from "@/lib/exports.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { QueryError } from "@/components/admin/QueryError";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/badge";
@@ -62,11 +66,13 @@ function QualityPage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
   const [selected, setSelected] = useState<string | null>(null);
-  const [scores, setScores] = useState<Record<string, number>>({
-    accuracy_score: 4,
-    tone_score: 4,
-    compliance_score: 5,
-    resolution_score: 4,
+  // No pre-filled scores: a review must reflect a real judgement on all four
+  // criteria, not whatever the form happened to default to.
+  const [scores, setScores] = useState<Record<string, number | null>>({
+    accuracy_score: null,
+    tone_score: null,
+    compliance_score: null,
+    resolution_score: null,
   });
   const [notes, setNotes] = useState("");
   const [flagged, setFlagged] = useState(false);
@@ -120,6 +126,40 @@ function QualityPage() {
     },
   });
 
+  /**
+   * Which of the conversations on screen already have a review — asked of the
+   * server for exactly these ids, so the badge does not depend on whichever
+   * page of reviews happens to be loaded.
+   */
+  const reviewedQuery = useQuery({
+    queryKey: ["quality-reviewed", convPage],
+    enabled: (conversations.data?.rows ?? []).length > 0,
+    queryFn: async () => {
+      const ids = (conversations.data?.rows ?? []).map((c) => c.id);
+      const { data, error } = await supabase
+        .from("qa_reviews")
+        .select("conversation_id")
+        .in("conversation_id", ids);
+      if (error) throw error;
+      return (data ?? []).map((r) => r.conversation_id as string);
+    },
+  });
+
+  /** The conversation being reviewed, read directly rather than from the page. */
+  const selectedConversation = useQuery({
+    queryKey: ["quality-conversation", selected],
+    enabled: Boolean(selected),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("conversations")
+        .select("id, organization_id, assigned_to")
+        .eq("id", selected!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const transcript = useQuery({
     queryKey: ["quality-transcript", selected],
     enabled: Boolean(selected),
@@ -138,17 +178,21 @@ function QualityPage() {
     mutationFn: async () => {
       const orgId = session.data?.organizationId;
       if (!orgId || !selected) throw new Error("Pick a conversation to review first.");
-      const conversation = (conversations.data?.rows ?? []).find((c) => c.id === selected);
+      const conversation = selectedConversation.data;
+      if (!conversation) throw new Error("Still loading this conversation — try again in a moment.");
+      if (CRITERIA.some((c) => scores[c.key] == null)) {
+        throw new Error("Score all four criteria before saving.");
+      }
       const { error } = await supabase.from("qa_reviews").insert({
-        organization_id: orgId,
+        organization_id: conversation.organization_id ?? orgId,
         conversation_id: selected,
         reviewer_id: session.data?.userId ?? null,
         reviewer_name: session.data?.profile?.full_name ?? session.data?.email ?? null,
-        agent_id: conversation?.assigned_to ?? null,
-        accuracy_score: scores.accuracy_score,
-        tone_score: scores.tone_score,
-        compliance_score: scores.compliance_score,
-        resolution_score: scores.resolution_score,
+        agent_id: conversation.assigned_to ?? null,
+        accuracy_score: scores.accuracy_score!,
+        tone_score: scores.tone_score!,
+        compliance_score: scores.compliance_score!,
+        resolution_score: scores.resolution_score!,
         coaching_notes: notes || null,
         flagged,
       });
@@ -164,7 +208,15 @@ function QualityPage() {
       setStatus("Review saved.");
       setNotes("");
       setFlagged(false);
+      setScores({
+        accuracy_score: null,
+        tone_score: null,
+        compliance_score: null,
+        resolution_score: null,
+      });
       queryClient.invalidateQueries({ queryKey: ["qa-reviews"] });
+      queryClient.invalidateQueries({ queryKey: ["quality-reviewed"] });
+      queryClient.invalidateQueries({ queryKey: ["quality-summary"] });
     },
     onError: (e) => setStatus(e instanceof Error ? e.message : "Could not save review"),
   });
@@ -178,35 +230,30 @@ function QualityPage() {
   const flaggedTotal = Number(stats['flagged_total'] ?? 0);
   const reviewRows = reviews.data?.rows ?? [];
   const conversationRows = conversations.data?.rows ?? [];
-  const reviewedIds = new Set(reviewRows.map((r) => r.conversation_id));
+  const reviewedIds = new Set(reviewedQuery.data ?? []);
+  const scoresComplete = CRITERIA.every((c) => scores[c.key] != null);
+
+  const runExport = useServerFn(exportCsvFn);
+  const exportCsv = useMutation({
+    mutationFn: async () => runExport({ data: { dataset: "quality" } }),
+    onSuccess: (result) => {
+      if (!result.rows) {
+        toast.info("There are no reviews to export yet.");
+        return;
+      }
+      saveCsv("qa-reviews", result.csv);
+      toast.success(`Exported ${result.rows.toLocaleString()} reviews`);
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not build that export"),
+  });
 
   return (
     <AdminShell
       title="Quality & QA"
       description="Visitor satisfaction, transcript review, and agent scorecards for accuracy, tone and compliance."
       actions={
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            downloadCsv(
-              "qa-reviews",
-              reviewRows.map((r) => ({
-                conversation_id: r.conversation_id,
-                reviewer: r.reviewer_name ?? "",
-                accuracy: r.accuracy_score,
-                tone: r.tone_score,
-                compliance: r.compliance_score,
-                resolution: r.resolution_score,
-                overall: r.overall_score ?? "",
-                flagged: r.flagged,
-                notes: r.coaching_notes ?? "",
-                created_at: r.created_at,
-              })),
-            )
-          }
-        >
-          Export CSV
+        <Button variant="outline" size="sm" onClick={() => exportCsv.mutate()} disabled={exportCsv.isPending}>
+          {exportCsv.isPending ? "Preparing…" : "Export CSV"}
         </Button>
       }
     >
@@ -229,6 +276,14 @@ function QualityPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[320px_1fr]">
         <section className="rounded-xl border border-border">
           <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">Recent conversations</h2>
+          {conversations.error ? (
+            <QueryError
+              className="m-3"
+              error={conversations.error}
+              onRetry={() => conversations.refetch()}
+              busy={conversations.isFetching}
+            />
+          ) : null}
           <ul className="max-h-[520px] divide-y divide-border overflow-y-auto">
             {conversationRows.map((c) => (
               <li key={c.id}>
@@ -343,16 +398,27 @@ function QualityPage() {
                   setStatus(null);
                   saveReview.mutate();
                 }}
-                disabled={!selected || saveReview.isPending}
+                disabled={!selected || !scoresComplete || saveReview.isPending}
               >
                 {saveReview.isPending ? "Saving…" : "Save review"}
               </Button>
+              {!scoresComplete ? (
+                <span className="text-sm text-muted-foreground">Score all four criteria to save.</span>
+              ) : null}
               {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
             </div>
           </div>
 
           <div className="rounded-xl border border-border">
             <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">Recent QA reviews</h2>
+            {reviews.error ? (
+              <QueryError
+                className="m-3"
+                error={reviews.error}
+                onRetry={() => reviews.refetch()}
+                busy={reviews.isFetching}
+              />
+            ) : null}
             <ul className="divide-y divide-border">
               {reviewRows.map((r) => (
                 <li key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">

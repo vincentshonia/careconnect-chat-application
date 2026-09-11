@@ -317,6 +317,44 @@ export type Database = {
           },
         ]
       }
+      conversation_dispositions: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          organization_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          organization_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          organization_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_dispositions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_events: {
         Row: {
           actor_id: string | null
@@ -419,6 +457,7 @@ export type Database = {
           contact_id: string | null
           created_at: string
           department_id: string | null
+          disposition_id: string | null
           escalation_reason: string | null
           escalation_requested: boolean
           first_agent_response_at: string | null
@@ -459,6 +498,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           department_id?: string | null
+          disposition_id?: string | null
           escalation_reason?: string | null
           escalation_requested?: boolean
           first_agent_response_at?: string | null
@@ -499,6 +539,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           department_id?: string | null
+          disposition_id?: string | null
           escalation_reason?: string | null
           escalation_requested?: boolean
           first_agent_response_at?: string | null
@@ -543,6 +584,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_disposition_id_fkey"
+            columns: ["disposition_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_dispositions"
             referencedColumns: ["id"]
           },
           {
@@ -2746,6 +2794,7 @@ export type Database = {
           contact_id: string | null
           created_at: string
           department_id: string | null
+          disposition_id: string | null
           escalation_reason: string | null
           escalation_requested: boolean
           first_agent_response_at: string | null

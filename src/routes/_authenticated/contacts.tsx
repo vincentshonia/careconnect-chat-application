@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Pager } from "@/components/admin/Pager";
+import { QueryError } from "@/components/admin/QueryError";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,6 +112,8 @@ function ContactsPage() {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["contact-record", activeId] });
     },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not save that change"),
   });
 
   const history = useQuery({
@@ -187,7 +190,14 @@ function ContactsPage() {
       <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="rounded-xl border border-border">
           <div className="max-h-[64vh] overflow-y-auto">
-            {listQuery.isLoading ? (
+            {listQuery.error ? (
+              <QueryError
+                className="m-3"
+                error={listQuery.error}
+                onRetry={() => listQuery.refetch()}
+                busy={listQuery.isFetching}
+              />
+            ) : listQuery.isLoading ? (
               <p className="p-4 text-sm text-muted-foreground">Loading…</p>
             ) : contacts.length === 0 ? (
               <p className="p-4 text-sm text-muted-foreground">No contacts match.</p>

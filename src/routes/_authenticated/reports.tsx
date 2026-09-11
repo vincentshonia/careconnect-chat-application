@@ -581,7 +581,9 @@ function OverviewTab({ filters, drill, drillLive }: TabProps) {
     csat: number | null;
     csat_responses: number;
     transfer_events: number;
+    outcomes: Array<{ label: string; conversations: number }>;
   }>("overview", filters);
+
   const volume = useReport<{ by_day: Row[]; by_hour: Row[]; by_weekday: Row[]; peak_day: string | null; peak_day_count: number }>(
     "volume",
     filters,
@@ -704,6 +706,23 @@ function OverviewTab({ filters, drill, drillLive }: TabProps) {
           </div>
         </Panel>
       </div>
+
+      <Panel
+        title="Outcomes"
+        description="What agents recorded when they resolved a conversation. 'Not recorded' covers chats closed before an outcome was required."
+      >
+        {(q.data?.outcomes ?? []).length === 0 ? (
+          <p className="text-sm text-muted-foreground">No completed conversations in this range.</p>
+        ) : (
+          <BarList
+            rows={(q.data?.outcomes ?? []).map((o) => ({
+              label: o.label,
+              value: Number(o.conversations ?? 0),
+            }))}
+          />
+        )}
+      </Panel>
+
     </div>
   );
 }
@@ -869,6 +888,8 @@ function TicketsTab({ filters, search, update }: TabProps) {
               { key: "contact_name", label: "Visitor", render: (r) => String(r['contact_name'] ?? "Anonymous") },
               { key: "department", label: "Department", sortable: true, render: (r) => String(r['department_name'] ?? "—") },
               { key: "assigned", label: "Agent", sortable: true, render: (r) => String(r['assigned_name'] ?? "Unassigned") },
+              { key: "disposition", label: "Outcome", sortable: true, render: (r) => String(r['disposition'] ?? "—") },
+
               {
                 key: "status",
                 label: "Status",

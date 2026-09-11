@@ -17,7 +17,7 @@ import { toCsv } from "@/lib/csv";
 const CHUNK = 1_000;
 export const EXPORT_ROW_CAP = 50_000;
 
-export const EXPORT_DATASETS = ["contacts", "intake", "audit", "staff"] as const;
+export const EXPORT_DATASETS = ["contacts", "intake", "audit", "staff", "quality"] as const;
 export type ExportDataset = (typeof EXPORT_DATASETS)[number];
 
 const inputSchema = z.object({
@@ -36,6 +36,8 @@ const SELECTS: Record<ExportDataset, string> = {
     "reference, created_at, request_type, stage, priority, full_name, email, phone, county, zip_code, health_plan, service_interest, preferred_language, source, due_date, submitted_at, closed_at",
   audit: "created_at, actor_name, action, record_type, record_id, ip_address",
   staff: "full_name, email, title, phone, presence, status, max_concurrent_chats, created_at",
+  quality:
+    "created_at, conversation_id, reviewer_name, accuracy_score, tone_score, compliance_score, resolution_score, overall_score, flagged, coaching_notes",
 };
 
 const ORDER: Record<ExportDataset, { column: string; ascending: boolean }> = {
@@ -43,6 +45,7 @@ const ORDER: Record<ExportDataset, { column: string; ascending: boolean }> = {
   intake: { column: "created_at", ascending: false },
   audit: { column: "created_at", ascending: false },
   staff: { column: "full_name", ascending: true },
+  quality: { column: "created_at", ascending: false },
 };
 
 const TABLES: Record<ExportDataset, string> = {
@@ -50,6 +53,7 @@ const TABLES: Record<ExportDataset, string> = {
   intake: "intake_requests",
   audit: "audit_logs",
   staff: "profiles",
+  quality: "qa_reviews",
 };
 
 const PERMISSION: Record<ExportDataset, string> = {
@@ -57,6 +61,7 @@ const PERMISSION: Record<ExportDataset, string> = {
   intake: "workflow.view_assigned",
   audit: "audit.view",
   staff: "staff.view",
+  quality: "reports.team",
 };
 
 /** Escape a value for a PostgREST `or=` search expression. */
@@ -77,6 +82,8 @@ function applyFilters(
       );
     } else if (dataset === "intake") {
       query.or(`full_name.ilike.%${term}%,reference.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`);
+    } else if (dataset === "quality") {
+      query.or(`reviewer_name.ilike.%${term}%,coaching_notes.ilike.%${term}%`);
     } else if (dataset === "audit") {
       query.or(`action.ilike.%${term}%,actor_name.ilike.%${term}%,record_type.ilike.%${term}%`);
     } else {

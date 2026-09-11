@@ -10,6 +10,8 @@ import { logAudit } from "@/lib/audit";
 import { createStaffFn, setStaffAccessFn } from "@/lib/staff.functions";
 import { setUserRoleFn } from "@/lib/rbac.functions";
 import { ROLE_LABEL, roleTransitionError, type OrgRole } from "@/lib/permissions";
+import { QueryError } from "@/components/admin/QueryError";
+import { toast } from "sonner";
 import { InvitationsCard } from "@/components/admin/InvitationsCard";
 import type { Database } from "@/integrations/supabase/types";
 import { PanelShell } from "@/components/admin/PanelShell";
@@ -134,6 +136,7 @@ export function StaffPanel() {
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) =>
       changeRole({ data: { userId, role: role as OrgRole } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not change that role"),
   });
 
   const updateProfile = useMutation({
@@ -149,6 +152,7 @@ export function StaffPanel() {
       await logAudit({ action: "staff_profile.updated", recordType: "profiles", recordId: id, newValue: patch as Record<string, unknown> });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save that profile"),
   });
 
   const toggleDepartment = useMutation({
@@ -176,6 +180,8 @@ export function StaffPanel() {
       await logAudit({ action: "department_member.added", recordType: "department_members", recordId: userId, newValue: { departmentId } });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not update that department"),
   });
 
   const changeAccess = useServerFn(setStaffAccessFn);
@@ -183,6 +189,7 @@ export function StaffPanel() {
     mutationFn: async (input: { userId: string; action: "disable" | "enable" | "remove" }) =>
       changeAccess({ data: input }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not change that access"),
   });
 
   const rows = (staffQuery.data?.rows ?? []) as StaffRow[];
@@ -367,7 +374,13 @@ export function StaffPanel() {
 
       {can("staff.create") ? <InvitationsCard callerRank={callerRank} /> : null}
 
-      {staffQuery.isLoading ? (
+      {staffQuery.error ? (
+        <QueryError
+          error={staffQuery.error}
+          onRetry={() => staffQuery.refetch()}
+          busy={staffQuery.isFetching}
+        />
+      ) : staffQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">Loading team…</p>
       ) : (
         <div className="space-y-3">

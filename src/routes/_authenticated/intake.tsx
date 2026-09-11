@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { useDebounced } from "@/hooks/use-debounced";
 import { Pager } from "@/components/admin/Pager";
+import { QueryError } from "@/components/admin/QueryError";
 import { exportCsvFn } from "@/lib/exports.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
@@ -207,6 +208,8 @@ function IntakePage() {
       }
     },
     onSuccess: invalidateLists,
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not save that change"),
   });
 
   const addNote = useMutation({
@@ -225,6 +228,7 @@ function IntakePage() {
       setNote("");
       queryClient.invalidateQueries({ queryKey: ["intake-events"] });
     },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save that note"),
   });
 
   // Exports are generated server-side with the same filters and permissions.
@@ -337,7 +341,17 @@ function IntakePage() {
                   </td>
                 </tr>
               ))}
-              {items.length === 0 && !listQuery.isLoading ? (
+              {listQuery.error ? (
+                <tr>
+                  <td className="p-3" colSpan={5}>
+                    <QueryError
+                      error={listQuery.error}
+                      onRetry={() => listQuery.refetch()}
+                      busy={listQuery.isFetching}
+                    />
+                  </td>
+                </tr>
+              ) : items.length === 0 && !listQuery.isLoading ? (
                 <tr>
                   <td className="px-4 py-6 text-muted-foreground" colSpan={5}>
                     No requests match these filters.
