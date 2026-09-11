@@ -5,6 +5,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { adminStatusFn } from "@/lib/admin.functions";
+import { LaunchReadinessCard } from "@/components/admin/LaunchReadinessCard";
 import { WebsitesPanel } from "./websites";
 import { DepartmentsPanel } from "./departments";
 import { RoutingPanel } from "./routing";
@@ -33,9 +34,19 @@ const TABS = [
     id: "settings",
     label: "Organization settings",
     perms: ["settings.manage"],
-    render: () => <SettingsPanel />,
+    render: () => (
+      <>
+        <LaunchReadinessCard />
+        <SettingsPanel />
+      </>
+    ),
   },
-  { id: "security", label: "Security", perms: ["security.manage"], render: () => <SecurityPanel /> },
+  {
+    id: "security",
+    label: "Security",
+    perms: ["security.manage"],
+    render: () => <SecurityPanel />,
+  },
   { id: "audit", label: "Audit log", perms: ["audit.view"], render: () => <AuditPanel /> },
   {
     id: "organizations",
@@ -63,7 +74,7 @@ export const ADMIN_PERMISSIONS = [
 
 export const Route = createFileRoute("/_authenticated/admin")({
   validateSearch: (search: Record<string, unknown>): { tab?: AdminTab } => {
-    const tab = typeof search['tab'] === "string" ? search['tab'] : undefined;
+    const tab = typeof search["tab"] === "string" ? search["tab"] : undefined;
     return tab && TAB_IDS.includes(tab) ? { tab: tab as AdminTab } : {};
   },
   head: () => ({
@@ -109,9 +120,7 @@ function AdminHub() {
 
       <Tabs
         value={active}
-        onValueChange={(tab) =>
-          navigate({ search: { tab: tab as AdminTab }, replace: true })
-        }
+        onValueChange={(tab) => navigate({ search: { tab: tab as AdminTab }, replace: true })}
         className="mt-4"
       >
         <div className="-mx-1 overflow-x-auto px-1 pb-1">
@@ -147,7 +156,9 @@ function AdminStatusStrip({ canRead }: { canRead: boolean }) {
 
   const data = status.data;
   const jobs = data?.jobs ?? [];
-  const jobsBad = jobs.some((j) => j.timedOut || (j.statusCode ?? 0) >= 300 || j.statusCode === null);
+  const jobsBad = jobs.some(
+    (j) => j.timedOut || (j.statusCode ?? 0) >= 300 || j.statusCode === null,
+  );
 
   const items: { label: string; value: string; tone: "ok" | "warn"; tab: AdminTab }[] = data
     ? [
@@ -178,7 +189,9 @@ function AdminStatusStrip({ canRead }: { canRead: boolean }) {
         {
           label: "Scheduled jobs",
           value: jobs.length
-            ? jobs.map((j) => `${j.jobName}: ${j.timedOut ? "timeout" : (j.statusCode ?? "—")}`).join(" · ")
+            ? jobs
+                .map((j) => `${j.jobName}: ${j.timedOut ? "timeout" : (j.statusCode ?? "—")}`)
+                .join(" · ")
             : "No runs yet",
           tone: jobs.length && !jobsBad ? "ok" : "warn",
           tab: "settings",

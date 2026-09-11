@@ -23,9 +23,15 @@ describe("queue predicate", () => {
   });
 
   it("queues only unassigned chats where a person was requested", () => {
-    expect(isQueued({ escalation_requested: true, assigned_to: null, status: "waiting" })).toBe(true);
-    expect(isQueued({ escalation_requested: true, assigned_to: "u1", status: "waiting" })).toBe(false);
-    expect(isQueued({ escalation_requested: false, assigned_to: null, status: "waiting" })).toBe(false);
+    expect(isQueued({ escalation_requested: true, assigned_to: null, status: "waiting" })).toBe(
+      true,
+    );
+    expect(isQueued({ escalation_requested: true, assigned_to: "u1", status: "waiting" })).toBe(
+      false,
+    );
+    expect(isQueued({ escalation_requested: false, assigned_to: null, status: "waiting" })).toBe(
+      false,
+    );
   });
 
   it("treats abandoned as finished and excluded from reporting totals", () => {
@@ -51,19 +57,28 @@ describe("reopening a finished chat", () => {
   it("reopens resolved, closed and abandoned chats", () => {
     for (const status of REOPENABLE_STATUSES) {
       expect(
-        decideReopen({ senderType: "visitor", status, assignedTo: null, assigneePresence: null }).reopens,
+        decideReopen({ senderType: "visitor", status, assignedTo: null, assigneePresence: null })
+          .reopens,
       ).toBe(true);
     }
   });
 
   it("ignores replies in a live chat and messages from staff", () => {
     expect(
-      decideReopen({ senderType: "visitor", status: "active", assignedTo: null, assigneePresence: null })
-        .reopens,
+      decideReopen({
+        senderType: "visitor",
+        status: "active",
+        assignedTo: null,
+        assigneePresence: null,
+      }).reopens,
     ).toBe(false);
     expect(
-      decideReopen({ senderType: "agent", status: "closed", assignedTo: null, assigneePresence: null })
-        .reopens,
+      decideReopen({
+        senderType: "agent",
+        status: "closed",
+        assignedTo: null,
+        assigneePresence: null,
+      }).reopens,
     ).toBe(false);
   });
 

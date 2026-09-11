@@ -35,7 +35,10 @@ export const Route = createFileRoute("/auth")({
           "Sign in to the Pacific Health Group support console to manage conversations, knowledge, and widget settings.",
       },
       { property: "og:title", content: "Staff Sign In — Pacific Health Group" },
-      { property: "og:description", content: "Support console access for Pacific Health Group staff." },
+      {
+        property: "og:description",
+        content: "Support console access for Pacific Health Group staff.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "robots", content: "noindex" },
@@ -48,8 +51,7 @@ function AuthPage() {
   const navigate = useNavigate();
   const { redirect } = Route.useSearch();
   const destination = safeRedirect(redirect) ?? "/inbox";
-  const goToDestination = () =>
-    navigate({ to: destination as never, replace: true });
+  const goToDestination = () => navigate({ to: destination as never, replace: true });
   // Staff accounts are created by administrators — this page only signs in
   // existing users or emails them a password reset link.
   const [mode, setMode] = useState<"signin" | "forgot">("signin");
@@ -146,7 +148,6 @@ function AuthPage() {
           />
         </div>
 
-
         <div className="relative max-w-lg">
           <h2 className="font-display text-5xl font-bold leading-[1.08] tracking-tight">
             Your members are one chat away!
@@ -161,7 +162,9 @@ function AuthPage() {
               <HeartPulse className="h-5 w-5" />
             </span>
             <div className="text-sm">
-              <p className="font-semibold text-white">Built with love. Focused on retention.&nbsp;</p>
+              <p className="font-semibold text-white">
+                Built with love. Focused on retention.&nbsp;
+              </p>
               <p className="text-xs text-sidebar-foreground/65">
                 Secure · HIPAA-aware · Internal use only
               </p>
@@ -229,7 +232,6 @@ function AuthPage() {
           ) : null}
 
           <form onSubmit={submit} className="mt-6 space-y-4">
-
             <div className="space-y-2">
               <Label htmlFor="email" className="sr-only">
                 Work email
@@ -283,7 +285,11 @@ function AuthPage() {
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
 
-            <Button type="submit" className="h-11 w-full gap-2 text-sm font-semibold" disabled={busy}>
+            <Button
+              type="submit"
+              className="h-11 w-full gap-2 text-sm font-semibold"
+              disabled={busy}
+            >
               {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Send reset link"}
               {!busy ? <ArrowRight className="h-4 w-4" /> : null}
             </Button>
@@ -324,10 +330,22 @@ function AuthPage() {
 function GoogleMark() {
   return (
     <svg className="h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.4 5.4 2.5 13.2l7.8 6.1C12.2 13.1 17.6 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.1h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-17z" />
-      <path fill="#FBBC05" d="M10.3 28.7c-.5-1.4-.8-2.9-.8-4.7s.3-3.3.8-4.7l-7.8-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.5 10.8l7.8-6.1z" />
-      <path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.6l-7.1-5.5c-2 1.3-4.6 2.1-8.2 2.1-6.4 0-11.8-3.6-13.7-8.8l-7.8 6.1C6.4 42.6 14.6 48 24 48z" />
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.4 5.4 2.5 13.2l7.8 6.1C12.2 13.1 17.6 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.1h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-17z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.3 28.7c-.5-1.4-.8-2.9-.8-4.7s.3-3.3.8-4.7l-7.8-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.5 10.8l7.8-6.1z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.2 0 11.5-2 15.3-5.6l-7.1-5.5c-2 1.3-4.6 2.1-8.2 2.1-6.4 0-11.8-3.6-13.7-8.8l-7.8 6.1C6.4 42.6 14.6 48 24 48z"
+      />
     </svg>
   );
 }

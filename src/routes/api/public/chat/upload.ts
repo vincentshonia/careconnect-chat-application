@@ -47,7 +47,10 @@ function contentMatchesType(type: string, bytes: Uint8Array): boolean {
     case "image/gif":
       return startsWith(bytes, [0x47, 0x49, 0x46, 0x38]);
     case "image/webp":
-      return startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) && startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8);
+      return (
+        startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) &&
+        startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8)
+      );
     case "image/heic":
       // ISO base media: ....ftyp
       return startsWith(bytes, [0x66, 0x74, 0x79, 0x70], 4);
@@ -107,7 +110,6 @@ export const Route = createFileRoute("/api/public/chat/upload")({
             limits.ip_requests_per_minute,
             60,
           );
-
 
           const conversation = conversationId
             ? await mod.conversationForSession(ctx, conversationId)

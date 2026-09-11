@@ -34,7 +34,9 @@ function InvitePage() {
   );
   const [message, setMessage] = useState("");
   const token =
-    typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("t") ?? "";
+    typeof window === "undefined"
+      ? ""
+      : (new URLSearchParams(window.location.search).get("t") ?? "");
 
   useEffect(() => {
     (async () => {
@@ -69,12 +71,14 @@ function InvitePage() {
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-sm">
         <h1 className="text-xl font-semibold text-card-foreground">Join your team</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Invitations are single use, expire automatically, and only work for the email address
-          they were sent to.
+          Invitations are single use, expire automatically, and only work for the email address they
+          were sent to.
         </p>
 
         {state === "error" && (
-          <p className="mt-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{message}</p>
+          <p className="mt-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+            {message}
+          </p>
         )}
         {state === "done" && (
           <p className="mt-4 rounded-lg bg-accent/40 p-3 text-sm">
@@ -82,11 +86,7 @@ function InvitePage() {
           </p>
         )}
 
-        <Button
-          className="mt-6 w-full"
-          disabled={state !== "ready"}
-          onClick={() => void redeem()}
-        >
+        <Button className="mt-6 w-full" disabled={state !== "ready"} onClick={() => void redeem()}>
           {state === "working" ? "Accepting…" : "Accept invitation"}
         </Button>
       </div>

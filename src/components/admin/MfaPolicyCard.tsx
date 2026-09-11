@@ -66,19 +66,25 @@ export function MfaPolicyCard() {
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">Organization MFA policy</h2>
         <Badge variant={org.require_mfa ? "default" : "outline"}>
-          {org.require_mfa ? "Enforced for everyone" : org.require_mfa_for_admins ? "Admins only" : "Optional"}
+          {org.require_mfa
+            ? "Enforced for everyone"
+            : org.require_mfa_for_admins
+              ? "Admins only"
+              : "Optional"}
         </Badge>
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
-        Staff in {org.name} who fall under enforcement must complete an authenticator code before the
-        console loads. Existing sessions are stepped up on their next page load.
+        Staff in {org.name} who fall under enforcement must complete an authenticator code before
+        the console loads. Existing sessions are stepped up on their next page load.
       </p>
 
       <div className="mt-4 space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             <Label htmlFor="require-mfa-all">Require for all staff</Label>
-            <p className="text-xs text-muted-foreground">Agents, leads, managers and administrators.</p>
+            <p className="text-xs text-muted-foreground">
+              Agents, leads, managers and administrators.
+            </p>
           </div>
           <Switch
             id="require-mfa-all"

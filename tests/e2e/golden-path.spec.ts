@@ -6,6 +6,7 @@ import {
   fixtureReader,
   type E2ETenant,
 } from "./fixtures/e2e-fixtures";
+import { resolveOpenConversation } from "./helpers/flows";
 
 /**
  * Segment 2 — the CareConnect golden path.
@@ -64,7 +65,9 @@ async function openWidget(page: Page) {
   await expect(page.getByLabel("Type your question")).toBeVisible();
 }
 
-test("visitor → AI chat → human hand-off → agent claim, reply and resolution", async ({ browser }) => {
+test("visitor → AI chat → human hand-off → agent claim, reply and resolution", async ({
+  browser,
+}) => {
   const visitorContext = await browser.newContext();
   const visitor = await visitorContext.newPage();
 
@@ -82,7 +85,9 @@ test("visitor → AI chat → human hand-off → agent claim, reply and resoluti
   await visitor.getByLabel("Type your question").press("Enter");
 
   // Transport only: the answer text itself is AI-generated and not asserted.
-  expect((await messageResponse).status(), "the visitor message must be accepted").toBeLessThan(400);
+  expect((await messageResponse).status(), "the visitor message must be accepted").toBeLessThan(
+    400,
+  );
   await expect(visitor.getByText(question)).toBeVisible();
 
   const created = await waitForConversation((c) => Boolean(c.id));
@@ -94,11 +99,15 @@ test("visitor → AI chat → human hand-off → agent claim, reply and resoluti
   await visitor.getByRole("button", { name: "Talk to an agent" }).click();
   await expect(visitor.getByText("Speak with a representative")).toBeVisible();
 
-  await visitor.getByLabel("Which team can help you?").selectOption({ label: tenant.departmentName });
+  await visitor
+    .getByLabel("Which team can help you?")
+    .selectOption({ label: tenant.departmentName });
   await visitor.getByLabel("Full name").fill(`E2E Visitor ${tenant.runId}`);
   await visitor.getByLabel("Phone number").fill("5555550142");
   await visitor.getByLabel("Email address").fill(`${tenant.runId}.visitor@example.test`);
-  await visitor.getByLabel("Reason for contacting").fill("I would like to speak with a representative.");
+  await visitor
+    .getByLabel("Reason for contacting")
+    .fill("I would like to speak with a representative.");
   await visitor.getByRole("checkbox").check();
 
   const escalateResponse = visitor.waitForResponse(
@@ -106,11 +115,18 @@ test("visitor → AI chat → human hand-off → agent claim, reply and resoluti
     { timeout: 60_000 },
   );
   await visitor.getByRole("button", { name: "Submit" }).click();
-  expect((await escalateResponse).status(), "the hand-off request must be accepted").toBeLessThan(400);
+  expect((await escalateResponse).status(), "the hand-off request must be accepted").toBeLessThan(
+    400,
+  );
 
   const waiting = await waitForConversation((c) => c.escalation_requested === true);
-  expect(waiting.department_id, "the visitor's chosen department must be honoured").toBe(tenant.departmentId);
-  expect(waiting.assigned_to, "a shared-queue hand-off must stay unassigned until claimed").toBeNull();
+  expect(waiting.department_id, "the visitor's chosen department must be honoured").toBe(
+    tenant.departmentId,
+  );
+  expect(
+    waiting.assigned_to,
+    "a shared-queue hand-off must stay unassigned until claimed",
+  ).toBeNull();
   expect(["waiting", "escalated", "open"]).toContain(waiting.status);
 
   /* ---------------------------------------------------------------- *
@@ -162,7 +178,7 @@ test("visitor → AI chat → human hand-off → agent claim, reply and resoluti
   /* ---------------------------------------------------------------- *
    * 6. The agent resolves the conversation
    * ---------------------------------------------------------------- */
-  await agent.getByRole("button", { name: "Resolve", exact: true }).click();
+  await resolveOpenConversation(agent);
   const resolved = await waitForConversation((c) => c.status === "resolved");
   expect(resolved.resolved_by ?? tenant.agent.userId).toBe(tenant.agent.userId);
 

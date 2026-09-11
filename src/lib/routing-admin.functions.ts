@@ -21,7 +21,11 @@ type Ctx = { supabase: Parameters<typeof resolveActor>[0]; userId: string };
 
 async function authorize(context: Ctx): Promise<{ actor: Actor; organizationId: string }> {
   const actor = await resolveActor(context.supabase, context.userId);
-  requirePermission(actor, "workflow.manage", "Only managers and above can change routing and templates");
+  requirePermission(
+    actor,
+    "workflow.manage",
+    "Only managers and above can change routing and templates",
+  );
   return { actor, organizationId: requireOrganization(actor) };
 }
 
@@ -44,7 +48,8 @@ export const manageRoutingRuleFn = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     if (data.action === "create") {
-      if (!data.name || !data.matchValue) throw new Error("Give the rule a name and a value to match");
+      if (!data.name || !data.matchValue)
+        throw new Error("Give the rule a name and a value to match");
       const { data: created, error } = await supabaseAdmin
         .from("routing_rules")
         .insert({
@@ -95,12 +100,12 @@ export const manageRoutingRuleFn = createServerFn({ method: "POST" })
     }
 
     const patch: Record<string, unknown> = {};
-    if (data.name !== undefined) patch['name'] = data.name;
-    if (data.matchType !== undefined) patch['match_type'] = data.matchType;
-    if (data.matchValue !== undefined) patch['match_value'] = data.matchValue;
-    if (data.departmentId !== undefined) patch['department_id'] = data.departmentId;
-    if (data.priority !== undefined) patch['priority'] = data.priority;
-    if (data.status !== undefined) patch['status'] = data.status;
+    if (data.name !== undefined) patch["name"] = data.name;
+    if (data.matchType !== undefined) patch["match_type"] = data.matchType;
+    if (data.matchValue !== undefined) patch["match_value"] = data.matchValue;
+    if (data.departmentId !== undefined) patch["department_id"] = data.departmentId;
+    if (data.priority !== undefined) patch["priority"] = data.priority;
+    if (data.status !== undefined) patch["status"] = data.status;
     if (Object.keys(patch).length === 0) return { ok: true };
 
     const { error } = await supabaseAdmin
@@ -189,11 +194,11 @@ export const manageResponseTemplateFn = createServerFn({ method: "POST" })
     }
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if (data.name !== undefined) patch['name'] = data.name;
-    if (data.shortcut !== undefined) patch['shortcut'] = data.shortcut || null;
-    if (data.category !== undefined) patch['category'] = data.category || null;
-    if (data.body !== undefined) patch['body'] = data.body;
-    if (data.approved !== undefined) patch['approved'] = data.approved;
+    if (data.name !== undefined) patch["name"] = data.name;
+    if (data.shortcut !== undefined) patch["shortcut"] = data.shortcut || null;
+    if (data.category !== undefined) patch["category"] = data.category || null;
+    if (data.body !== undefined) patch["body"] = data.body;
+    if (data.approved !== undefined) patch["approved"] = data.approved;
 
     const { error } = await supabaseAdmin
       .from("response_templates")

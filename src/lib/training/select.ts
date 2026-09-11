@@ -18,7 +18,14 @@
  */
 import { ROLE_RANK, type OrgRole, type PlatformRole } from "@/lib/permissions";
 import { GUIDES, GUIDE_ORDER } from "./registry";
-import { gateAllows, type Block, type Chapter, type Guide, type GuideRole, type Section } from "./types";
+import {
+  gateAllows,
+  type Block,
+  type Chapter,
+  type Guide,
+  type GuideRole,
+  type Section,
+} from "./types";
 
 /** The five organization guides, in ascending authority order. */
 export const ORG_GUIDE_ORDER = GUIDE_ORDER.filter(
@@ -102,7 +109,9 @@ function blockText(block: Block): string {
     case "terms":
       return block.items.map((item) => `${item.term} ${item.definition}`).join(" ");
     case "quiz":
-      return block.items.map((item) => `${item.question} ${item.options.join(" ")} ${item.why}`).join(" ");
+      return block.items
+        .map((item) => `${item.question} ${item.options.join(" ")} ${item.why}`)
+        .join(" ");
     case "figure":
       return block.caption ?? "";
     default:

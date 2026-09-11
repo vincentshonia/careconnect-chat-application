@@ -57,7 +57,7 @@ export function requireTestBackend(options: { publishable?: boolean } = {}): Tes
   const allow = (process.env["ALLOW_INTEGRATION_TESTS_ON_PRIMARY"] ?? "").trim().toLowerCase();
   if (allow !== "true") {
     throw new Error(
-      "Integration suites refuse to run: ALLOW_INTEGRATION_TESTS_ON_PRIMARY is not set to \"true\". " +
+      'Integration suites refuse to run: ALLOW_INTEGRATION_TESTS_ON_PRIMARY is not set to "true". ' +
         "This deployment has a single backend, so these suites create and delete synthetic " +
         `${TEST_PREFIX} tenants inside the live project. Set ALLOW_INTEGRATION_TESTS_ON_PRIMARY=true to acknowledge that.`,
     );
@@ -230,4 +230,28 @@ export async function purgeSyntheticUsers(
     await db.from("profiles").delete().eq("id", user.id);
     await db.auth.admin.deleteUser(user.id);
   }
+}
+
+/**
+ * Final sweep: removes any synthetic auth account that a suite created but did
+ * not track for teardown (an early throw between account creation and the
+ * fixture's own cleanup list). Only prefixed addresses are ever deleted, so a
+ * real account can never be caught by this sweep.
+ */
+export async function purgeOrphanSyntheticUsers(db: AnyClient): Promise<number> {
+  const orphans: { id: string; email: string }[] = [];
+  for (let page = 1; page <= 50; page += 1) {
+    const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw new Error(`orphan sweep failed: ${error.message}`);
+    const users = data?.users ?? [];
+    for (const user of users) {
+      const email = user.email ?? "";
+      if (SYNTHETIC_PREFIXES.some((prefix) => email.startsWith(prefix))) {
+        orphans.push({ id: user.id, email });
+      }
+    }
+    if (users.length < 200) break;
+  }
+  await purgeSyntheticUsers(db, orphans);
+  return orphans.length;
 }

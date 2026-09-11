@@ -240,11 +240,7 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
             </MockStatRow>
           </MockPanel>
           <MockColumns>
-            <MockPanel
-              title="Needs my attention"
-              description="Ordered by urgency."
-              marker={3}
-            >
+            <MockPanel title="Needs my attention" description="Ordered by urgency." marker={3}>
               <MockList
                 items={[
                   {
@@ -314,7 +310,11 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
               <MockStat label="SLA risk" value="1" tone="warn" />
             </MockStatRow>
           </MockPanel>
-          <MockPanel title="Staff availability" description="Live presence across your scope." marker={2}>
+          <MockPanel
+            title="Staff availability"
+            description="Live presence across your scope."
+            marker={2}
+          >
             <MockStatRow>
               <MockStat label="Available" value="6" tone="good" />
               <MockStat label="Busy" value="2" />
@@ -331,7 +331,11 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
               ]}
             />
           </MockPanel>
-          <MockPanel title="My team today" description="Presence, workload and outcomes." marker={4}>
+          <MockPanel
+            title="My team today"
+            description="Presence, workload and outcomes."
+            marker={4}
+          >
             <MockTable
               head={["Staff", "Presence", "Active / capacity", "Completed"]}
               rows={[
@@ -756,7 +760,11 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
             </MockPanel>
             <MockPanel title="Personal details">
               <div className="space-y-1">
-                <MockField label="Display name (visitor-facing)" value="Maria from Pacific Health" marker={3} />
+                <MockField
+                  label="Display name (visitor-facing)"
+                  value="Maria from Pacific Health"
+                  marker={3}
+                />
                 <MockField label="Availability" value="Available" marker={4} />
                 <MockField label="Languages spoken" value="English, Spanish" />
               </div>
@@ -1066,7 +1074,11 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
           title="Departments &amp; hours"
           description="Routing targets, coverage windows and closures used by the widget and escalation flow."
         >
-          <MockPills items={["Departments", "Business hours", "Holidays"]} active="Departments" marker={1} />
+          <MockPills
+            items={["Departments", "Business hours", "Holidays"]}
+            active="Departments"
+            marker={1}
+          />
           <MockPanel title="New department" marker={2}>
             <div className="flex items-end gap-1">
               <MockField label="Name" value="e.g. Enrollment Support" />
@@ -1123,7 +1135,11 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
           title="Routing &amp; templates"
           description="Decide which department receives each escalation, and keep approved replies handy."
         >
-          <MockPills items={["Routing rules", "Response templates"]} active="Routing rules" marker={1} />
+          <MockPills
+            items={["Routing rules", "Response templates"]}
+            active="Routing rules"
+            marker={1}
+          />
           <MockPanel title="New rule" marker={2}>
             <div className="grid gap-1 sm:grid-cols-4">
               <MockField label="Rule name" value="Transport → Enrollment" />
@@ -1206,7 +1222,10 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
               <MockField label="Max chats" value="4" />
             </div>
             <div className="mt-1.5">
-              <MockPills items={["✓ Enrollment", "+ Care Management", "+ Transportation"]} marker={5} />
+              <MockPills
+                items={["✓ Enrollment", "+ Care Management", "+ Transportation"]}
+                marker={5}
+              />
             </div>
             <span className="mt-1.5 flex gap-1">
               <MockButton tone="outline" marker={6}>
@@ -1306,7 +1325,11 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
                 value="Tone, escalation rules, phrases to avoid…"
                 marker={3}
               />
-              <MockField label="Emergency / crisis message" value="If this is an emergency, call 911." marker={4} />
+              <MockField
+                label="Emergency / crisis message"
+                value="If this is an emergency, call 911."
+                marker={4}
+              />
             </div>
             <span className="mt-1.5 flex justify-end">
               <MockButton marker={5}>Save settings</MockButton>

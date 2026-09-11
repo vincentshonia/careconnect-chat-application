@@ -27,7 +27,6 @@ type Template = Database["public"]["Tables"]["response_templates"]["Row"];
 
 const MATCH_TYPES = ["interest", "keyword", "county", "menu_option", "language"];
 
-
 export function RoutingPanel() {
   return (
     <PanelShell
@@ -89,7 +88,12 @@ function Rules() {
         data: {
           action: "create",
           name: form.name.trim(),
-          matchType: form.match_type as "interest" | "keyword" | "county" | "menu_option" | "language",
+          matchType: form.match_type as
+            | "interest"
+            | "keyword"
+            | "county"
+            | "menu_option"
+            | "language",
           matchValue: form.match_value.trim(),
           departmentId: form.department_id || null,
           priority: Number(form.priority) || 100,
@@ -97,20 +101,34 @@ function Rules() {
       });
     },
     onSuccess: () => {
-      setForm({ name: "", match_type: "interest", match_value: "", department_id: "", priority: 100 });
+      setForm({
+        name: "",
+        match_type: "interest",
+        match_value: "",
+        department_id: "",
+        priority: 100,
+      });
       queryClient.invalidateQueries({ queryKey: ["routing-rules"] });
     },
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Database["public"]["Tables"]["routing_rules"]["Update"] }) => {
+    mutationFn: async ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: Database["public"]["Tables"]["routing_rules"]["Update"];
+    }) => {
       await saveRule({
         data: {
           action: "update",
           id,
           ...(patch.priority !== undefined ? { priority: Number(patch.priority) } : {}),
           ...(patch.status !== undefined ? { status: patch.status as "active" | "inactive" } : {}),
-          ...(patch.department_id !== undefined ? { departmentId: patch.department_id ?? null } : {}),
+          ...(patch.department_id !== undefined
+            ? { departmentId: patch.department_id ?? null }
+            : {}),
         },
       });
     },
@@ -135,7 +153,11 @@ function Rules() {
       >
         <div className="space-y-2">
           <Label htmlFor="rule-name">Rule name</Label>
-          <Input id="rule-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <Input
+            id="rule-name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="rule-type">Match on</Label>
@@ -192,15 +214,19 @@ function Rules() {
               {r.match_type}: {r.match_value}
             </Badge>
             <span className="text-xs text-muted-foreground">
-              → {(departments.data ?? []).find((d) => d.id === r.department_id)?.name ?? "Unassigned"} · priority{" "}
-              {r.priority}
+              →{" "}
+              {(departments.data ?? []).find((d) => d.id === r.department_id)?.name ?? "Unassigned"}{" "}
+              · priority {r.priority}
             </span>
             <div className="ml-auto flex gap-2">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() =>
-                  update.mutate({ id: r.id, patch: { status: r.status === "active" ? "inactive" : "active" } })
+                  update.mutate({
+                    id: r.id,
+                    patch: { status: r.status === "active" ? "inactive" : "active" },
+                  })
                 }
               >
                 {r.status === "active" ? "Disable" : "Enable"}
@@ -256,7 +282,13 @@ function Templates() {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Database["public"]["Tables"]["response_templates"]["Update"] }) => {
+    mutationFn: async ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: Database["public"]["Tables"]["response_templates"]["Update"];
+    }) => {
       await saveTemplate({
         data: {
           action: "update",
@@ -291,7 +323,11 @@ function Templates() {
         <h2 className="text-sm font-semibold">New template</h2>
         <div className="space-y-2">
           <Label htmlFor="tpl-name">Name</Label>
-          <Input id="tpl-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <Input
+            id="tpl-name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">

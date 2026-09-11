@@ -35,10 +35,7 @@ export function progressStorageKey(userId: string | null | undefined, guideRole:
 }
 
 /** Per-tenant, per-guide review key. */
-export function reviewStorageKey(
-  organizationId: string | null | undefined,
-  guideRole: GuideRole,
-) {
+export function reviewStorageKey(organizationId: string | null | undefined, guideRole: GuideRole) {
   return `${PREFIX}.review.${organizationId ?? "no-org"}.${guideRole}`;
 }
 

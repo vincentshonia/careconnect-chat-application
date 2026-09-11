@@ -9,7 +9,11 @@ export type DashboardScope = "self" | "team" | "organization";
 
 export function dashboardChapter(scope: DashboardScope): Chapter {
   const figure =
-    scope === "organization" ? "dashboard-org" : scope === "team" ? "dashboard-team" : "dashboard-self";
+    scope === "organization"
+      ? "dashboard-org"
+      : scope === "team"
+        ? "dashboard-team"
+        : "dashboard-self";
 
   const chapter: Chapter = {
     id: "dashboard",
@@ -66,7 +70,10 @@ export function dashboardChapter(scope: DashboardScope): Chapter {
                     ["Unassigned", "Open conversations with no owner"],
                     ["Active", "Conversations in live back-and-forth"],
                     ["Agent requested", "Visitors who explicitly asked for a human"],
-                    ["Completed today", "Resolved or closed today, in your organization's timezone"],
+                    [
+                      "Completed today",
+                      "Resolved or closed today, in your organization's timezone",
+                    ],
                     ["SLA risk", "Conversations at risk of missing the first-response target"],
                     ["Open intakes", "Referral and enrollment requests still open"],
                   ],
@@ -84,7 +91,10 @@ export function dashboardChapter(scope: DashboardScope): Chapter {
                   rows: [
                     ["My open", "Conversations you own that are not finished"],
                     ["My active", "Your conversations in live back-and-forth"],
-                    ["Waiting in my department", "Conversations waiting for a person in your departments"],
+                    [
+                      "Waiting in my department",
+                      "Conversations waiting for a person in your departments",
+                    ],
                     ["Completed today", "Conversations you resolved or closed today"],
                     ["SLA risk", "Your conversations at risk of missing the first-response target"],
                     ["My capacity", "Your active chats against the maximum your administrator set"],
@@ -139,12 +149,18 @@ export function dashboardChapter(scope: DashboardScope): Chapter {
               ["Resolved / Closed", "Finished with the need met / finished without a resolution"],
               ["Completion rate", "Completed conversations divided by conversations you handled"],
               ["Avg. first response", "How long visitors waited for your first reply"],
-              ["Median first response", "Your typical reply speed, shown once you have enough volume"],
+              [
+                "Median first response",
+                "Your typical reply speed, shown once you have enough volume",
+              ],
               ["Avg. time to claim", "How quickly you pick work up"],
               ["Avg. handle time", "From claim to resolution or closure"],
               ["SLA compliance", "Share of eligible conversations answered inside the target"],
               ["Visitor satisfaction", "Your average star rating, once visitors have rated you"],
-              ["Department average response", "A privacy-safe benchmark — the department average, never an individual colleague"],
+              [
+                "Department average response",
+                "A privacy-safe benchmark — the department average, never an individual colleague",
+              ],
             ],
           },
           {
@@ -276,7 +292,10 @@ export const inboxChapter: Chapter = {
             ["Department", "Everything in your departments"],
             ["Active", "Live conversations happening now"],
             ["Closed", "Finished conversations"],
-            ["All conversations", "Every conversation in the organization — only for roles that may see everything"],
+            [
+              "All conversations",
+              "Every conversation in the organization — only for roles that may see everything",
+            ],
           ],
         },
         {
@@ -399,8 +418,16 @@ export const inboxChapter: Chapter = {
           kind: "table",
           head: ["Button", "Use it when", "What it means in reporting"],
           rows: [
-            ["Resolve", "The visitor's need was met", "Counts as a completed, resolved conversation"],
-            ["Close", "The chat is over without a resolution — abandoned, duplicate or out of scope", "Counts as completed but not resolved"],
+            [
+              "Resolve",
+              "The visitor's need was met",
+              "Counts as a completed, resolved conversation",
+            ],
+            [
+              "Close",
+              "The chat is over without a resolution — abandoned, duplicate or out of scope",
+              "Counts as completed but not resolved",
+            ],
           ],
         },
         {
@@ -468,8 +495,14 @@ export const inboxChapter: Chapter = {
             ["Assigned to <name>", "A colleague owns it"],
             ["View only", "You may read this conversation but not act on it"],
             ["“Claim this conversation to reply.”", "It is unassigned — claim it first"],
-            ["“<name> is currently handling this conversation.”", "Someone else owns it; ask them, or reassign if your role allows"],
-            ["“This conversation is closed.”", "It is finished; reopen happens automatically if the visitor writes again"],
+            [
+              "“<name> is currently handling this conversation.”",
+              "Someone else owns it; ask them, or reassign if your role allows",
+            ],
+            [
+              "“This conversation is closed.”",
+              "It is finished; reopen happens automatically if the visitor writes again",
+            ],
           ],
         },
         {
@@ -727,7 +760,10 @@ export const notificationsChapter: Chapter = {
           rows: [
             ["Live-agent escalations", "A visitor asks for a human"],
             ["New referrals & enrollments", "A new intake request arrives"],
-            ["First-response SLA breaches", "A waiting conversation passes your first-response target"],
+            [
+              "First-response SLA breaches",
+              "A waiting conversation passes your first-response target",
+            ],
             ["Low satisfaction ratings", "A visitor leaves a poor rating"],
           ],
         },

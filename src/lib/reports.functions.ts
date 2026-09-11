@@ -96,7 +96,6 @@ function clampStaff(scope: Scope, requested?: string | null): string[] | null {
   return scope.staffIds;
 }
 
-
 function parseRange(filters: ReportFilters) {
   const from = new Date(filters.from);
   const to = new Date(filters.to);
@@ -149,7 +148,10 @@ function buildCall(
     case "departments":
       return { fn: "report_departments", args: { ...common, _sla: sla } };
     case "backlog":
-      return { fn: "report_department_backlog", args: { _org: scope.organizationId, _dept: dept, _sla: sla } };
+      return {
+        fn: "report_department_backlog",
+        args: { _org: scope.organizationId, _dept: dept, _sla: sla },
+      };
     case "staff":
       return { fn: "report_staff", args: { ...common, _sla: sla } };
     case "workload":
@@ -217,7 +219,10 @@ function buildCall(
 }
 
 type Rpc = {
-  rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+  rpc: (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { message: string } | null }>;
 };
 
 async function callRpc(fn: string, args: Record<string, unknown>) {
@@ -245,7 +250,10 @@ async function orgReportSettings(
     .select("sla_first_response_minutes, timezone")
     .eq("id", organizationId)
     .maybeSingle();
-  const row = data as { sla_first_response_minutes?: number | null; timezone?: string | null } | null;
+  const row = data as {
+    sla_first_response_minutes?: number | null;
+    timezone?: string | null;
+  } | null;
   return {
     sla: row?.sla_first_response_minutes ?? DEFAULT_SLA_MINUTES,
     timeZone: safeTimeZone(row?.timezone),
@@ -304,7 +312,12 @@ const DATASETS = {
   sla_departments: { section: "sla", path: "by_department", paged: false, file: "sla-departments" },
   sla_staff: { section: "sla", path: "by_staff", paged: false, file: "sla-staff" },
   ai_questions: { section: "ai", path: "top_questions", paged: false, file: "ai-top-questions" },
-  ai_low_confidence: { section: "ai", path: "low_confidence_questions", paged: false, file: "ai-knowledge-gaps" },
+  ai_low_confidence: {
+    section: "ai",
+    path: "low_confidence_questions",
+    paged: false,
+    file: "ai-knowledge-gaps",
+  },
 } as const;
 
 export const REPORT_EXPORTS = Object.keys(DATASETS) as (keyof typeof DATASETS)[];
@@ -348,7 +361,14 @@ export const exportReportFn = createServerFn({ method: "POST" })
     let truncated = false;
 
     if (!spec.paged) {
-      const { fn, args } = buildCall(scope, spec.section, data.filters, baseOptions, settings.sla, settings.timeZone);
+      const { fn, args } = buildCall(
+        scope,
+        spec.section,
+        data.filters,
+        baseOptions,
+        settings.sla,
+        settings.timeZone,
+      );
       rows.push(...pluck(await callRpc(fn, args), spec.path));
     } else {
       for (let offset = 0; offset < REPORT_EXPORT_ROW_CAP; offset += EXPORT_PAGE) {
@@ -420,11 +440,16 @@ export const reportFilterOptionsFn = createServerFn({ method: "POST" })
       .select("id, name")
       .eq("organization_id", scope.organizationId)
       .order("name");
-    if (scope.departmentIds) deptQuery.in("id", scope.departmentIds.length ? scope.departmentIds : [""]);
+    if (scope.departmentIds)
+      deptQuery.in("id", scope.departmentIds.length ? scope.departmentIds : [""]);
 
     const [departments, websites, staff] = await Promise.all([
       deptQuery,
-      db.from("websites").select("id, name").eq("organization_id", scope.organizationId).order("name"),
+      db
+        .from("websites")
+        .select("id, name")
+        .eq("organization_id", scope.organizationId)
+        .order("name"),
       db
         .from("organization_memberships")
         .select("user_id, profiles!inner(full_name)")
@@ -434,7 +459,8 @@ export const reportFilterOptionsFn = createServerFn({ method: "POST" })
 
     let people = (staff.data ?? []).map((row) => ({
       id: row.user_id as string,
-      name: ((row as { profiles?: { full_name?: string } }).profiles?.full_name ?? "Unnamed") as string,
+      name: ((row as { profiles?: { full_name?: string } }).profiles?.full_name ??
+        "Unnamed") as string,
     }));
     if (scope.staffIds) people = people.filter((p) => scope.staffIds!.includes(p.id));
     people.sort((a, b) => a.name.localeCompare(b.name));
@@ -444,7 +470,10 @@ export const reportFilterOptionsFn = createServerFn({ method: "POST" })
       sections: SECTIONS_BY_LEVEL[scope.level] as readonly string[],
 
       selfId: actor.userId,
-      departments: (departments.data ?? []).map((d) => ({ id: d.id as string, name: d.name as string })),
+      departments: (departments.data ?? []).map((d) => ({
+        id: d.id as string,
+        name: d.name as string,
+      })),
       websites: (websites.data ?? []).map((w) => ({ id: w.id as string, name: w.name as string })),
       staff: people,
       slaMinutes: (await orgReportSettings(db as never, scope.organizationId)).sla,

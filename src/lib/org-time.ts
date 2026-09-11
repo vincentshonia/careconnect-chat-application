@@ -62,12 +62,12 @@ export function zonedParts(date: Date, timeZone: string): Parts {
     if (p.type !== "literal") bag[p.type] = p.value;
   }
   return {
-    year: Number(bag['year']),
-    month: Number(bag['month']),
-    day: Number(bag['day']),
-    hour: Number(bag['hour']),
-    minute: Number(bag['minute']),
-    second: Number(bag['second']),
+    year: Number(bag["year"]),
+    month: Number(bag["month"]),
+    day: Number(bag["day"]),
+    hour: Number(bag["hour"]),
+    minute: Number(bag["minute"]),
+    second: Number(bag["second"]),
   };
 }
 
@@ -84,7 +84,14 @@ function offsetMs(utcMs: number, timeZone: string): number {
  * other side of a clock change.
  */
 export function zonedTimeToUtc(
-  parts: { year: number; month: number; day: number; hour?: number; minute?: number; second?: number },
+  parts: {
+    year: number;
+    month: number;
+    day: number;
+    hour?: number;
+    minute?: number;
+    second?: number;
+  },
   timeZone: string,
 ): Date {
   const naive = Date.UTC(
@@ -131,7 +138,14 @@ export function startOfMonthInZone(date: Date, timeZone: string): Date {
 export function addDaysInZone(date: Date, days: number, timeZone: string): Date {
   const p = zonedParts(date, timeZone);
   return zonedTimeToUtc(
-    { year: p.year, month: p.month, day: p.day + days, hour: p.hour, minute: p.minute, second: p.second },
+    {
+      year: p.year,
+      month: p.month,
+      day: p.day + days,
+      hour: p.hour,
+      minute: p.minute,
+      second: p.second,
+    },
     timeZone,
   );
 }
@@ -265,15 +279,26 @@ export function presetRange(
 
 /** Rolling "last N days" window anchored on the org's midnight boundary. */
 
-export function lastDaysWindow(days: number, timeZone: string, now: Date = new Date()): { from: string; to: string } {
+export function lastDaysWindow(
+  days: number,
+  timeZone: string,
+  now: Date = new Date(),
+): { from: string; to: string } {
   const tz = safeTimeZone(timeZone);
   const to = now;
-  const from = days <= 1 ? startOfDayInZone(now, tz) : addDaysInZone(startOfDayInZone(now, tz), -(days - 1), tz);
+  const from =
+    days <= 1
+      ? startOfDayInZone(now, tz)
+      : addDaysInZone(startOfDayInZone(now, tz), -(days - 1), tz);
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
 /** Inclusive `YYYY-MM-DD` range picked by a user, read in the org's timezone. */
-export function dateRangeInZone(fromDate: string, toDate: string, timeZone: string): { from: string; to: string } {
+export function dateRangeInZone(
+  fromDate: string,
+  toDate: string,
+  timeZone: string,
+): { from: string; to: string } {
   const tz = safeTimeZone(timeZone);
   const [fy, fm, fd] = fromDate.split("-").map(Number);
   const [ty, tm, td] = toDate.split("-").map(Number);

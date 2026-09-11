@@ -82,7 +82,6 @@ function NotificationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefs.isSuccess, prefs.data?.user_id]);
 
-
   const save = useMutation({
     mutationFn: async () => {
       const userId = session.data?.userId;
@@ -178,7 +177,10 @@ function NotificationsPage() {
               }`}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={n.severity === "critical" ? "destructive" : "outline"} className="capitalize">
+                <Badge
+                  variant={n.severity === "critical" ? "destructive" : "outline"}
+                  className="capitalize"
+                >
                   {n.type.replace(/_/g, " ")}
                 </Badge>
                 <span className="text-sm font-medium">{n.title}</span>
@@ -225,7 +227,10 @@ function NotificationsPage() {
               <span>Email</span>
             </div>
             {TOGGLES.map((t) => (
-              <div key={t.key} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 text-sm">
+              <div
+                key={t.key}
+                className="grid grid-cols-[1fr_auto_auto] items-center gap-3 text-sm"
+              >
                 <span>{t.label}</span>
                 <input
                   type="checkbox"

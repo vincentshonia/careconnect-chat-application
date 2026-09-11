@@ -15,7 +15,8 @@ export const Route = createFileRoute("/_authenticated/profile")({
       { title: "My settings — CareConnect" },
       {
         name: "description",
-        content: "Personal profile, availability, appearance and security settings for your CareConnect account.",
+        content:
+          "Personal profile, availability, appearance and security settings for your CareConnect account.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -61,7 +62,11 @@ function PersonalSettingsPage() {
     queryKey: ["my-profile", userId],
     enabled: Boolean(userId),
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*").eq("id", userId!).maybeSingle();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId!)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -84,7 +89,6 @@ function PersonalSettingsPage() {
     setShowInWidget(p.show_in_widget_team === true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile.data?.id]);
-
 
   // Reflect the saved appearance choice once the profile loads.
   useEffect(() => {
@@ -139,7 +143,10 @@ function PersonalSettingsPage() {
       if (uploadError) throw uploadError;
 
       const url = `/api/public/staff-avatar/${path}`;
-      const { error } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", userId);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ avatar_url: url })
+        .eq("id", userId);
       if (error) throw error;
       setAvatarUrl(url);
       setNotice("Profile photo updated.");
@@ -193,7 +200,9 @@ function PersonalSettingsPage() {
     >
       <div className="max-w-3xl space-y-5">
         {notice && (
-          <p className="rounded-xl border border-border bg-muted px-4 py-3 text-sm text-foreground">{notice}</p>
+          <p className="rounded-xl border border-border bg-muted px-4 py-3 text-sm text-foreground">
+            {notice}
+          </p>
         )}
 
         {/* Profile photo */}
@@ -201,15 +210,19 @@ function PersonalSettingsPage() {
           <div>
             <Label>Profile photo</Label>
             <p className="text-xs text-muted-foreground">
-              PNG or JPG up to 5 MB. Shown to teammates in CareConnect. It is only shown to
-              website visitors if you turn on public visibility below.
+              PNG or JPG up to 5 MB. Shown to teammates in CareConnect. It is only shown to website
+              visitors if you turn on public visibility below.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
             <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-full border border-border bg-muted text-sm font-semibold text-muted-foreground">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Your profile photo" className="h-full w-full object-cover" />
+                <img
+                  src={avatarUrl}
+                  alt="Your profile photo"
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 initials || "—"
               )}
@@ -251,13 +264,12 @@ function PersonalSettingsPage() {
             <span>
               <span className="font-medium">Show my name and photo to website visitors</span>
               <span className="block text-xs text-muted-foreground">
-                Off by default. When on, your photo can appear on the chat widget and while you
-                are chatting with a visitor.
+                Off by default. When on, your photo can appear on the chat widget and while you are
+                chatting with a visitor.
               </span>
             </span>
           </label>
         </section>
-
 
         {/* Personal details */}
         <form
@@ -349,7 +361,8 @@ function PersonalSettingsPage() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Your role, organization, departments and maximum simultaneous chats are managed by an administrator.
+            Your role, organization, departments and maximum simultaneous chats are managed by an
+            administrator.
           </p>
           <Button type="submit" disabled={save.isPending}>
             {save.isPending ? "Saving…" : "Save changes"}
@@ -360,7 +373,9 @@ function PersonalSettingsPage() {
         <section className="space-y-3 rounded-xl border border-border bg-card p-4">
           <div>
             <h2 className="text-sm font-semibold text-card-foreground">Appearance</h2>
-            <p className="text-xs text-muted-foreground">Choose how the console looks on this account.</p>
+            <p className="text-xs text-muted-foreground">
+              Choose how the console looks on this account.
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {THEMES.map((t) => (

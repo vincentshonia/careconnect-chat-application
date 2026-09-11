@@ -125,7 +125,11 @@ export function WidgetPreview({ config }: { config: WidgetPreviewConfig }) {
                   className="flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-medium transition hover:bg-muted/60"
                   style={isActive ? { color: brand } : undefined}
                 >
-                  <Icon d={t.icon} size={19} className={isActive ? undefined : "text-muted-foreground"} />
+                  <Icon
+                    d={t.icon}
+                    size={19}
+                    className={isActive ? undefined : "text-muted-foreground"}
+                  />
                   <span className={isActive ? undefined : "text-muted-foreground"}>{t.label}</span>
                 </button>
               );
@@ -154,7 +158,9 @@ export function WidgetPreview({ config }: { config: WidgetPreviewConfig }) {
         aria-label={open ? "Hide widget preview" : "Show widget preview"}
         onClick={() => setOpen((v) => !v)}
         className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full text-white shadow-xl ring-1 ring-white/25 transition hover:-translate-y-0.5"
-        style={{ background: `linear-gradient(145deg, ${brand}, color-mix(in oklab, ${brand} 72%, black))` }}
+        style={{
+          background: `linear-gradient(145deg, ${brand}, color-mix(in oklab, ${brand} 72%, black))`,
+        }}
       >
         <Icon
           d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
@@ -246,7 +252,9 @@ function HomeView({
               : ["Enhanced Care Management", "Community Supports", "What services do you provide?"]
             ).map((t) => (
               <div key={t} className="flex items-center gap-2 py-2.5">
-                <span className="min-w-0 flex-1 truncate text-[13px] text-card-foreground">{t}</span>
+                <span className="min-w-0 flex-1 truncate text-[13px] text-card-foreground">
+                  {t}
+                </span>
                 <Icon d="M9 6l6 6-6 6" size={15} className="shrink-0 text-muted-foreground" />
               </div>
             ))}

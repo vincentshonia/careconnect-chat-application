@@ -8,7 +8,13 @@ import {
   type E2EStaff,
   type E2ETenant,
 } from "./fixtures/e2e-fixtures";
-import { escalateToHuman, openConversation, openWidget, signIn, waitForConversation } from "./helpers/flows";
+import {
+  escalateToHuman,
+  openConversation,
+  openWidget,
+  signIn,
+  waitForConversation,
+} from "./helpers/flows";
 
 /**
  * Claim exclusivity in real browsers.
@@ -65,11 +71,10 @@ test("two agents racing for one conversation produce exactly one owner", async (
   // Both agents commit at the same moment.
   await Promise.all([claimA.click(), claimB.click()]);
 
-  const claimed = await waitForConversation(
-    tenant.websiteId,
-    (c) => c.assigned_to !== null,
-    { conversationId: conversation.id, timeoutMs: 45_000 },
-  );
+  const claimed = await waitForConversation(tenant.websiteId, (c) => c.assigned_to !== null, {
+    conversationId: conversation.id,
+    timeoutMs: 45_000,
+  });
   expect([tenant.agent.userId, secondAgent.userId]).toContain(claimed.assigned_to);
 
   // The ownership never flips afterwards, and it is a single agent.

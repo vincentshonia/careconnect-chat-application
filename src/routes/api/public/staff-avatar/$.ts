@@ -33,7 +33,6 @@ export const Route = createFileRoute("/api/public/staff-avatar/$")({
         const { data, error } = await supabaseAdmin.storage.from("staff-avatars").download(key);
         if (error || !data) return new Response("Not found", { status: 404 });
 
-
         return new Response(await data.arrayBuffer(), {
           headers: {
             "content-type": data.type || "application/octet-stream",

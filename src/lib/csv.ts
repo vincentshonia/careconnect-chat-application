@@ -16,7 +16,6 @@ function escapeCell(value: unknown): string {
   return /[",\n]/.test(raw) ? `"${raw.replace(/"/g, '""')}"` : raw;
 }
 
-
 export function toCsv(rows: Record<string, unknown>[], columns?: string[]): string {
   if (rows.length === 0) return "";
   const keys = columns ?? Object.keys(rows[0]);

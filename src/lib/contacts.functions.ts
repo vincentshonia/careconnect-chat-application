@@ -40,9 +40,9 @@ export const updateContactFn = createServerFn({ method: "POST" })
     }
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if (data.leadStatus !== undefined) patch['lead_status'] = data.leadStatus;
-    if (data.notes !== undefined) patch['notes'] = data.notes;
-    if (data.ownerId !== undefined) patch['owner_id'] = data.ownerId;
+    if (data.leadStatus !== undefined) patch["lead_status"] = data.leadStatus;
+    if (data.notes !== undefined) patch["notes"] = data.notes;
+    if (data.ownerId !== undefined) patch["owner_id"] = data.ownerId;
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin

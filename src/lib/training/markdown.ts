@@ -137,5 +137,8 @@ export function guideToMarkdown(guide: Guide): string {
     });
   });
 
-  return `${out.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
+  return `${out
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()}\n`;
 }

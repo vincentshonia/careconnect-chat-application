@@ -23,7 +23,11 @@ export const Route = createFileRoute("/mfa")({
   head: () => ({
     meta: [
       { title: "Two-step verification — CareConnect" },
-      { name: "description", content: "Confirm your identity with an authenticator code to reach the CareConnect console." },
+      {
+        name: "description",
+        content:
+          "Confirm your identity with an authenticator code to reach the CareConnect console.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -86,7 +90,9 @@ function MfaGate() {
         <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <ShieldCheck className="size-5" />
         </div>
-        <h1 className="mt-5 text-xl font-semibold tracking-tight">Two-step verification required</h1>
+        <h1 className="mt-5 text-xl font-semibold tracking-tight">
+          Two-step verification required
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {hasFactor || enroll
             ? "Enter the 6-digit code from your authenticator app to continue."
@@ -94,14 +100,22 @@ function MfaGate() {
         </p>
 
         {!hasFactor && !enroll ? (
-          <Button className="mt-6 w-full" onClick={() => startEnroll.mutate()} disabled={startEnroll.isPending}>
+          <Button
+            className="mt-6 w-full"
+            onClick={() => startEnroll.mutate()}
+            disabled={startEnroll.isPending}
+          >
             {startEnroll.isPending ? "Preparing…" : "Set up authenticator app"}
           </Button>
         ) : (
           <div className="mt-6 space-y-4">
             {enroll ? (
               <div className="space-y-2">
-                <img src={enroll.qr} alt="Two-factor QR code" className="h-44 w-44 rounded-lg bg-white p-2" />
+                <img
+                  src={enroll.qr}
+                  alt="Two-factor QR code"
+                  className="h-44 w-44 rounded-lg bg-white p-2"
+                />
                 <p className="text-xs text-muted-foreground">
                   Can&apos;t scan? Enter this key manually:{" "}
                   <code className="font-mono">{enroll.secret}</code>

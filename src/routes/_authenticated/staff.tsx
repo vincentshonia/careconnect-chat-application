@@ -22,7 +22,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDateInZone } from "@/lib/org-time";
 
-
 export const Route = createFileRoute("/_authenticated/staff")({
   // Moved into the Admin hub. The old address still works so existing links,
   // notifications and the staff manuals keep resolving.
@@ -30,7 +29,6 @@ export const Route = createFileRoute("/_authenticated/staff")({
     throw redirect({ to: "/admin", search: { tab: "staff" } });
   },
 });
-
 
 const ROLES: AppRole[] = ["agent", "team_lead", "manager", "administrator", "super_admin"];
 const PRESENCE = ["available", "busy", "away", "offline"];
@@ -88,13 +86,13 @@ export function StaffPanel() {
     },
   });
 
-
-
   // Directory paging, search and filters all run in the database, so the page
   // is just as fast for a team of five thousand as for a team of five.
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | AppRole>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "disabled" | "removed">("active");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "disabled" | "removed">(
+    "active",
+  );
   const [deptFilter, setDeptFilter] = useState<string>("all");
   const [page, setPage] = useState(0);
   const debouncedSearch = useDebounced(search, 300);
@@ -123,7 +121,11 @@ export function StaffPanel() {
   const departmentsQuery = useQuery({
     queryKey: ["departments-lite"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("departments").select("id, name").order("name").range(0, 199);
+      const { data, error } = await supabase
+        .from("departments")
+        .select("id, name")
+        .order("name")
+        .range(0, 199);
       if (error) throw error;
       return data ?? [];
     },
@@ -136,7 +138,8 @@ export function StaffPanel() {
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) =>
       changeRole({ data: { userId, role: role as OrgRole } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not change that role"),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not change that role"),
   });
 
   // Editing another teammate availability or capacity is an administrator action.
@@ -164,7 +167,8 @@ export function StaffPanel() {
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save that profile"),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not save that profile"),
   });
 
   const toggleDepartment = useMutation({
@@ -189,13 +193,13 @@ export function StaffPanel() {
     mutationFn: async (input: { userId: string; action: "disable" | "enable" | "remove" }) =>
       changeAccess({ data: input }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not change that access"),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not change that access"),
   });
 
   const rows = (staffQuery.data?.rows ?? []) as StaffRow[];
   const total = staffQuery.data?.total ?? 0;
   const departments = departmentsQuery.data ?? [];
-
 
   return (
     <PanelShell
@@ -237,7 +241,9 @@ export function StaffPanel() {
           </select>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "disabled" | "removed")}
+            onChange={(e) =>
+              setStatusFilter(e.target.value as "all" | "active" | "disabled" | "removed")
+            }
             aria-label="Filter by account status"
             className="h-9 rounded-md border border-input bg-background px-2 text-sm"
           >
@@ -262,7 +268,11 @@ export function StaffPanel() {
                 Sends a single-use invitation link. They set their own password when they accept it.
               </p>
             </div>
-            <Button type="button" variant={showForm ? "outline" : "default"} onClick={() => setShowForm((v) => !v)}>
+            <Button
+              type="button"
+              variant={showForm ? "outline" : "default"}
+              onClick={() => setShowForm((v) => !v)}
+            >
               {showForm ? "Cancel" : "Add staff member"}
             </Button>
           </div>
@@ -344,13 +354,12 @@ export function StaffPanel() {
                 Email: <span className="font-mono">{createdInvitation.email}</span>
               </p>
               <p className="text-sm break-all text-muted-foreground">
-                Invitation link:{" "}
-                <span className="font-mono">{createdInvitation.inviteUrl}</span>
+                Invitation link: <span className="font-mono">{createdInvitation.inviteUrl}</span>
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 The link is single use, only works for this email address, and expires on{" "}
-                {formatDateInZone(createdInvitation.expiresAt)}. It will not be shown
-                again — no password is created or sent.
+                {formatDateInZone(createdInvitation.expiresAt)}. It will not be shown again — no
+                password is created or sent.
               </p>
               <p className="mt-2 text-xs">
                 {createdInvitation.emailed
@@ -412,7 +421,9 @@ export function StaffPanel() {
               <article key={p.id} className="rounded-xl border border-border p-4">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-sm font-semibold">{p.full_name || "Unnamed staff member"}</h2>
+                    <h2 className="text-sm font-semibold">
+                      {p.full_name || "Unnamed staff member"}
+                    </h2>
                     <p className="text-xs text-muted-foreground">{p.email}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Badge variant="outline" className="capitalize">
@@ -426,7 +437,6 @@ export function StaffPanel() {
                           {p.status === "archived" ? "removed" : p.status}
                         </Badge>
                       ) : null}
-
                     </div>
                   </div>
 
@@ -437,7 +447,9 @@ export function StaffPanel() {
                         disabled={!canManageRoles || roleLocked}
                         className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm disabled:opacity-60"
                         value={role ?? ""}
-                        onChange={(e) => setRole.mutate({ userId: p.id, role: e.target.value as AppRole })}
+                        onChange={(e) =>
+                          setRole.mutate({ userId: p.id, role: e.target.value as AppRole })
+                        }
                       >
                         <option value="" disabled>
                           Select role
@@ -543,7 +555,11 @@ export function StaffPanel() {
                           variant="outline"
                           disabled={setAccess.isPending}
                           onClick={() => {
-                            if (confirm(`Disable ${p.full_name || p.email}? They will not be able to sign in, but all their chat history stays.`))
+                            if (
+                              confirm(
+                                `Disable ${p.full_name || p.email}? They will not be able to sign in, but all their chat history stays.`,
+                              )
+                            )
                               setAccess.mutate({ userId: p.id, action: "disable" });
                           }}
                         >
@@ -567,7 +583,11 @@ export function StaffPanel() {
                           variant="destructive"
                           disabled={setAccess.isPending}
                           onClick={() => {
-                            if (confirm(`Remove ${p.full_name || p.email} from the team? Sign-in, roles and department routing are revoked. Conversations, messages and audit records are preserved.`))
+                            if (
+                              confirm(
+                                `Remove ${p.full_name || p.email} from the team? Sign-in, roles and department routing are revoked. Conversations, messages and audit records are preserved.`,
+                              )
+                            )
                               setAccess.mutate({ userId: p.id, action: "remove" });
                           }}
                         >
@@ -577,7 +597,6 @@ export function StaffPanel() {
                     </div>
                   </div>
                 ) : null}
-
               </article>
             );
           })}

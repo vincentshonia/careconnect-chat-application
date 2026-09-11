@@ -58,11 +58,10 @@ export const Route = createFileRoute("/_authenticated/inbox")({
   validateSearch: (
     search: Record<string, unknown>,
   ): { c?: string; tab?: string; status?: string } => ({
-    ...(typeof search['c'] === "string" ? { c: search['c'] } : {}),
-    ...(typeof search['tab'] === "string" ? { tab: search['tab'] } : {}),
-    ...(typeof search['status'] === "string" ? { status: search['status'] } : {}),
+    ...(typeof search["c"] === "string" ? { c: search["c"] } : {}),
+    ...(typeof search["tab"] === "string" ? { tab: search["tab"] } : {}),
+    ...(typeof search["status"] === "string" ? { status: search["status"] } : {}),
   }),
-
 
   head: () => ({
     meta: [
@@ -73,7 +72,6 @@ export const Route = createFileRoute("/_authenticated/inbox")({
   }),
   component: InboxPage,
 });
-
 
 type Conversation = {
   id: string;
@@ -95,7 +93,6 @@ type Conversation = {
 };
 
 type Tab = "waiting" | "mine" | "department" | "active" | "closed" | "all";
-
 
 const STATUS_LABEL: Record<string, string> = {
   new: "AI handling",
@@ -154,7 +151,6 @@ function InboxPage() {
     const timer = setInterval(() => setNowTick(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
-
 
   const userId = session.data?.userId ?? null;
   const organizationId = session.data?.organizationId ?? null;
@@ -277,7 +273,9 @@ function InboxPage() {
           q = applyQueueFilter(q);
           break;
         case "mine":
-          q = q.eq("assigned_to", userId ?? "").not("status", "in", `(${CLOSED_STATUSES.join(",")})`);
+          q = q
+            .eq("assigned_to", userId ?? "")
+            .not("status", "in", `(${CLOSED_STATUSES.join(",")})`);
           break;
         case "department":
           q = q
@@ -309,8 +307,10 @@ function InboxPage() {
               .order("id", { ascending: true })
           : q.order("last_message_at", { ascending: false }).order("id", { ascending: false });
 
-      const { data, error, count } = await ordered
-        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+      const { data, error, count } = await ordered.range(
+        page * PAGE_SIZE,
+        page * PAGE_SIZE + PAGE_SIZE - 1,
+      );
       if (error) throw error;
       return { rows: (data ?? []) as Conversation[], total: count ?? 0 };
     },
@@ -349,7 +349,6 @@ function InboxPage() {
   useEffect(() => {
     setPage(0);
   }, [tab, statusFilter, debouncedQuery]);
-
 
   /**
    * Live updates, scoped as narrowly as the data allows: conversation events
@@ -501,7 +500,6 @@ function InboxPage() {
     },
   });
 
-
   const sendReply = useMutation({
     mutationFn: async (body: string) => replyFn({ data: { conversationId: active!.id, body } }),
     onSuccess: () => {
@@ -576,9 +574,6 @@ function InboxPage() {
     onError: (e) => fail(e, "Could not save that note"),
   });
 
-
-
-
   const departmentsQuery = useQuery({
     queryKey: ["inbox-departments"],
     queryFn: async () => {
@@ -636,7 +631,9 @@ function InboxPage() {
   };
 
   const isOwner = Boolean(active && active.assigned_to === userId);
-  const isClosed = Boolean(active && (CLOSED_STATUSES as readonly string[]).includes(active.status));
+  const isClosed = Boolean(
+    active && (CLOSED_STATUSES as readonly string[]).includes(active.status),
+  );
   const canClaim =
     Boolean(active) &&
     !active!.assigned_to &&
@@ -658,14 +655,11 @@ function InboxPage() {
       })
     : null;
   const canReply =
-    Boolean(active) &&
-    !isClosed &&
-    (isOwner || (isSupervisor && Boolean(active!.assigned_to)));
+    Boolean(active) && !isClosed && (isOwner || (isSupervisor && Boolean(active!.assigned_to)));
   // Supervisors can finish an unclaimed conversation without taking it over —
   // otherwise stray tickets can only be tidied up by claiming them first.
   const canFinish = Boolean(active) && !isClosed && (isOwner || isSupervisor);
   const readOnly = Boolean(active) && !canReply && !canClaim;
-
 
   const tabs: Array<{ key: Tab; label: string }> = [
     { key: "waiting", label: "Waiting" },
@@ -684,7 +678,6 @@ function InboxPage() {
     if (c.assigned_to === userId) return "Assigned to you";
     const name = (staffQuery.data ?? []).find((s) => s.id === c.assigned_to)?.full_name;
     return name ? `Assigned to ${name}` : "Assigned to a colleague";
-
   }
 
   const noteAuthorName = (id: string | null) => {
@@ -692,7 +685,6 @@ function InboxPage() {
     if (id === userId) return "You";
     return (staffQuery.data ?? []).find((s) => s.id === id)?.full_name ?? "A team member";
   };
-
 
   return (
     <AdminShell
@@ -753,7 +745,6 @@ function InboxPage() {
             <p className="p-4 text-sm text-muted-foreground">Loading conversations…</p>
           ) : conversations.length === 0 ? (
             <p className="p-4 text-sm text-muted-foreground">Nothing in this queue right now.</p>
-
           ) : (
             <ul className="divide-y divide-border">
               {conversations.map((c) => (
@@ -796,7 +787,12 @@ function InboxPage() {
                 {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
               </span>
               <span className="flex gap-1">
-                <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => p - 1)}
+                >
                   Prev
                 </Button>
                 <Button
@@ -869,7 +865,6 @@ function InboxPage() {
                     </span>
                   ) : null}
 
-
                   {canFinish ? (
                     <>
                       <Dialog
@@ -931,8 +926,6 @@ function InboxPage() {
                       </Button>
                     </>
                   ) : null}
-
-
                 </div>
               </div>
 
@@ -945,7 +938,6 @@ function InboxPage() {
                   />
                 ) : null}
                 {(messagesQuery.data ?? []).map((m) => (
-
                   <div
                     key={m.id}
                     className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
@@ -957,8 +949,7 @@ function InboxPage() {
                     }`}
                   >
                     <p className="mb-1 text-xs opacity-70">
-                      {m.sender_name ?? m.sender_type} ·{" "}
-                      {formatTimeInZone(m.created_at)}
+                      {m.sender_name ?? m.sender_type} · {formatTimeInZone(m.created_at)}
                     </p>
                     <p className="whitespace-pre-wrap">{m.body}</p>
                     {(m.metadata as { attachment?: Attachment } | null)?.attachment ? (
@@ -1143,7 +1134,6 @@ function InboxPage() {
             </div>
           ) : null}
         </aside>
-
       </div>
     </AdminShell>
   );
@@ -1176,7 +1166,8 @@ function QueueMeta({
     <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
       {waited !== null ? (
         <span className="font-medium text-destructive">
-          Waiting {waitLabel(conversation.first_human_requested_at ?? conversation.requested_agent_at)}
+          Waiting{" "}
+          {waitLabel(conversation.first_human_requested_at ?? conversation.requested_agent_at)}
         </span>
       ) : null}
       {remaining !== null ? (

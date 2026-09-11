@@ -34,10 +34,8 @@ function requireVars(names: string[], tier: string): Record<string, string> {
 
 /** Tier A — browser-only smoke testing. */
 export function requireBrowserEnv(): { baseURL: string } {
-  const baseURL =
-    read("E2E_BASE_URL") ?? `http://127.0.0.1:${read("E2E_PORT") ?? "4173"}`;
+  const baseURL = read("E2E_BASE_URL") ?? `http://127.0.0.1:${read("E2E_PORT") ?? "4173"}`;
   try {
-    // eslint-disable-next-line no-new
     new URL(baseURL);
   } catch {
     throw new Error(`E2E preflight failed (browser): invalid base URL "${baseURL}".`);

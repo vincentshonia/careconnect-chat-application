@@ -49,7 +49,12 @@ export const Route = createFileRoute("/api/public/chat/message")({
                 input.menuOption ? `${input.menuOption} enquiry` : undefined,
               );
 
-          const visitorMessage = await mod.insertMessage(conversation, "visitor", input.text, "Visitor");
+          const visitorMessage = await mod.insertMessage(
+            conversation,
+            "visitor",
+            input.text,
+            "Visitor",
+          );
 
           // The insert may have reopened a finished chat. Re-read the row so a
           // reopen that went back to the human queue is not also answered by
@@ -62,7 +67,7 @@ export const Route = createFileRoute("/api/public/chat/message")({
             .maybeSingle();
           const liveAgentOwned = Boolean(
             (refreshed?.escalation_requested ?? conversation.escalation_requested) ||
-              (refreshed?.assigned_to ?? conversation.assigned_to),
+            (refreshed?.assigned_to ?? conversation.assigned_to),
           );
 
           // A live agent owns the conversation: don't answer with AI.
@@ -75,7 +80,6 @@ export const Route = createFileRoute("/api/public/chat/message")({
           }
 
           await mod.enforceAiBudget(ctx.claims.org, limits);
-
 
           const db = mod.admin();
           const { data: prior } = await db
@@ -174,7 +178,10 @@ export const Route = createFileRoute("/api/public/chat/message")({
             return Response.json({ error: error.message }, { status: error.status });
           }
           console.error("[chat/message]", error);
-          return Response.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+          return Response.json(
+            { error: "Something went wrong. Please try again." },
+            { status: 500 },
+          );
         }
       },
     },

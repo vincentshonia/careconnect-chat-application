@@ -332,7 +332,10 @@ export const reportsChapter: Chapter = {
             ["Staff", "Who handled what, how fast, with what outcome?"],
             ["Tickets / conversations", "Which specific conversations sit behind a number?"],
             ["Intake", "How are referrals and enrollments flowing, and what is overdue?"],
-            ["AI", "How much is the assistant handling, how often does it escalate, and was it helpful?"],
+            [
+              "AI",
+              "How much is the assistant handling, how often does it escalate, and was it helpful?",
+            ],
           ],
         },
       ],

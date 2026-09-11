@@ -13,7 +13,6 @@ import {
   type ProtectedBaseline,
 } from "./helpers/required-env";
 
-
 /**
  * Phase 3 scale & reconciliation tests.
  *
@@ -82,10 +81,12 @@ type Rpc = Record<string, unknown>;
 // "Could not query the database for the schema cache" is PostgREST reporting
 // that it momentarily lost its own connection to Postgres under bulk-write
 // load — the same transient class as a pool timeout, not a product defect.
-const TRANSIENT =
-  /connection pool|timeout|timed out|fetch failed|socket|schema cache|502|503|504/i;
+const TRANSIENT = /connection pool|timeout|timed out|fetch failed|socket|schema cache|502|503|504/i;
 
-async function attempt<T>(label: string, run: () => Promise<{ data: unknown; error: { message: string } | null }>) {
+async function attempt<T>(
+  label: string,
+  run: () => Promise<{ data: unknown; error: { message: string } | null }>,
+) {
   let last = "";
   for (let tries = 0; tries < 8; tries += 1) {
     const { data, error } = await run();
@@ -109,12 +110,12 @@ async function insertBatched(table: string, rows: Record<string, unknown>[]) {
     // Rows carry client-generated ids and are upserted, so a retry after a
     // timed-out-but-applied write can never duplicate a fixture row.
     await attempt(`${table} insert`, () =>
-      db.from(table).upsert(slice as never, { onConflict: "id", ignoreDuplicates: true }));
+      db.from(table).upsert(slice as never, { onConflict: "id", ignoreDuplicates: true }),
+    );
     // A short pause between batches keeps the shared pool from saturating.
     await new Promise((resolve) => setTimeout(resolve, 60));
   }
 }
-
 
 async function makeOrg(name: string) {
   const orgName = syntheticName(name, suffix);
@@ -181,7 +182,6 @@ async function makeOwner(org: string, key: string) {
 
 /** Deterministic shape for the bulk rows so every expectation is exact. */
 const STATUS_CYCLE = ["new", "waiting", "active", "resolved", "closed"] as const;
-
 
 function baseFilters() {
   return {
@@ -296,7 +296,6 @@ describe("reporting at volume", () => {
     expect(page.rows).toHaveLength(50);
   }, 240_000);
 
-
   it("pages through every record exactly once, with no duplicates or skips", async () => {
     const limit = 500;
     const seen: string[] = [];
@@ -304,7 +303,7 @@ describe("reporting at volume", () => {
       const page = await tickets({ _limit: limit, _offset: offset });
       expect(page.total).toBe(VOLUME);
       expect(page.rows).toHaveLength(Math.min(limit, VOLUME - offset));
-      for (const row of page.rows) seen.push(String(row['id']));
+      for (const row of page.rows) seen.push(String(row["id"]));
     }
     expect(seen).toHaveLength(VOLUME);
     expect(new Set(seen).size).toBe(VOLUME);
@@ -316,11 +315,10 @@ describe("reporting at volume", () => {
   it("orders deterministically across repeated reads", async () => {
     const a = await tickets({ _limit: 100, _offset: 300, _sort: "status", _dir: "asc" });
     const b = await tickets({ _limit: 100, _offset: 300, _sort: "status", _dir: "asc" });
-    expect(a.rows.map((r) => r['id'])).toEqual(b.rows.map((r) => r['id']));
+    expect(a.rows.map((r) => r["id"])).toEqual(b.rows.map((r) => r["id"]));
     // Same sandbox allowance as the other volume reads in this suite; the
     // assertions are unchanged — only the wall-clock budget matches its peers.
   }, 240_000);
-
 
   it("combines a filter with pagination without losing rows", async () => {
     const expected = VOLUME / STATUS_CYCLE.length; // one status in five
@@ -331,8 +329,8 @@ describe("reporting at volume", () => {
     for (let offset = 0; offset < expected; offset += 100) {
       const page = await tickets({ _statuses: ["resolved"], _limit: 100, _offset: offset });
       for (const row of page.rows) {
-        expect(row['status']).toBe("resolved");
-        seen.add(String(row['id']));
+        expect(row["status"]).toBe("resolved");
+        seen.add(String(row["id"]));
       }
     }
     expect(seen.size).toBe(expected);
@@ -346,11 +344,10 @@ describe("reporting at volume", () => {
 
   it("never returns another tenant's conversations", async () => {
     const page = await tickets({ _limit: 100 });
-    expect(page.rows.every((r) => String(r['reference']).startsWith(`SC-${suffix}`))).toBe(true);
+    expect(page.rows.every((r) => String(r["reference"]).startsWith(`SC-${suffix}`))).toBe(true);
     const other = await tickets({ _org: orgB, _limit: 5 });
     expect(other.total).toBe(OTHER_VOLUME);
   }, 240_000);
-
 
   it("clamps a department filter to the requested department only", async () => {
     const one = await tickets({ _dept: [deptOne], _limit: 5 });
@@ -458,7 +455,6 @@ describe("AI-only completion", () => {
       aiTo = new Date(Date.UTC(2025, 6, 1)).toISOString();
 
       const done = new Date(Date.UTC(2025, 5, 10, 12, 30, 0)).toISOString();
-      
 
       await conversation("completed", { status: "resolved", resolved_at: done });
       await conversation("unresolved", { status: "waiting" });
@@ -472,7 +468,7 @@ describe("AI-only completion", () => {
       const { error: messageError } = await db.from("messages").insert({
         organization_id: aiOrg,
         website_id: aiSite,
-        conversation_id: cases['agentmsg'],
+        conversation_id: cases["agentmsg"],
         sender_type: "agent",
         body: "Following up personally.",
       } as never);
@@ -480,7 +476,7 @@ describe("AI-only completion", () => {
 
       const { error: eventError } = await db.from("conversation_events").insert({
         organization_id: aiOrg,
-        conversation_id: cases['humanreq'],
+        conversation_id: cases["humanreq"],
         event_type: "human_requested",
         detail: "Visitor asked for a person",
       } as never);
@@ -510,37 +506,37 @@ describe("AI-only completion", () => {
   it("only credits a completed, human-free conversation", async () => {
     const d = await ai();
     // completed, unresolved, abandoned, agentmsg, humanreq, otherdept — spam excluded.
-    expect(Number(d['eligible'])).toBe(6);
-    expect(Number(d['ai_only_completed'])).toBe(2); // completed + otherdept
-    expect(Number(d['excluded'])).toBe(1);
+    expect(Number(d["eligible"])).toBe(6);
+    expect(Number(d["ai_only_completed"])).toBe(2); // completed + otherdept
+    expect(Number(d["excluded"])).toBe(1);
   });
 
   it("does not count an unresolved AI conversation as a completion", async () => {
     const d = await ai();
-    expect(Number(d['ai_unresolved'])).toBe(2); // unresolved + abandoned
+    expect(Number(d["ai_unresolved"])).toBe(2); // unresolved + abandoned
   });
 
   it("disqualifies a conversation with a historical agent message", async () => {
-    const touched = await rpc<boolean>("conversation_human_touched", { _id: cases['agentmsg'] });
+    const touched = await rpc<boolean>("conversation_human_touched", { _id: cases["agentmsg"] });
     expect(touched).toBe(true);
   });
 
   it("disqualifies a conversation with a human-request event", async () => {
-    const touched = await rpc<boolean>("conversation_human_touched", { _id: cases['humanreq'] });
+    const touched = await rpc<boolean>("conversation_human_touched", { _id: cases["humanreq"] });
     expect(touched).toBe(true);
   });
 
   it("leaves a purely AI conversation untouched by humans", async () => {
-    const touched = await rpc<boolean>("conversation_human_touched", { _id: cases['completed'] });
+    const touched = await rpc<boolean>("conversation_human_touched", { _id: cases["completed"] });
     expect(touched).toBe(false);
   });
 
   it("scopes to a department", async () => {
     const one = await ai([aiDeptOne]);
     const two = await ai([aiDeptTwo]);
-    expect(Number(one['ai_only_completed'])).toBe(1);
-    expect(Number(two['ai_only_completed'])).toBe(1);
-    expect(Number(two['eligible'])).toBe(1);
+    expect(Number(one["ai_only_completed"])).toBe(1);
+    expect(Number(two["ai_only_completed"])).toBe(1);
+    expect(Number(two["eligible"])).toBe(1);
   });
 
   it("returns no rate at all when there is nothing to measure", async () => {
@@ -551,9 +547,9 @@ describe("AI-only completion", () => {
       _dept: null,
       _website: null,
     });
-    expect(Number(empty['eligible'])).toBe(0);
-    expect(empty['ai_only_completion_rate']).toBeNull();
-    expect(empty['escalation_rate']).toBeNull();
+    expect(Number(empty["eligible"])).toBe(0);
+    expect(empty["ai_only_completion_rate"]).toBeNull();
+    expect(empty["escalation_rate"]).toBeNull();
   });
 });
 
@@ -666,21 +662,21 @@ describe("report days follow the organization timezone", () => {
 
   it("counts a 23:30 Pacific conversation on the Pacific day", async () => {
     const d = await volume("America/Los_Angeles");
-    const days = d['by_day'] as { day: string; conversations: number }[];
+    const days = d["by_day"] as { day: string; conversations: number }[];
     expect(days.map((r) => r.day)).toEqual(["2025-06-10"]);
     expect(Number(days[0]!.conversations)).toBe(1);
-    expect(d['peak_day']).toBe("2025-06-10");
+    expect(d["peak_day"]).toBe("2025-06-10");
   });
 
   it("buckets the hour on the Pacific clock too", async () => {
     const d = await volume("America/Los_Angeles");
-    const hours = d['by_hour'] as { hour: number }[];
+    const hours = d["by_hour"] as { hour: number }[];
     expect(hours.map((h) => Number(h.hour))).toEqual([23]);
   });
 
   it("still reports the UTC day when asked for UTC", async () => {
     const d = await volume("UTC");
-    const days = d['by_day'] as { day: string }[];
+    const days = d["by_day"] as { day: string }[];
     expect(days.map((r) => r.day)).toEqual(["2025-06-11"]);
   });
 });
@@ -797,7 +793,10 @@ describe("staff credit survives a reassignment", () => {
       if (eventError) throw new Error(`credit events: ${eventError.message}`);
     } catch (error) {
       // A half-built fixture is exactly what gets left behind otherwise.
-      await purgeSyntheticUsers(db, [responder, inheritor].filter((u) => u?.id));
+      await purgeSyntheticUsers(
+        db,
+        [responder, inheritor].filter((u) => u?.id),
+      );
       await purgeSyntheticOrganizations(db, [org]);
       throw error;
     }
@@ -805,7 +804,10 @@ describe("staff credit survives a reassignment", () => {
 
   afterAll(async () => {
     if (!configured) return;
-    await purgeSyntheticUsers(db, [responder, inheritor].filter((u) => u.id));
+    await purgeSyntheticUsers(
+      db,
+      [responder, inheritor].filter((u) => u.id),
+    );
     await purgeSyntheticOrganizations(db, [org]);
   }, 180_000);
 
@@ -827,26 +829,26 @@ describe("staff credit survives a reassignment", () => {
 
   it("keeps the first-response and reply-target credit with the original responder", async () => {
     const rows = await staffRows();
-    const original = rows.find((r) => r['user_id'] === responder.id);
-    const now = rows.find((r) => r['user_id'] === inheritor.id);
+    const original = rows.find((r) => r["user_id"] === responder.id);
+    const now = rows.find((r) => r["user_id"] === inheritor.id);
     expect(original).toBeTruthy();
     expect(now).toBeTruthy();
-    expect(Number(original!['avg_response'])).toBe(5);
-    expect(Number(original!['avg_claim'])).toBe(2);
-    expect(Number(original!['sla_pct'])).toBe(100);
+    expect(Number(original!["avg_response"])).toBe(5);
+    expect(Number(original!["avg_claim"])).toBe(2);
+    expect(Number(original!["sla_pct"])).toBe(100);
     // The current owner never replied, so nothing is credited to them.
-    expect(now!['avg_response']).toBeNull();
-    expect(now!['sla_pct']).toBeNull();
+    expect(now!["avg_response"]).toBeNull();
+    expect(now!["sla_pct"]).toBeNull();
   });
 
   it("credits handling time to whoever resolved the conversation", async () => {
     const rows = await staffRows();
-    const original = rows.find((r) => r['user_id'] === responder.id);
-    const now = rows.find((r) => r['user_id'] === inheritor.id);
-    expect(Number(original!['avg_handle'])).toBe(38);
-    expect(now!['avg_handle']).toBeNull();
+    const original = rows.find((r) => r["user_id"] === responder.id);
+    const now = rows.find((r) => r["user_id"] === inheritor.id);
+    expect(Number(original!["avg_handle"])).toBe(38);
+    expect(now!["avg_handle"]).toBeNull();
     // Current workload still belongs to the person who holds the chat today.
-    expect(Number(now!['assigned_count'])).toBe(1);
+    expect(Number(now!["assigned_count"])).toBe(1);
   });
 
   it("self-scope report credits the original responder after reassignment", async () => {
@@ -865,10 +867,10 @@ describe("staff credit survives a reassignment", () => {
       _priority: null,
       _sla: 15,
     });
-    const original = rows.find((r) => r['user_id'] === responder.id);
+    const original = rows.find((r) => r["user_id"] === responder.id);
     expect(original).toBeTruthy();
-    expect(Number(original!['avg_response'])).toBe(5);
-    expect(Number(original!['sla_pct'])).toBe(100);
-    expect(Number(original!['avg_handle'])).toBe(38);
+    expect(Number(original!["avg_response"])).toBe(5);
+    expect(Number(original!["sla_pct"])).toBe(100);
+    expect(Number(original!["avg_handle"])).toBe(38);
   });
 });

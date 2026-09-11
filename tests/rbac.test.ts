@@ -265,23 +265,21 @@ describe("authenticated RBAC boundaries", () => {
 
   describe("cross-tenant denial", () => {
     it("a member of tenant B sees no conversation from tenant A", async () => {
-      const { data } = await clients['agentB']!
-        .from("conversations")
+      const { data } = await clients["agentB"]!.from("conversations")
         .select("id")
         .eq("organization_id", ctx.orgA);
       expect(data ?? []).toHaveLength(0);
     });
 
     it("a member of tenant B cannot read tenant A's organization record", async () => {
-      const { data } = await clients['agentB']!
-        .from("organizations")
+      const { data } = await clients["agentB"]!.from("organizations")
         .select("id")
         .eq("id", ctx.orgA);
       expect(data ?? []).toHaveLength(0);
     });
 
     it("a member of tenant B cannot write into tenant A", async () => {
-      const { error } = await clients['agentB']!.from("conversations").insert({
+      const { error } = await clients["agentB"]!.from("conversations").insert({
         organization_id: ctx.orgA,
         website_id: ctx.websiteA,
         reference: `forged-${suffix}`,
@@ -299,37 +297,36 @@ describe("authenticated RBAC boundaries", () => {
     });
 
     it("B may view A's owned conversation but cannot take ownership of it", async () => {
-      await clients['userB']!
-        .from("conversations")
-        .update({ assigned_to: ctx.users['userB']!.id })
+      await clients["userB"]!.from("conversations")
+        .update({ assigned_to: ctx.users["userB"]!.id })
         .eq("id", ctx.convA1);
       const { data } = await admin
         .from("conversations")
         .select("assigned_to")
         .eq("id", ctx.convA1)
         .single();
-      expect(data?.assigned_to).toBe(ctx.users['userA']!.id);
+      expect(data?.assigned_to).toBe(ctx.users["userA"]!.id);
     });
 
     it("B cannot reply on a conversation owned by A", async () => {
-      const { error } = await clients['userB']!.from("messages").insert({
+      const { error } = await clients["userB"]!.from("messages").insert({
         conversation_id: ctx.convA1,
         organization_id: ctx.orgA,
         website_id: ctx.websiteA,
         sender_type: "agent",
-        sender_user_id: ctx.users['userB']!.id,
+        sender_user_id: ctx.users["userB"]!.id,
         body: "impersonation attempt",
       } as never);
       expect(error).not.toBeNull();
     });
 
     it("A can reply on the conversation they own", async () => {
-      const { error } = await clients['userA']!.from("messages").insert({
+      const { error } = await clients["userA"]!.from("messages").insert({
         conversation_id: ctx.convA1,
         organization_id: ctx.orgA,
         website_id: ctx.websiteA,
         sender_type: "agent",
-        sender_user_id: ctx.users['userA']!.id,
+        sender_user_id: ctx.users["userA"]!.id,
         body: "hello from the owner",
       } as never);
       expect(error).toBeNull();
@@ -346,14 +343,13 @@ describe("authenticated RBAC boundaries", () => {
     });
 
     it("a Standard User cannot modify roles", async () => {
-      await clients['userA']!
-        .from("organization_memberships")
+      await clients["userA"]!.from("organization_memberships")
         .update({ role: "administrator" })
-        .eq("user_id", ctx.users['userA']!.id);
+        .eq("user_id", ctx.users["userA"]!.id);
       const { data } = await admin
         .from("organization_memberships")
         .select("role")
-        .eq("user_id", ctx.users['userA']!.id)
+        .eq("user_id", ctx.users["userA"]!.id)
         .single();
       expect(data?.role).toBe("agent");
       expect(
@@ -368,15 +364,16 @@ describe("authenticated RBAC boundaries", () => {
     });
 
     it("a Standard User cannot make themselves a platform administrator", async () => {
-      const { error } = await clients['userA']!
-        .from("platform_admins")
-        .insert({ user_id: ctx.users['userA']!.id, role: "platform_owner" } as never);
+      const { error } = await clients["userA"]!.from("platform_admins").insert({
+        user_id: ctx.users["userA"]!.id,
+        role: "platform_owner",
+      } as never);
       expect(error).not.toBeNull();
     });
 
     it("a Standard User cannot grant themselves a role row", async () => {
-      const { error } = await clients['userA']!.from("user_roles").insert({
-        user_id: ctx.users['userA']!.id,
+      const { error } = await clients["userA"]!.from("user_roles").insert({
+        user_id: ctx.users["userA"]!.id,
         role: "administrator",
         organization_id: ctx.orgA,
       } as never);
@@ -396,14 +393,13 @@ describe("authenticated RBAC boundaries", () => {
     });
 
     it("cannot change organization roles", async () => {
-      await clients['lead']!
-        .from("organization_memberships")
+      await clients["lead"]!.from("organization_memberships")
         .update({ role: "agent" })
-        .eq("user_id", ctx.users['userB']!.id);
+        .eq("user_id", ctx.users["userB"]!.id);
       const { data } = await admin
         .from("organization_memberships")
         .select("role")
-        .eq("user_id", ctx.users['userB']!.id)
+        .eq("user_id", ctx.users["userB"]!.id)
         .single();
       expect(data?.role).toBe("agent");
       expect(
@@ -439,14 +435,13 @@ describe("authenticated RBAC boundaries", () => {
           targetNewRole: "team_lead",
         }),
       ).toBeTruthy();
-      await clients['manager']!
-        .from("organization_memberships")
+      await clients["manager"]!.from("organization_memberships")
         .update({ role: "team_lead" })
-        .eq("user_id", ctx.users['userB']!.id);
+        .eq("user_id", ctx.users["userB"]!.id);
       const { data } = await admin
         .from("organization_memberships")
         .select("role")
-        .eq("user_id", ctx.users['userB']!.id)
+        .eq("user_id", ctx.users["userB"]!.id)
         .single();
       expect(data?.role).toBe("agent");
     });
@@ -472,19 +467,14 @@ describe("authenticated RBAC boundaries", () => {
 
   describe("Administrator", () => {
     it("can access organization-wide conversations", async () => {
-      const seen = await visibleConversations("adminA", [
-        ctx.convA1,
-        ctx.convA1Open,
-        ctx.convA2,
-      ]);
+      const seen = await visibleConversations("adminA", [ctx.convA1, ctx.convA1Open, ctx.convA2]);
       expect(seen.sort()).toEqual([ctx.convA1, ctx.convA1Open, ctx.convA2].sort());
     });
 
     it("cannot access organization B", async () => {
       const seen = await visibleConversations("adminA", [ctx.convB]);
       expect(seen).toHaveLength(0);
-      const { data } = await clients['adminA']!
-        .from("organization_memberships")
+      const { data } = await clients["adminA"]!.from("organization_memberships")
         .select("user_id")
         .eq("organization_id", ctx.orgB);
       expect(data ?? []).toHaveLength(0);
@@ -500,14 +490,13 @@ describe("authenticated RBAC boundaries", () => {
           targetNewRole: "super_admin",
         }),
       ).toBeTruthy();
-      await clients['adminA']!
-        .from("organization_memberships")
+      await clients["adminA"]!.from("organization_memberships")
         .update({ role: "super_admin" })
-        .eq("user_id", ctx.users['userB']!.id);
+        .eq("user_id", ctx.users["userB"]!.id);
       const { data } = await admin
         .from("organization_memberships")
         .select("role")
-        .eq("user_id", ctx.users['userB']!.id)
+        .eq("user_id", ctx.users["userB"]!.id)
         .single();
       expect(data?.role).toBe("agent");
     });
@@ -522,14 +511,13 @@ describe("authenticated RBAC boundaries", () => {
           targetNewRole: "super_admin",
         }),
       ).toBeTruthy();
-      await clients['adminA']!
-        .from("organization_memberships")
+      await clients["adminA"]!.from("organization_memberships")
         .update({ role: "super_admin" })
-        .eq("user_id", ctx.users['adminA']!.id);
+        .eq("user_id", ctx.users["adminA"]!.id);
       const { data } = await admin
         .from("organization_memberships")
         .select("role")
-        .eq("user_id", ctx.users['adminA']!.id)
+        .eq("user_id", ctx.users["adminA"]!.id)
         .single();
       expect(data?.role).toBe("administrator");
     });
@@ -537,19 +525,14 @@ describe("authenticated RBAC boundaries", () => {
 
   describe("Super Admin", () => {
     it("receives organization-wide access", async () => {
-      const seen = await visibleConversations("superA", [
-        ctx.convA1,
-        ctx.convA1Open,
-        ctx.convA2,
-      ]);
+      const seen = await visibleConversations("superA", [ctx.convA1, ctx.convA1Open, ctx.convA2]);
       expect(seen.sort()).toEqual([ctx.convA1, ctx.convA1Open, ctx.convA2].sort());
     });
 
     it("still cannot access another tenant", async () => {
       const seen = await visibleConversations("superA", [ctx.convB]);
       expect(seen).toHaveLength(0);
-      const { data } = await clients['superA']!
-        .from("organizations")
+      const { data } = await clients["superA"]!.from("organizations")
         .select("id")
         .eq("id", ctx.orgB);
       expect(data ?? []).toHaveLength(0);
@@ -563,8 +546,7 @@ describe("authenticated RBAC boundaries", () => {
      * that the statement removes nothing and org B is still there afterwards.
      */
     it("cannot delete another tenant's organization", async () => {
-      const { data, error } = await clients['superA']!
-        .from("organizations")
+      const { data, error } = await clients["superA"]!.from("organizations")
         .delete()
         .eq("id", ctx.orgB)
         .select("id");
@@ -591,11 +573,11 @@ describe("authenticated RBAC boundaries", () => {
      * session, and the insert policy rejects any other actor_id.
      */
     it("stores the caller's own id when the client forges actor_id", async () => {
-      const caller = ctx.users['userA']!;
-      const victim = ctx.users['userB']!;
+      const caller = ctx.users["userA"]!;
+      const victim = ctx.users["userB"]!;
 
       const action = `test.audit.forgery.${suffix}`;
-      const { error } = await clients['userA']!.from("audit_logs").insert({
+      const { error } = await clients["userA"]!.from("audit_logs").insert({
         organization_id: ctx.orgA,
         actor_id: victim.id,
         actor_name: "Somebody Else",
@@ -615,13 +597,10 @@ describe("authenticated RBAC boundaries", () => {
     });
   });
 
-
-
   describe("personal profile updates never grant authority", () => {
     for (const key of ["userA", "adminA", "superA"] as const) {
       it(`${key} cannot move themselves to another organization`, async () => {
-        await clients[key]!
-          .from("profiles")
+        await clients[key]!.from("profiles")
           .update({ organization_id: ctx.orgB })
           .eq("id", ctx.users[key]!.id);
         const { data } = await admin
@@ -637,8 +616,7 @@ describe("authenticated RBAC boundaries", () => {
           .from("profiles")
           .update({ max_concurrent_chats: 2 })
           .eq("id", ctx.users[key]!.id);
-        await clients[key]!
-          .from("profiles")
+        await clients[key]!.from("profiles")
           .update({ max_concurrent_chats: 99 })
           .eq("id", ctx.users[key]!.id);
         const { data } = await admin
@@ -651,8 +629,7 @@ describe("authenticated RBAC boundaries", () => {
 
       it(`${key} cannot change their own account status`, async () => {
         await admin.from("profiles").update({ status: "active" }).eq("id", ctx.users[key]!.id);
-        await clients[key]!
-          .from("profiles")
+        await clients[key]!.from("profiles")
           .update({ status: "suspended" })
           .eq("id", ctx.users[key]!.id);
         const { data } = await admin
@@ -664,8 +641,7 @@ describe("authenticated RBAC boundaries", () => {
       });
 
       it(`${key}'s profile email keeps mirroring the sign-in email`, async () => {
-        await clients[key]!
-          .from("profiles")
+        await clients[key]!.from("profiles")
           .update({ email: "attacker@example.test" })
           .eq("id", ctx.users[key]!.id);
         const { data } = await admin
@@ -678,47 +654,44 @@ describe("authenticated RBAC boundaries", () => {
     }
 
     it("a Standard User can still edit their own personal details", async () => {
-      const { error } = await clients['userA']!
-        .from("profiles")
+      const { error } = await clients["userA"]!.from("profiles")
         .update({ full_name: "Renamed Agent", phone: "555-0100" })
-        .eq("id", ctx.users['userA']!.id);
+        .eq("id", ctx.users["userA"]!.id);
       expect(error).toBeNull();
       const { data } = await admin
         .from("profiles")
         .select("full_name")
-        .eq("id", ctx.users['userA']!.id)
+        .eq("id", ctx.users["userA"]!.id)
         .single();
       expect(data?.full_name).toBe("Renamed Agent");
     });
 
     it("a Standard User cannot edit a colleague's profile", async () => {
-      await clients['userA']!
-        .from("profiles")
+      await clients["userA"]!.from("profiles")
         .update({ full_name: "Hacked" })
-        .eq("id", ctx.users['userB']!.id);
+        .eq("id", ctx.users["userB"]!.id);
       const { data } = await admin
         .from("profiles")
         .select("full_name")
-        .eq("id", ctx.users['userB']!.id)
+        .eq("id", ctx.users["userB"]!.id)
         .single();
       expect(data?.full_name).not.toBe("Hacked");
     });
 
     it("an Administrator can still perform authorized staff management on another employee", async () => {
-      const { error } = await clients['adminA']!
-        .from("profiles")
+      const { error } = await clients["adminA"]!.from("profiles")
         .update({ max_concurrent_chats: 7, status: "inactive", title: "Senior Advocate" })
-        .eq("id", ctx.users['userC']!.id);
+        .eq("id", ctx.users["userC"]!.id);
       expect(error).toBeNull();
       const { data } = await admin
         .from("profiles")
         .select("max_concurrent_chats, status, title")
-        .eq("id", ctx.users['userC']!.id)
+        .eq("id", ctx.users["userC"]!.id)
         .single();
       expect(data?.max_concurrent_chats).toBe(7);
       expect(data?.status).toBe("inactive");
       expect(data?.title).toBe("Senior Advocate");
-      await admin.from("profiles").update({ status: "active" }).eq("id", ctx.users['userC']!.id);
+      await admin.from("profiles").update({ status: "active" }).eq("id", ctx.users["userC"]!.id);
     });
   });
 
@@ -727,7 +700,7 @@ describe("authenticated RBAC boundaries", () => {
       const { report, dashboard } = await scopeForSignedInUser("userA");
       expect(dashboard).toBe("self");
       expect(report.level).toBe("self");
-      expect(report.staffIds).toEqual([ctx.users['userA']!.id]);
+      expect(report.staffIds).toEqual([ctx.users["userA"]!.id]);
       expect(report.departmentIds).toEqual([ctx.deptA1]);
     });
 
@@ -769,12 +742,12 @@ describe("authenticated RBAC boundaries", () => {
       } as never);
       expect(error).toBeNull();
       const rows = (data ?? []) as Array<{ user_id: string; in_department: boolean }>;
-      expect(rows.map((r) => r.user_id)).toContain(ctx.users['userB']!.id);
-      expect(rows.map((r) => r.user_id)).not.toContain(ctx.users['agentB']!.id);
+      expect(rows.map((r) => r.user_id)).toContain(ctx.users["userB"]!.id);
+      expect(rows.map((r) => r.user_id)).not.toContain(ctx.users["agentB"]!.id);
     });
 
     it("is not callable by signed-in users directly", async () => {
-      const { error } = await clients['userA']!.rpc("reassignment_candidates", {
+      const { error } = await clients["userA"]!.rpc("reassignment_candidates", {
         _org: ctx.orgA,
         _conversation: ctx.convA1,
       } as never);
@@ -785,14 +758,14 @@ describe("authenticated RBAC boundaries", () => {
   // Kept last: it permanently revokes one user's membership.
   describe("membership suspension revokes an existing session", () => {
     it("denies tenant reads and writes on the still-signed-in client", async () => {
-      const client = clients['suspended']!;
+      const client = clients["suspended"]!;
       const before = await visibleConversations("suspended", [ctx.convA1Open]);
       expect(before).toEqual([ctx.convA1Open]);
 
       const { error: suspendError } = await admin
         .from("organization_memberships")
         .update({ status: "suspended" })
-        .eq("user_id", ctx.users['suspended']!.id);
+        .eq("user_id", ctx.users["suspended"]!.id);
       expect(suspendError).toBeNull();
 
       // Same JWT, same client, no re-authentication.
@@ -819,7 +792,7 @@ describe("authenticated RBAC boundaries", () => {
 
   describe("two-step verification policy", () => {
     it("blocks tenant access for an aal1 session once the org requires MFA", async () => {
-      const client = clients['adminA']!;
+      const client = clients["adminA"]!;
       const before = await client.from("organizations").select("id").eq("id", ctx.orgA);
       expect((before.data ?? []).length).toBeGreaterThan(0);
 
@@ -844,4 +817,3 @@ describe("authenticated RBAC boundaries", () => {
     });
   });
 });
-

@@ -116,13 +116,16 @@ export function useNotifications(options: { alerts?: boolean } = {}) {
     if (!fresh.length) return;
     playChime();
     fresh.slice(0, 3).forEach((n) => {
-      const show = n.severity === "critical" ? toast.error : n.severity === "warning" ? toast.warning : toast.info;
+      const show =
+        n.severity === "critical"
+          ? toast.error
+          : n.severity === "warning"
+            ? toast.warning
+            : toast.info;
       show(n.title, { description: n.body ?? undefined, duration: 8000 });
       showDesktopNotification(n.title, n.body, n.link);
     });
   }, [rows, alerts]);
-
-
 
   const unread = (query.data ?? []).filter((n) => !n.read_at);
 

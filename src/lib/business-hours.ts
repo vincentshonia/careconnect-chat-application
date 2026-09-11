@@ -63,7 +63,13 @@ export function isOpenNow(
 
   const yesterday = (dow + 6) % 7;
   return (
-    inRange(hours.find((h) => h.day_of_week === dow), false) ||
-    inRange(hours.find((h) => h.day_of_week === yesterday), true)
+    inRange(
+      hours.find((h) => h.day_of_week === dow),
+      false,
+    ) ||
+    inRange(
+      hours.find((h) => h.day_of_week === yesterday),
+      true,
+    )
   );
 }

@@ -11,6 +11,7 @@ import {
 import {
   escalateToHuman,
   openConversation,
+  resolveOpenConversation,
   openWidget,
   signIn,
   waitForConversation,
@@ -43,7 +44,9 @@ test.afterAll(async () => {
   await destroyE2ETenant(tenant);
 });
 
-test("a resolved conversation is rated and shows up in authorized reporting", async ({ browser }) => {
+test("a resolved conversation is rated and shows up in authorized reporting", async ({
+  browser,
+}) => {
   const visitorContext = await browser.newContext();
   const visitor = await visitorContext.newPage();
   await openWidget(visitor, tenant);
@@ -53,9 +56,13 @@ test("a resolved conversation is rated and shows up in authorized reporting", as
     (r) => r.url().includes("/api/public/chat/message") && r.request().method() === "POST",
     { timeout: 90_000 },
   );
-  await visitor.getByLabel("Type your question").fill("What services do you offer for new members?");
+  await visitor
+    .getByLabel("Type your question")
+    .fill("What services do you offer for new members?");
   await visitor.getByLabel("Type your question").press("Enter");
-  expect((await messageResponse).status(), "the visitor message must be accepted").toBeLessThan(400);
+  expect((await messageResponse).status(), "the visitor message must be accepted").toBeLessThan(
+    400,
+  );
 
   const conversation = await escalateToHuman(visitor, tenant, {
     departmentName: tenant.departmentName,
@@ -97,7 +104,7 @@ test("a resolved conversation is rated and shows up in authorized reporting", as
     timeoutMs: 45_000,
   });
 
-  await adminPage.getByRole("button", { name: "Resolve", exact: true }).click();
+  await resolveOpenConversation(adminPage);
   const resolved = await waitForConversation(tenant.websiteId, (c) => c.status === "resolved", {
     conversationId: conversation.id,
     timeoutMs: 45_000,
@@ -112,7 +119,9 @@ test("a resolved conversation is rated and shows up in authorized reporting", as
   );
   await visitor.getByRole("button", { name: "Rate 5 out of 5" }).click();
   expect((await rateResponse).status(), "the rating must be accepted").toBeLessThan(400);
-  await expect(visitor.getByText("Thank you — your feedback helps our team improve.")).toBeVisible();
+  await expect(
+    visitor.getByText("Thank you — your feedback helps our team improve."),
+  ).toBeVisible();
 
   /* Stored against the right organization, website and conversation. */
   const db = fixtureReader();
@@ -134,7 +143,9 @@ test("a resolved conversation is rated and shows up in authorized reporting", as
 
   /* The authorized reporting surface reflects this isolated tenant only. */
   await adminPage.goto("/reports", { waitUntil: "domcontentloaded" });
-  await expect(adminPage.getByRole("heading", { name: /Reports/ })).toBeVisible({ timeout: 60_000 });
+  await expect(adminPage.getByRole("heading", { name: /Reports/ })).toBeVisible({
+    timeout: 60_000,
+  });
   await expect(adminPage.getByText("CSAT", { exact: true })).toBeVisible({ timeout: 60_000 });
 
   const { count: tenantConversations } = await db

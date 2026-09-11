@@ -41,7 +41,13 @@ export const Route = createFileRoute("/_authenticated/knowledge")({
 type Article = Database["public"]["Tables"]["knowledge_articles"]["Row"];
 type Faq = Database["public"]["Tables"]["faqs"]["Row"];
 
-const STATUSES: Article["status"][] = ["draft", "pending_review", "approved", "published", "archived"];
+const STATUSES: Article["status"][] = [
+  "draft",
+  "pending_review",
+  "approved",
+  "published",
+  "archived",
+];
 
 function ReindexAllButton() {
   const session = useSessionContext();
@@ -235,7 +241,6 @@ function Articles() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active?.id]);
 
-
   const save = useMutation({
     mutationFn: async () => {
       if (!active) return;
@@ -320,120 +325,118 @@ function Articles() {
     <div className="space-y-4">
       <KnowledgeImport mode="articles" />
       <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-      <aside className="flex max-h-[70vh] flex-col overflow-hidden rounded-xl border border-border">
-        <div className="border-b border-border p-3">
-          <Button
-            type="button"
-            size="sm"
-            className="w-full"
-            disabled={createArticle.isPending}
-            onClick={() => {
-              setNotice(null);
-              createArticle.mutate();
-            }}
-          >
-            {createArticle.isPending ? "Creating…" : "New article"}
-          </Button>
-        </div>
-        {listQuery.isLoading ? (
-          <p className="p-4 text-sm text-muted-foreground">Loading…</p>
-        ) : (
-          <ul className="divide-y divide-border overflow-y-auto">
-            {articles.map((a) => (
-              <li key={a.id}>
-                <button
-                  type="button"
-                  onClick={() => setActiveId(a.id)}
-                  className={`w-full px-4 py-3 text-left hover:bg-accent ${a.id === activeId ? "bg-accent" : ""}`}
+        <aside className="flex max-h-[70vh] flex-col overflow-hidden rounded-xl border border-border">
+          <div className="border-b border-border p-3">
+            <Button
+              type="button"
+              size="sm"
+              className="w-full"
+              disabled={createArticle.isPending}
+              onClick={() => {
+                setNotice(null);
+                createArticle.mutate();
+              }}
+            >
+              {createArticle.isPending ? "Creating…" : "New article"}
+            </Button>
+          </div>
+          {listQuery.isLoading ? (
+            <p className="p-4 text-sm text-muted-foreground">Loading…</p>
+          ) : (
+            <ul className="divide-y divide-border overflow-y-auto">
+              {articles.map((a) => (
+                <li key={a.id}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveId(a.id)}
+                    className={`w-full px-4 py-3 text-left hover:bg-accent ${a.id === activeId ? "bg-accent" : ""}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-sm font-medium">{a.title}</span>
+                      <Badge variant="outline">{a.status}</Badge>
+                    </div>
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                      Updated {formatDateInZone(a.updated_at)}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+
+        <section className="rounded-xl border border-border p-4">
+          {!active ? (
+            <p className="text-sm text-muted-foreground">Select an article to edit.</p>
+          ) : (
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setNotice(null);
+                save.mutate();
+              }}
+            >
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="summary">Summary</Label>
+                <Input
+                  id="summary"
+                  value={form.summary}
+                  onChange={(e) => setForm({ ...form, summary: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <select
+                  id="status"
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value })}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-medium">{a.title}</span>
-                    <Badge variant="outline">{a.status}</Badge>
-                  </div>
-                  <p className="mt-1 truncate text-xs text-muted-foreground">
-                    Updated {formatDateInZone(a.updated_at)}
-                  </p>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </aside>
-
-
-      <section className="rounded-xl border border-border p-4">
-        {!active ? (
-          <p className="text-sm text-muted-foreground">Select an article to edit.</p>
-        ) : (
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              setNotice(null);
-              save.mutate();
-            }}
-          >
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="summary">Summary</Label>
-              <Input
-                id="summary"
-                value={form.summary}
-                onChange={(e) => setForm({ ...form, summary: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <select
-                id="status"
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="content">Content</Label>
-              <Textarea
-                id="content"
-                rows={16}
-                value={form.content}
-                onChange={(e) => setForm({ ...form, content: e.target.value })}
-              />
-            </div>
-            {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
-            <div className="flex items-center gap-2">
-              <Button type="submit" disabled={save.isPending}>
-                {save.isPending ? "Saving & re-indexing…" : "Save & re-index"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={removeArticle.isPending}
-                onClick={() => {
-                  if (confirm("Delete this article? Its indexed chunks are removed too.")) {
-                    removeArticle.mutate(active.id);
-                  }
-                }}
-              >
-                {removeArticle.isPending ? "Deleting…" : "Delete"}
-              </Button>
-            </div>
-
-          </form>
-        )}
+                  {STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="content">Content</Label>
+                <Textarea
+                  id="content"
+                  rows={16}
+                  value={form.content}
+                  onChange={(e) => setForm({ ...form, content: e.target.value })}
+                />
+              </div>
+              {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
+              <div className="flex items-center gap-2">
+                <Button type="submit" disabled={save.isPending}>
+                  {save.isPending ? "Saving & re-indexing…" : "Save & re-index"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={removeArticle.isPending}
+                  onClick={() => {
+                    if (confirm("Delete this article? Its indexed chunks are removed too.")) {
+                      removeArticle.mutate(active.id);
+                    }
+                  }}
+                >
+                  {removeArticle.isPending ? "Deleting…" : "Delete"}
+                </Button>
+              </div>
+            </form>
+          )}
         </section>
       </div>
     </div>
@@ -478,7 +481,11 @@ function Faqs({ prefill }: { prefill?: FaqPrefill }) {
       await createFaq({
         data: { category: draft.category, question: draft.question, answer: draft.answer },
       });
-      await logAudit({ action: "faq.created", recordType: "faqs", newValue: { category: draft.category, question: draft.question } });
+      await logAudit({
+        action: "faq.created",
+        recordType: "faqs",
+        newValue: { category: draft.category, question: draft.question },
+      });
     },
     onSuccess: () => {
       setDraft({ category: "General", question: "", answer: "" });

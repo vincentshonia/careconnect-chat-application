@@ -136,7 +136,8 @@ export async function createE2ETenant(): Promise<E2ETenant> {
 
     .select("id, name")
     .single();
-  if (orgError || !org) throw new Error(`E2E fixture: organization insert failed — ${orgError?.message}`);
+  if (orgError || !org)
+    throw new Error(`E2E fixture: organization insert failed — ${orgError?.message}`);
   assertSynthetic(org.name, "organization");
   const organizationId = org.id as string;
 
@@ -157,7 +158,8 @@ export async function createE2ETenant(): Promise<E2ETenant> {
       })
       .select("id")
       .single();
-    if (websiteError || !website) throw new Error(`E2E fixture: website insert failed — ${websiteError?.message}`);
+    if (websiteError || !website)
+      throw new Error(`E2E fixture: website insert failed — ${websiteError?.message}`);
 
     const departmentName = `${E2E_PREFIX}care_team_${runId}`;
     const { data: department, error: deptError } = await db
@@ -174,7 +176,8 @@ export async function createE2ETenant(): Promise<E2ETenant> {
       })
       .select("id")
       .single();
-    if (deptError || !department) throw new Error(`E2E fixture: department insert failed — ${deptError?.message}`);
+    if (deptError || !department)
+      throw new Error(`E2E fixture: department insert failed — ${deptError?.message}`);
 
     const email = `${E2E_PREFIX}agent_${runId}@example.test`;
     const password = `E2e!${randomUUID().slice(0, 18)}`;
@@ -187,7 +190,8 @@ export async function createE2ETenant(): Promise<E2ETenant> {
       email_confirm: true,
       user_metadata: { full_name: fullName, e2e: true },
     });
-    if (userError || !created?.user) throw new Error(`E2E fixture: agent creation failed — ${userError?.message}`);
+    if (userError || !created?.user)
+      throw new Error(`E2E fixture: agent creation failed — ${userError?.message}`);
     const userId = created.user.id;
 
     const { error: profileError } = await db.from("profiles").upsert({
@@ -201,7 +205,8 @@ export async function createE2ETenant(): Promise<E2ETenant> {
       max_concurrent_chats: 5,
       timezone: "America/Los_Angeles",
     });
-    if (profileError) throw new Error(`E2E fixture: profile upsert failed — ${profileError.message}`);
+    if (profileError)
+      throw new Error(`E2E fixture: profile upsert failed — ${profileError.message}`);
 
     const { error: membershipError } = await db.from("organization_memberships").insert({
       organization_id: organizationId,
@@ -210,14 +215,16 @@ export async function createE2ETenant(): Promise<E2ETenant> {
       status: "active",
       accepted_at: new Date().toISOString(),
     });
-    if (membershipError) throw new Error(`E2E fixture: membership insert failed — ${membershipError.message}`);
+    if (membershipError)
+      throw new Error(`E2E fixture: membership insert failed — ${membershipError.message}`);
 
     const { error: deptMemberError } = await db.from("department_members").insert({
       organization_id: organizationId,
       department_id: department.id as string,
       user_id: userId,
     });
-    if (deptMemberError) throw new Error(`E2E fixture: department member insert failed — ${deptMemberError.message}`);
+    if (deptMemberError)
+      throw new Error(`E2E fixture: department member insert failed — ${deptMemberError.message}`);
 
     return {
       runId,
@@ -272,7 +279,8 @@ export async function destroyE2ETenant(tenant: E2ETenant): Promise<void> {
   for (const staff of tenant.additionalUsers ?? []) {
     assertSynthetic(staff.email, "staff email");
     const { error } = await db.auth.admin.deleteUser(staff.userId);
-    if (error && !/not found/i.test(error.message)) failures.push(`auth user ${staff.email}: ${error.message}`);
+    if (error && !/not found/i.test(error.message))
+      failures.push(`auth user ${staff.email}: ${error.message}`);
   }
 
   if (tenant.agent.userId) {
@@ -281,7 +289,10 @@ export async function destroyE2ETenant(tenant: E2ETenant): Promise<void> {
     if (error && !/not found/i.test(error.message)) failures.push(`auth user: ${error.message}`);
   }
 
-  const { error: orgError } = await db.from("organizations").delete().eq("id", tenant.organizationId);
+  const { error: orgError } = await db
+    .from("organizations")
+    .delete()
+    .eq("id", tenant.organizationId);
   if (orgError) failures.push(`organizations: ${orgError.message}`);
 
   // Verification pass — counted, not assumed.
@@ -299,7 +310,8 @@ export async function destroyE2ETenant(tenant: E2ETenant): Promise<void> {
     .select("id")
     .eq("id", tenant.organizationId)
     .maybeSingle();
-  if (survivingOrg) failures.push("verify organizations: the synthetic organization survived cleanup");
+  if (survivingOrg)
+    failures.push("verify organizations: the synthetic organization survived cleanup");
 
   for (const staff of tenant.additionalUsers ?? []) {
     const { data: surviving } = await db.auth.admin.getUserById(staff.userId);
@@ -308,11 +320,14 @@ export async function destroyE2ETenant(tenant: E2ETenant): Promise<void> {
 
   if (tenant.agent.userId) {
     const { data: survivingUser } = await db.auth.admin.getUserById(tenant.agent.userId);
-    if (survivingUser?.user) failures.push("verify auth: the synthetic agent account survived cleanup");
+    if (survivingUser?.user)
+      failures.push("verify auth: the synthetic agent account survived cleanup");
   }
 
   if (failures.length > 0) {
-    throw new Error(`E2E cleanup FAILED — ${failures.length} issue(s):\n - ${failures.join("\n - ")}`);
+    throw new Error(
+      `E2E cleanup FAILED — ${failures.length} issue(s):\n - ${failures.join("\n - ")}`,
+    );
   }
 }
 
@@ -376,8 +391,15 @@ export async function createE2EStaff(
     email_confirm: true,
     user_metadata: { full_name: fullName, e2e: true },
   });
-  if (userError || !created?.user) throw new Error(`E2E fixture: staff creation failed — ${userError?.message}`);
-  const staff: E2EStaff = { userId: created.user.id, email, password, fullName, role: options.role };
+  if (userError || !created?.user)
+    throw new Error(`E2E fixture: staff creation failed — ${userError?.message}`);
+  const staff: E2EStaff = {
+    userId: created.user.id,
+    email,
+    password,
+    fullName,
+    role: options.role,
+  };
   tenant.additionalUsers.push(staff);
 
   const { error: profileError } = await db.from("profiles").upsert({
@@ -399,7 +421,8 @@ export async function createE2EStaff(
     status: "active",
     accepted_at: new Date().toISOString(),
   });
-  if (membershipError) throw new Error(`E2E fixture: staff membership failed — ${membershipError.message}`);
+  if (membershipError)
+    throw new Error(`E2E fixture: staff membership failed — ${membershipError.message}`);
 
   for (const departmentId of options.departmentIds ?? []) {
     const { error } = await db.from("department_members").insert({
@@ -407,7 +430,8 @@ export async function createE2EStaff(
       department_id: departmentId,
       user_id: staff.userId,
     });
-    if (error) throw new Error(`E2E fixture: staff department membership failed — ${error.message}`);
+    if (error)
+      throw new Error(`E2E fixture: staff department membership failed — ${error.message}`);
   }
 
   return staff;

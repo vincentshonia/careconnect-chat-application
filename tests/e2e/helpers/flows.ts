@@ -55,7 +55,6 @@ export async function openWidget(page: Page, tenant: E2ETenant): Promise<void> {
   await expect(page.getByRole("button", { name: "Talk to an agent" })).toBeVisible();
 }
 
-
 /**
  * Visitor hand-off: opens the "Talk to an agent" form, fills it and submits.
  * Returns the conversation the backend created.
@@ -68,13 +67,13 @@ export async function escalateToHuman(
   await page.getByRole("button", { name: "Talk to an agent" }).click();
   await expect(page.getByText("Speak with a representative")).toBeVisible();
 
-  await page
-    .getByLabel("Which team can help you?")
-    .selectOption({ label: options.departmentName });
+  await page.getByLabel("Which team can help you?").selectOption({ label: options.departmentName });
   await page.getByLabel("Full name").fill(options.visitorName);
   await page.getByLabel("Phone number").fill("5555550142");
   await page.getByLabel("Email address").fill(`${tenant.runId}.visitor@example.test`);
-  await page.getByLabel("Reason for contacting").fill("I would like to speak with a representative.");
+  await page
+    .getByLabel("Reason for contacting")
+    .fill("I would like to speak with a representative.");
   await page.getByRole("checkbox").check();
 
   const escalateResponse = page.waitForResponse(
@@ -82,7 +81,9 @@ export async function escalateToHuman(
     { timeout: 60_000 },
   );
   await page.getByRole("button", { name: "Submit" }).click();
-  expect((await escalateResponse).status(), "the hand-off request must be accepted").toBeLessThan(400);
+  expect((await escalateResponse).status(), "the hand-off request must be accepted").toBeLessThan(
+    400,
+  );
 
   return waitForConversation(tenant.websiteId, (c) => c.escalation_requested === true);
 }
@@ -118,3 +119,21 @@ export async function openConversation(
   await listItem.click();
 }
 
+/**
+ * Resolves the open conversation through the real dialog: an outcome must be
+ * recorded before the chat can be closed out.
+ */
+export async function resolveOpenConversation(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Resolve", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
+  const outcome = dialog.locator("#disposition");
+  await expect(async () => {
+    const values = await outcome
+      .locator("option")
+      .evaluateAll((options) => options.map((o) => (o as HTMLOptionElement).value).filter(Boolean));
+    expect(values.length).toBeGreaterThan(0);
+    await outcome.selectOption(values[0]!);
+  }).toPass({ timeout: 30_000 });
+  await dialog.getByRole("button", { name: /^Resolv/ }).click();
+}

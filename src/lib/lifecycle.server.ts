@@ -47,12 +47,15 @@ export async function transitionConversation(input: {
   db?: ReturnType<typeof admin>;
 }): Promise<LifecycleResult> {
   const db = input.db ?? admin();
-  const { data, error } = await db.rpc("transition_conversation" as never, {
-    _id: input.conversationId,
-    _event: input.event,
-    _actor: input.actorId ?? null,
-    _payload: (input.payload ?? {}) as never,
-  } as never);
+  const { data, error } = await db.rpc(
+    "transition_conversation" as never,
+    {
+      _id: input.conversationId,
+      _event: input.event,
+      _actor: input.actorId ?? null,
+      _payload: (input.payload ?? {}) as never,
+    } as never,
+  );
 
   if (error) {
     const message = String((error as { message?: string }).message ?? "").trim();

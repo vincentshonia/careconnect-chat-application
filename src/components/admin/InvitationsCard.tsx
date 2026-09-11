@@ -74,7 +74,11 @@ export function InvitationsCard({ callerRank }: { callerRank: number }) {
             Sends a single-use link that expires in 7 days and only works for that email address.
           </p>
         </div>
-        <Button type="button" variant={open ? "outline" : "default"} onClick={() => setOpen((v) => !v)}>
+        <Button
+          type="button"
+          variant={open ? "outline" : "default"}
+          onClick={() => setOpen((v) => !v)}
+        >
           {open ? "Cancel" : "Invite teammate"}
         </Button>
       </div>

@@ -14,7 +14,7 @@
  * final verdict is computed from the stage results before the report is
  * written, and the process exits with that verdict.
  */
-import { spawn } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -56,6 +56,7 @@ async function stage(name, command, args, env) {
 }
 
 await stage("Preflight", "node", ["scripts/release-preflight.mjs"]);
+await stage("Lint", "bunx", ["eslint", "."]);
 await stage("Typecheck", "bunx", ["tsgo", "--noEmit"]);
 await stage("Production build", "bun", ["run", "build"]);
 await stage("Vitest", "bunx", [
@@ -105,9 +106,13 @@ function flattenSpecs(suite, out = []) {
 const pwRaw = readJson(PLAYWRIGHT_JSON);
 const pwSpecs = (pwRaw?.suites ?? []).flatMap((s) => flattenSpecs(s));
 const playwright = {
-  total: pwRaw?.stats?.expected != null
-    ? (pwRaw.stats.expected ?? 0) + (pwRaw.stats.unexpected ?? 0) + (pwRaw.stats.flaky ?? 0) + (pwRaw.stats.skipped ?? 0)
-    : pwSpecs.length,
+  total:
+    pwRaw?.stats?.expected != null
+      ? (pwRaw.stats.expected ?? 0) +
+        (pwRaw.stats.unexpected ?? 0) +
+        (pwRaw.stats.flaky ?? 0) +
+        (pwRaw.stats.skipped ?? 0)
+      : pwSpecs.length,
   passed: pwRaw?.stats?.expected ?? 0,
   failed: (pwRaw?.stats?.unexpected ?? 0) + (pwRaw?.stats?.flaky ?? 0),
   skipped: pwRaw?.stats?.skipped ?? 0,
@@ -122,10 +127,22 @@ function vitestSuite(fileName) {
 const suiteResults = [
   ["RBAC suite (tests/rbac.test.ts)", vitestSuite("rbac.test.ts")],
   ["Permissions suite (tests/permissions.test.ts)", vitestSuite("permissions.test.ts")],
-  ["Tenant-isolation suite (tests/tenant-isolation.test.ts)", vitestSuite("tenant-isolation.test.ts")],
-  ["Report/dashboard scope suite (tests/report-scope.test.ts)", vitestSuite("report-scope.test.ts")],
-  ["Concurrency/routing suite (tests/concurrency-routing.test.ts)", vitestSuite("concurrency-routing.test.ts")],
-  ["Scale/data-volume suite (tests/reporting-reconciliation.test.ts)", vitestSuite("reporting-reconciliation.test.ts")],
+  [
+    "Tenant-isolation suite (tests/tenant-isolation.test.ts)",
+    vitestSuite("tenant-isolation.test.ts"),
+  ],
+  [
+    "Report/dashboard scope suite (tests/report-scope.test.ts)",
+    vitestSuite("report-scope.test.ts"),
+  ],
+  [
+    "Concurrency/routing suite (tests/concurrency-routing.test.ts)",
+    vitestSuite("concurrency-routing.test.ts"),
+  ],
+  [
+    "Scale/data-volume suite (tests/reporting-reconciliation.test.ts)",
+    vitestSuite("reporting-reconciliation.test.ts"),
+  ],
   ["Widget regression suite (tests/widget-session.test.ts)", vitestSuite("widget-session.test.ts")],
   [
     "Browser E2E suite (Playwright)",
@@ -146,12 +163,9 @@ function buildIdentity() {
     null;
   if (fromEnv) return fromEnv;
   try {
-    const head = readFileSync(path.join(ROOT, ".git", "HEAD"), "utf8").trim();
-    if (head.startsWith("ref: ")) {
-      const ref = head.slice(5).trim();
-      return `${ref} @ ${readFileSync(path.join(ROOT, ".git", ref), "utf8").trim()}`;
-    }
-    return head;
+    // Same resolution the bundle uses (vite.config.ts), so the id recorded here
+    // is the id the built app reports back on the launch-readiness card.
+    return execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
   } catch {
     return "unavailable (no VCS metadata in this environment)";
   }
@@ -196,9 +210,7 @@ const lines = [
   "",
   "| Stage | Command | Exit code | Result |",
   "| --- | --- | --- | --- |",
-  ...stages.map(
-    (s) => `| ${s.name} | \`${s.command}\` | ${s.exitCode ?? "—"} | ${s.status} |`,
-  ),
+  ...stages.map((s) => `| ${s.name} | \`${s.command}\` | ${s.exitCode ?? "—"} | ${s.status} |`),
   "",
   "## Vitest",
   "",
@@ -226,7 +238,8 @@ const lines = [
 if (!passed) {
   lines.push("## Blocking failures", "");
   for (const s of stageFailures) lines.push(`- Stage **${s.name}** — ${s.status}`);
-  for (const reason of skipFailures) lines.push(`- ${reason} — required tests must actually execute`);
+  for (const reason of skipFailures)
+    lines.push(`- ${reason} — required tests must actually execute`);
   lines.push("");
 }
 

@@ -114,9 +114,9 @@ export const manageDepartmentFn = createServerFn({ method: "POST" })
     }
 
     const patch: Record<string, unknown> = {};
-    if (data.name !== undefined) patch['name'] = data.name;
-    if (data.routingMethod !== undefined) patch['routing_method'] = data.routingMethod;
-    if (data.status !== undefined) patch['status'] = data.status;
+    if (data.name !== undefined) patch["name"] = data.name;
+    if (data.routingMethod !== undefined) patch["routing_method"] = data.routingMethod;
+    if (data.status !== undefined) patch["status"] = data.status;
     if (Object.keys(patch).length === 0) return { ok: true };
 
     const { error } = await supabaseAdmin
@@ -196,7 +196,10 @@ const holidayInput = z.object({
   action: z.enum(["create", "delete"]),
   id: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(120).optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 });
 
 export const manageHolidayFn = createServerFn({ method: "POST" })

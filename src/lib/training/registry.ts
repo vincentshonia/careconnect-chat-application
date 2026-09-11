@@ -242,8 +242,14 @@ const AGENT_GUIDE: Guide = {
     }),
     knowledgeCheck("agent", [
       {
-        question: "A conversation is in the Waiting tab and you want to reply. What must you do first?",
-        options: ["Just type in the reply box", "Select Claim conversation", "Transfer it to your department", "Mark it resolved"],
+        question:
+          "A conversation is in the Waiting tab and you want to reply. What must you do first?",
+        options: [
+          "Just type in the reply box",
+          "Select Claim conversation",
+          "Transfer it to your department",
+          "Mark it resolved",
+        ],
         answer: 1,
         why: "Unassigned conversations have no reply box. Claiming makes you the owner, and only the owner may reply.",
       },
@@ -395,7 +401,8 @@ const TEAM_LEAD_GUIDE: Guide = {
         why: "Only active, in-department staff with spare capacity are eligible. Overrides require a written reason, which is recorded.",
       },
       {
-        question: "An unassigned conversation needs a reply and you are a supervisor. Can you type straight into it?",
+        question:
+          "An unassigned conversation needs a reply and you are a supervisor. Can you type straight into it?",
         options: [
           "Yes, supervisors bypass ownership",
           "No — it must be claimed or assigned to someone first",
@@ -406,7 +413,8 @@ const TEAM_LEAD_GUIDE: Guide = {
         why: "Ownership is enforced for everyone. Claim it yourself or assign it, then reply.",
       },
       {
-        question: "Your department's Oldest waiting figure is climbing and nobody is Available. What first?",
+        question:
+          "Your department's Oldest waiting figure is climbing and nobody is Available. What first?",
         options: [
           "Wait for the next shift",
           "Rebalance: reassign to someone with capacity, or claim the oldest conversation yourself",
@@ -826,12 +834,18 @@ const SUPER_ADMIN_GUIDE: Guide = {
     knowledgeCheck("super-admin", [
       {
         question: "Who may create or change another administrator?",
-        options: ["Any administrator", "Only the highest administrative level", "Any manager", "Anyone with staff.view"],
+        options: [
+          "Any administrator",
+          "Only the highest administrative level",
+          "Any manager",
+          "Anyone with staff.view",
+        ],
         answer: 1,
         why: "Administering administrators is deliberately reserved, and the system refuses to remove the last administrator of an organization.",
       },
       {
-        question: "You switch two-step verification to “required for everyone”. What should you do first?",
+        question:
+          "You switch two-step verification to “required for everyone”. What should you do first?",
         options: [
           "Nothing, it is seamless",
           "Announce it in advance and make sure someone can help with lockouts",

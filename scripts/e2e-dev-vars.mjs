@@ -12,7 +12,12 @@ import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const REQUIRED = ["SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SERVICE_ROLE_KEY", "WIDGET_SESSION_SECRET"];
+const REQUIRED = [
+  "SUPABASE_URL",
+  "SUPABASE_PUBLISHABLE_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "WIDGET_SESSION_SECRET",
+];
 const OPTIONAL = [
   "SUPABASE_PROJECT_ID",
   "LOVABLE_API_KEY",
@@ -25,7 +30,9 @@ const OPTIONAL = [
 
 const missing = REQUIRED.filter((name) => !process.env[name]?.trim());
 if (missing.length > 0) {
-  console.error(`e2e preview cannot start — missing environment variable(s): ${missing.join(", ")}`);
+  console.error(
+    `e2e preview cannot start — missing environment variable(s): ${missing.join(", ")}`,
+  );
   process.exit(1);
 }
 

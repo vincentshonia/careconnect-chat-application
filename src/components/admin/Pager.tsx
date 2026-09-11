@@ -31,7 +31,12 @@ export function Pager({
         {pages > 1 ? ` · page ${page + 1} of ${pages}` : ""}
       </span>
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" disabled={page === 0 || busy} onClick={() => onPage(page - 1)}>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page === 0 || busy}
+          onClick={() => onPage(page - 1)}
+        >
           Previous
         </Button>
         <Button

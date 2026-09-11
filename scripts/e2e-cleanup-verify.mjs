@@ -49,7 +49,9 @@ async function sweep(backend) {
         .select("id", { count: "exact", head: true })
         .like(column, `${prefix}%`);
       findings.push(
-        error ? { label: `${tag} ${label}`, count: null, error: error.message } : { label: `${tag} ${label}`, count: count ?? 0 },
+        error
+          ? { label: `${tag} ${label}`, count: null, error: error.message }
+          : { label: `${tag} ${label}`, count: count ?? 0 },
       );
     };
 

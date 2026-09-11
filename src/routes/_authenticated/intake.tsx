@@ -60,7 +60,11 @@ const label = (s: string) => s.replace(/_/g, " ");
 const PAGE_SIZE = 25;
 
 /** Strip characters that would break a PostgREST `or=` expression. */
-const sanitize = (term: string) => term.trim().replace(/[%,()*]/g, "").slice(0, 80);
+const sanitize = (term: string) =>
+  term
+    .trim()
+    .replace(/[%,()*]/g, "")
+    .slice(0, 80);
 
 function IntakePage() {
   const queryClient = useQueryClient();
@@ -113,7 +117,9 @@ function IntakePage() {
       if (stageFilter !== "all") q = q.eq("stage", stageFilter);
       const term = sanitize(debouncedSearch);
       if (term) {
-        q = q.or(`full_name.ilike.%${term}%,reference.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`);
+        q = q.or(
+          `full_name.ilike.%${term}%,reference.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`,
+        );
       }
       const { data, error, count } = await q
         .order("created_at", { ascending: false })
@@ -146,7 +152,11 @@ function IntakePage() {
     queryKey: ["intake-record", activeId],
     enabled: Boolean(activeId),
     queryFn: async () => {
-      const { data, error } = await supabase.from("intake_requests").select("*").eq("id", activeId!).maybeSingle();
+      const { data, error } = await supabase
+        .from("intake_requests")
+        .select("*")
+        .eq("id", activeId!)
+        .maybeSingle();
       if (error) throw error;
       return (data ?? null) as Intake | null;
     },
@@ -212,7 +222,8 @@ function IntakePage() {
       setNote("");
       queryClient.invalidateQueries({ queryKey: ["intake-events"] });
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save that note"),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not save that note"),
   });
 
   // Exports are generated server-side with the same filters and permissions.
@@ -237,7 +248,8 @@ function IntakePage() {
         `Exported ${result.rows.toLocaleString()} requests${result.truncated ? " (capped — narrow the filters for the rest)" : ""}`,
       );
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not build that export"),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not build that export"),
   });
 
   return (
@@ -252,13 +264,17 @@ function IntakePage() {
             placeholder="Search name, reference, email…"
             className="w-72"
           />
-          <Button variant="outline" size="sm" disabled={exportCsv.isPending} onClick={() => exportCsv.mutate()}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={exportCsv.isPending}
+            onClick={() => exportCsv.mutate()}
+          >
             {exportCsv.isPending ? "Preparing…" : "Export CSV"}
           </Button>
         </>
       }
     >
-
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <FilterChip active={typeFilter === "all"} onClick={() => setTypeFilter("all")}>
           All ({(counts?.total ?? 0).toLocaleString()})
@@ -278,13 +294,17 @@ function IntakePage() {
             type="button"
             onClick={() => setStageFilter(stageFilter === stage ? "all" : stage)}
             className={`min-w-[160px] rounded-xl border p-3 text-left transition ${
-              stageFilter === stage ? "border-primary bg-primary/5" : "border-border bg-card hover:bg-accent"
+              stageFilter === stage
+                ? "border-primary bg-primary/5"
+                : "border-border bg-card hover:bg-accent"
             }`}
           >
             <span className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {label(stage)}
             </span>
-            <span className="mt-1 block text-2xl font-semibold">{(byStage[stage] ?? 0).toLocaleString()}</span>
+            <span className="mt-1 block text-2xl font-semibold">
+              {(byStage[stage] ?? 0).toLocaleString()}
+            </span>
           </button>
         ))}
       </div>
@@ -444,7 +464,11 @@ function IntakePage() {
               <div className="space-y-2">
                 <Label>Add note</Label>
                 <Textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
-                <Button size="sm" disabled={!note.trim() || addNote.isPending} onClick={() => addNote.mutate()}>
+                <Button
+                  size="sm"
+                  disabled={!note.trim() || addNote.isPending}
+                  onClick={() => addNote.mutate()}
+                >
                   Save note
                 </Button>
               </div>
@@ -462,9 +486,7 @@ function IntakePage() {
                         </span>
                       ) : null}
                       {e.detail ? <p className="mt-1 text-muted-foreground">{e.detail}</p> : null}
-                      <p className="mt-1 text-muted-foreground">
-                        {formatInZone(e.created_at)}
-                      </p>
+                      <p className="mt-1 text-muted-foreground">{formatInZone(e.created_at)}</p>
                     </li>
                   ))}
                 </ul>
@@ -500,7 +522,9 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={`rounded-full border px-3 py-1 text-xs capitalize ${
-        active ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground"
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border text-muted-foreground"
       }`}
     >
       {children}

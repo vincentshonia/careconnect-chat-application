@@ -122,7 +122,6 @@ export const createStaffFn = createServerFn({ method: "POST" })
     return { email, inviteUrl, expiresAt: invitation.expiresAt, emailed, emailError };
   });
 
-
 /**
  * Administrator-only: disable, re-enable, or revoke a staff account.
  * Access is revoked at the auth layer and the profile is flagged — no
@@ -164,7 +163,11 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
     if (targetRank > callerRank && !actor.isPlatformAdmin) {
       throw new ForbiddenError("You cannot change access for a higher role");
     }
-    if (targetRank === ROLE_RANK.super_admin && callerRank < ROLE_RANK.super_admin && !actor.isPlatformAdmin) {
+    if (
+      targetRank === ROLE_RANK.super_admin &&
+      callerRank < ROLE_RANK.super_admin &&
+      !actor.isPlatformAdmin
+    ) {
       throw new ForbiddenError("Only a Super Admin can change another Super Admin");
     }
 
@@ -180,10 +183,7 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
 
     if (data.action === "enable") {
       await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: "none" });
-      await supabaseAdmin
-        .from("profiles")
-        .update({ status: "active" })
-        .eq("id", data.userId);
+      await supabaseAdmin.from("profiles").update({ status: "active" }).eq("id", data.userId);
     } else {
       // Indefinite ban revokes sign-in without touching any historical records.
       await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: "876000h" });
@@ -211,12 +211,14 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
       record_type: "profiles",
       record_id: data.userId,
       previous_value: { status: target.status },
-      new_value: { status: data.action === "enable" ? "active" : data.action === "remove" ? "archived" : "inactive" },
+      new_value: {
+        status:
+          data.action === "enable" ? "active" : data.action === "remove" ? "archived" : "inactive",
+      },
     });
 
     return { ok: true, status: data.action };
   });
-
 
 const staffProfileInput = z.object({
   userId: z.string().uuid(),
@@ -247,8 +249,9 @@ export const updateStaffProfileFn = createServerFn({ method: "POST" })
     }
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if (data.presence !== undefined) patch['presence'] = data.presence;
-    if (data.maxConcurrentChats !== undefined) patch['max_concurrent_chats'] = data.maxConcurrentChats;
+    if (data.presence !== undefined) patch["presence"] = data.presence;
+    if (data.maxConcurrentChats !== undefined)
+      patch["max_concurrent_chats"] = data.maxConcurrentChats;
 
     const { error } = await supabaseAdmin
       .from("profiles")
@@ -262,7 +265,10 @@ export const updateStaffProfileFn = createServerFn({ method: "POST" })
       action: "staff_profile.updated",
       recordType: "profiles",
       recordId: target.id,
-      previousValue: { presence: target.presence, max_concurrent_chats: target.max_concurrent_chats },
+      previousValue: {
+        presence: target.presence,
+        max_concurrent_chats: target.max_concurrent_chats,
+      },
       newValue: patch,
     });
 
