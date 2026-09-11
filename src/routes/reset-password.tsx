@@ -26,7 +26,10 @@ export const Route = createFileRoute("/reset-password")({
 
 function ResetPasswordPage() {
   const navigate = useNavigate();
-  const [ready, setReady] = useState(false);
+  /** "recovery" = arrived from an email link; "signed-in" = must re-enter the current password. */
+  const [mode, setMode] = useState<"none" | "recovery" | "signed-in">("none");
+  const [email, setEmail] = useState<string | null>(null);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -34,12 +37,20 @@ function ResetPasswordPage() {
   const [done, setDone] = useState(false);
 
   // Supabase puts a recovery session in the URL hash; wait for it to hydrate.
+  // An ordinary signed-in session is NOT proof the person owns the account, so
+  // it only unlocks the form once they re-enter their current password.
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true);
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setMode("recovery");
+        setEmail(session?.user.email ?? null);
+      }
     });
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true);
+      if (data.session) {
+        setEmail(data.session.user.email ?? null);
+        setMode((current) => (current === "recovery" ? current : "signed-in"));
+      }
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -53,16 +64,31 @@ function ResetPasswordPage() {
     setBusy(true);
     setError(null);
     try {
+      if (mode === "signed-in") {
+        if (!email) throw new Error("Sign in again to change your password.");
+        const { error: reauth } = await supabase.auth.signInWithPassword({
+          email,
+          password: currentPassword,
+        });
+        if (reauth) throw new Error("Your current password is not correct.");
+      }
       const { error: err } = await supabase.auth.updateUser({ password });
       if (err) throw err;
+
+      // Re-check the two-step requirement before returning to the console.
+      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       setDone(true);
-      setTimeout(() => navigate({ to: "/inbox", replace: true }), 1200);
+      const target = aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2" ? "/mfa" : "/inbox";
+      setTimeout(() => navigate({ to: target, replace: true }), 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update password");
     } finally {
       setBusy(false);
     }
   }
+
+  const ready = mode !== "none";
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
