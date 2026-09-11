@@ -688,6 +688,13 @@ function InboxPage() {
 
   }
 
+  const noteAuthorName = (id: string | null) => {
+    if (!id) return "A team member";
+    if (id === userId) return "You";
+    return (staffQuery.data ?? []).find((s) => s.id === id)?.full_name ?? "A team member";
+  };
+
+
   return (
     <AdminShell
       title="Inbox"
