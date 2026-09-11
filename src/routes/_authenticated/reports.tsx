@@ -581,7 +581,9 @@ function OverviewTab({ filters, drill, drillLive }: TabProps) {
     csat: number | null;
     csat_responses: number;
     transfer_events: number;
+    outcomes: Array<{ label: string; conversations: number }>;
   }>("overview", filters);
+
   const volume = useReport<{ by_day: Row[]; by_hour: Row[]; by_weekday: Row[]; peak_day: string | null; peak_day_count: number }>(
     "volume",
     filters,
