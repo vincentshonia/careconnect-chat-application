@@ -164,6 +164,7 @@ function WidgetPage() {
   );
   const websiteId = params.get("w") ?? "";
   const hostOrigin = params.get("h");
+  const originProof = params.get("op");
   const page = params.get("p") ?? "";
 
   const [config, setConfig] = useState<Config | null>(null);
@@ -288,6 +289,7 @@ function WidgetPage() {
         body: JSON.stringify({
           websiteId,
           host: hostOrigin,
+          originProof,
           // Hand back the token being replaced: the server reuses the same
           // visitor when it is genuine, so older conversations stay reachable.
           priorSession: cached?.token ?? null,
@@ -307,7 +309,7 @@ function WidgetPage() {
       safeStorage.setJson(key, sessionRef.current);
       return json.token as string;
     },
-    [storageKey, websiteId, hostOrigin, page, params],
+    [storageKey, websiteId, hostOrigin, originProof, page, params],
   );
 
   /** POST to a public chat endpoint, transparently re-minting an expired session. */
@@ -332,14 +334,14 @@ function WidgetPage() {
       setError("Missing website id");
       return;
     }
-    fetch(`/api/public/chat/config?w=${encodeURIComponent(websiteId)}&h=${encodeURIComponent(hostOrigin ?? "")}`)
+    fetch(`/api/public/chat/config?w=${encodeURIComponent(websiteId)}&h=${encodeURIComponent(hostOrigin ?? "")}&op=${encodeURIComponent(originProof ?? "")}`)
       .then(async (r) => {
         const json = await r.json();
         if (!r.ok) throw new Error(json.error ?? "Unable to load chat");
         setConfig(json as Config);
       })
       .catch((e: Error) => setError(e.message));
-  }, [websiteId, hostOrigin]);
+  }, [websiteId, hostOrigin, originProof]);
 
   /* ------------------- teaser / auto-open / hidden pages ---------------- */
   useEffect(() => {
