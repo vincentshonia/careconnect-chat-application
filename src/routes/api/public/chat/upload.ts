@@ -19,7 +19,6 @@ const ALLOWED = [
   "image/heic",
   "application/pdf",
   "text/plain",
-  "text/csv",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
@@ -30,15 +29,49 @@ function safeName(name: string) {
   return (name || "attachment").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80);
 }
 
+function startsWith(bytes: Uint8Array, signature: number[], offset = 0) {
+  return signature.every((b, i) => bytes[offset + i] === b);
+}
+
+/**
+ * A declared content type is just a claim. For the binary formats we accept,
+ * check the file really starts with that format's signature so an executable
+ * or script cannot arrive labelled as a picture.
+ */
+function contentMatchesType(type: string, bytes: Uint8Array): boolean {
+  switch (type) {
+    case "image/png":
+      return startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    case "image/jpeg":
+      return startsWith(bytes, [0xff, 0xd8, 0xff]);
+    case "image/gif":
+      return startsWith(bytes, [0x47, 0x49, 0x46, 0x38]);
+    case "image/webp":
+      return startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) && startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8);
+    case "image/heic":
+      // ISO base media: ....ftyp
+      return startsWith(bytes, [0x66, 0x74, 0x79, 0x70], 4);
+    case "application/pdf":
+      return startsWith(bytes, [0x25, 0x50, 0x44, 0x46, 0x2d]);
+    default:
+      // Office/plain text formats keep the declared type; they carry no
+      // universally reliable signature.
+      return true;
+  }
+}
+
 export const Route = createFileRoute("/api/public/chat/upload")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         const mod = await import("@/lib/public-chat.server");
         try {
+          // Rate limit before the body is read, so a flood of large uploads is
+          // rejected without being buffered.
+          await mod.enforceRateLimit(`upload:ip:${mod.clientIp(request)}`, 20, 60);
+
           const form = await request.formData();
           const session = String(form.get("session") ?? "");
-          const host = form.get("host") ? String(form.get("host")) : null;
           const conversationId = form.get("conversationId")
             ? String(form.get("conversationId"))
             : null;
@@ -58,6 +91,14 @@ export const Route = createFileRoute("/api/public/chat/upload")({
             );
           }
 
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          if (!contentMatchesType(type, bytes)) {
+            return Response.json(
+              { error: "That file does not look like the type it claims to be." },
+              { status: 400 },
+            );
+          }
+
           const ctx = await mod.sessionContext(session, mod.verifiedOrigin(request));
           const limits = await mod.orgLimits(ctx.claims.org);
           await mod.enforceRateLimit(`upload:s:${ctx.claims.sid}`, 10, 60);
@@ -66,6 +107,7 @@ export const Route = createFileRoute("/api/public/chat/upload")({
             limits.ip_requests_per_minute,
             60,
           );
+
 
           const conversation = conversationId
             ? await mod.conversationForSession(ctx, conversationId)
