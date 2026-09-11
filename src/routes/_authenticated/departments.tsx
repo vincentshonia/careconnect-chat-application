@@ -2,7 +2,12 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  manageDepartmentFn,
+  manageHolidayFn,
+  saveBusinessHoursFn,
+} from "@/lib/departments.functions";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { useSessionContext } from "@/hooks/use-session-context";
@@ -80,17 +85,13 @@ function DepartmentsTab() {
     },
   });
 
+  // Department changes run server-side behind a permission check with audit rows.
+  const saveDepartment = useServerFn(manageDepartmentFn);
+
   const create = useMutation({
     mutationFn: async () => {
       if (!orgId || !name.trim()) return;
-      const { error } = await supabase.from("departments").insert({
-        organization_id: orgId,
-        name: name.trim(),
-        routing_method: "first_available",
-        timezone: "America/Los_Angeles",
-      });
-      if (error) throw error;
-      await logAudit({ action: "department.created", recordType: "departments", newValue: { name: name.trim() } });
+      await saveDepartment({ data: { action: "create", name: name.trim() } });
     },
     onSuccess: () => {
       setName("");
@@ -100,10 +101,17 @@ function DepartmentsTab() {
 
   const update = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Database["public"]["Tables"]["departments"]["Update"] }) => {
-      const { data, error } = await supabase.from("departments").update(patch).eq("id", id).select("id").maybeSingle();
-      if (error) throw error;
-      if (!data) throw new Error("You do not have permission to update departments.");
-      await logAudit({ action: "department.updated", recordType: "departments", recordId: id, newValue: patch as Record<string, unknown> });
+      await saveDepartment({
+        data: {
+          action: "update",
+          id,
+          ...(patch.name !== undefined ? { name: String(patch.name) } : {}),
+          ...(patch.routing_method !== undefined
+            ? { routingMethod: patch.routing_method as "first_available" | "round_robin" }
+            : {}),
+          ...(patch.status !== undefined ? { status: patch.status as "active" | "inactive" } : {}),
+        },
+      });
       return patch;
     },
     onSuccess: (patch) => {
@@ -118,26 +126,7 @@ function DepartmentsTab() {
   const setDefault = useMutation({
     mutationFn: async (dept: Department) => {
       if (!orgId) throw new Error("Missing organization");
-      const { error: clearError } = await supabase
-        .from("departments")
-        .update({ is_default: false })
-        .eq("organization_id", orgId)
-        .neq("id", dept.id);
-      if (clearError) throw clearError;
-      const { data, error } = await supabase
-        .from("departments")
-        .update({ is_default: true })
-        .eq("id", dept.id)
-        .select("id")
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) throw new Error("You do not have permission to change the default department.");
-      await logAudit({
-        action: "department.default_changed",
-        recordType: "departments",
-        recordId: dept.id,
-        newValue: { name: dept.name, is_default: true },
-      });
+      await saveDepartment({ data: { action: "set_default", id: dept.id } });
     },
     onSuccess: (_d, dept) => {
       toast.success(`${dept.name} is now the default department`);
@@ -150,14 +139,7 @@ function DepartmentsTab() {
 
   const remove = useMutation({
     mutationFn: async (dept: Department) => {
-      const { error } = await supabase.from("departments").delete().eq("id", dept.id);
-      if (error) throw error;
-      await logAudit({
-        action: "department.deleted",
-        recordType: "departments",
-        recordId: dept.id,
-        previousValue: { name: dept.name, routing_method: dept.routing_method },
-      });
+      await saveDepartment({ data: { action: "delete", id: dept.id } });
     },
     onSuccess: (_data, dept) => {
       toast.success(`${dept.name} deleted`);
@@ -301,36 +283,19 @@ function HoursTab() {
     },
   });
 
+  const saveHours = useServerFn(saveBusinessHoursFn);
   const upsert = useMutation({
     mutationFn: async (row: { day: number; open: string; close: string; closed: boolean; id?: string }) => {
       if (!orgId) return;
-      if (row.id) {
-        const { error } = await supabase
-          .from("business_hours")
-          .update({ open_time: row.open, close_time: row.close, is_closed: row.closed })
-          .eq("id", row.id);
-        if (error) throw error;
-        await logAudit({
-          action: "business_hours.updated",
-          recordType: "business_hours",
-          recordId: row.id,
-          newValue: { day_of_week: row.day, open_time: row.open, close_time: row.close, is_closed: row.closed },
-        });
-      } else {
-        const { error } = await supabase.from("business_hours").insert({
-          organization_id: orgId,
-          day_of_week: row.day,
-          open_time: row.open,
-          close_time: row.close,
-          is_closed: row.closed,
-        });
-        if (error) throw error;
-        await logAudit({
-          action: "business_hours.created",
-          recordType: "business_hours",
-          newValue: { day_of_week: row.day, open_time: row.open, close_time: row.close, is_closed: row.closed },
-        });
-      }
+      await saveHours({
+        data: {
+          ...(row.id ? { id: row.id } : {}),
+          dayOfWeek: row.day,
+          openTime: row.open,
+          closeTime: row.close,
+          isClosed: row.closed,
+        },
+      });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["business-hours"] }),
   });
@@ -413,11 +378,7 @@ function HolidaysTab() {
   const create = useMutation({
     mutationFn: async () => {
       if (!orgId || !form.name.trim() || !form.date) return;
-      const { error } = await supabase
-        .from("holidays")
-        .insert({ organization_id: orgId, name: form.name.trim(), holiday_date: form.date });
-      if (error) throw error;
-      await logAudit({ action: "holiday.created", recordType: "holidays", newValue: { name: form.name.trim(), date: form.date } });
+      await saveHoliday({ data: { action: "create", name: form.name.trim(), date: form.date } });
     },
     onSuccess: () => {
       setForm({ name: "", date: "" });
@@ -427,9 +388,7 @@ function HolidaysTab() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("holidays").delete().eq("id", id);
-      if (error) throw error;
-      await logAudit({ action: "holiday.deleted", recordType: "holidays", recordId: id });
+      await saveHoliday({ data: { action: "delete", id } });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["holidays"] }),
   });

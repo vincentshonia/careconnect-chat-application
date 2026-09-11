@@ -6,8 +6,8 @@ import { listStaffFn, STAFF_PAGE_SIZE, type StaffRow } from "@/lib/directory.fun
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
-import { createStaffFn, setStaffAccessFn } from "@/lib/staff.functions";
+import { createStaffFn, setStaffAccessFn, updateStaffProfileFn } from "@/lib/staff.functions";
+import { setDepartmentMemberFn } from "@/lib/departments.functions";
 import { setUserRoleFn } from "@/lib/rbac.functions";
 import { ROLE_LABEL, roleTransitionError, type OrgRole } from "@/lib/permissions";
 import { QueryError } from "@/components/admin/QueryError";
@@ -139,6 +139,10 @@ export function StaffPanel() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "Could not change that role"),
   });
 
+  // Editing another teammate availability or capacity is an administrator action.
+  const saveStaffProfile = useServerFn(updateStaffProfileFn);
+  const saveDepartmentMember = useServerFn(setDepartmentMemberFn);
+
   const updateProfile = useMutation({
     mutationFn: async ({
       id,
@@ -147,9 +151,17 @@ export function StaffPanel() {
       id: string;
       patch: Database["public"]["Tables"]["profiles"]["Update"];
     }) => {
-      const { error } = await supabase.from("profiles").update(patch).eq("id", id);
-      if (error) throw error;
-      await logAudit({ action: "staff_profile.updated", recordType: "profiles", recordId: id, newValue: patch as Record<string, unknown> });
+      await saveStaffProfile({
+        data: {
+          userId: id,
+          ...(patch.presence !== undefined
+            ? { presence: patch.presence as "online" | "away" | "busy" | "offline" }
+            : {}),
+          ...(patch.max_concurrent_chats !== undefined
+            ? { maxConcurrentChats: Number(patch.max_concurrent_chats) }
+            : {}),
+        },
+      });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
     onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save that profile"),
@@ -165,19 +177,7 @@ export function StaffPanel() {
       departmentId: string;
       member?: { id: string };
     }) => {
-      if (member) {
-        const { error } = await supabase.from("department_members").delete().eq("id", member.id);
-        if (error) throw error;
-        await logAudit({ action: "department_member.removed", recordType: "department_members", recordId: userId, previousValue: { departmentId } });
-        return;
-      }
-      const { error } = await supabase.from("department_members").insert({
-        user_id: userId,
-        department_id: departmentId,
-        organization_id: session.data?.organizationId ?? "",
-      });
-      if (error) throw error;
-      await logAudit({ action: "department_member.added", recordType: "department_members", recordId: userId, newValue: { departmentId } });
+      await saveDepartmentMember({ data: { userId, departmentId, member: !member } });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff"] }),
     onError: (error) =>

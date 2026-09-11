@@ -2,7 +2,8 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
+import { useServerFn } from "@tanstack/react-start";
+import { manageRoutingRuleFn, manageResponseTemplateFn } from "@/lib/routing-admin.functions";
 import type { Database } from "@/integrations/supabase/types";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { PanelShell } from "@/components/admin/PanelShell";
@@ -78,28 +79,21 @@ function Rules() {
     },
   });
 
+  // Routing changes are written server-side with a permission check and audit row.
+  const saveRule = useServerFn(manageRoutingRuleFn);
+
   const create = useMutation({
     mutationFn: async () => {
       if (!orgId || !form.name.trim() || !form.match_value.trim()) return;
-      const { data: created, error } = await supabase
-        .from("routing_rules")
-        .insert({
-          organization_id: orgId,
+      await saveRule({
+        data: {
+          action: "create",
           name: form.name.trim(),
-          match_type: form.match_type,
-          match_value: form.match_value.trim(),
-          department_id: form.department_id || null,
+          matchType: form.match_type as "interest" | "keyword" | "county" | "menu_option" | "language",
+          matchValue: form.match_value.trim(),
+          departmentId: form.department_id || null,
           priority: Number(form.priority) || 100,
-          routing_method: "first_available",
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
-      await logAudit({
-        action: "routing_rule.created",
-        recordType: "routing_rules",
-        recordId: created?.id ?? null,
-        newValue: { name: form.name.trim(), match_type: form.match_type, match_value: form.match_value.trim() },
+        },
       });
     },
     onSuccess: () => {
@@ -110,18 +104,22 @@ function Rules() {
 
   const update = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Database["public"]["Tables"]["routing_rules"]["Update"] }) => {
-      const { error } = await supabase.from("routing_rules").update(patch).eq("id", id);
-      if (error) throw error;
-      await logAudit({ action: "routing_rule.updated", recordType: "routing_rules", recordId: id, newValue: patch as Record<string, unknown> });
+      await saveRule({
+        data: {
+          action: "update",
+          id,
+          ...(patch.priority !== undefined ? { priority: Number(patch.priority) } : {}),
+          ...(patch.status !== undefined ? { status: patch.status as "active" | "inactive" } : {}),
+          ...(patch.department_id !== undefined ? { departmentId: patch.department_id ?? null } : {}),
+        },
+      });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["routing-rules"] }),
   });
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("routing_rules").delete().eq("id", id);
-      if (error) throw error;
-      await logAudit({ action: "routing_rule.deleted", recordType: "routing_rules", recordId: id });
+      await saveRule({ data: { action: "delete", id } });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["routing-rules"] }),
   });
@@ -236,27 +234,19 @@ function Templates() {
     },
   });
 
+  const saveTemplate = useServerFn(manageResponseTemplateFn);
+
   const create = useMutation({
     mutationFn: async () => {
       if (!orgId || !form.name.trim() || !form.body.trim()) return;
-      const { data: created, error } = await supabase
-        .from("response_templates")
-        .insert({
-          organization_id: orgId,
+      await saveTemplate({
+        data: {
+          action: "create",
           name: form.name.trim(),
           shortcut: form.shortcut.trim() || null,
           category: form.category.trim() || null,
           body: form.body.trim(),
-          language: "en",
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
-      await logAudit({
-        action: "response_template.created",
-        recordType: "response_templates",
-        recordId: created?.id ?? null,
-        newValue: { name: form.name.trim(), shortcut: form.shortcut.trim() || null },
+        },
       });
     },
     onSuccess: () => {
@@ -267,18 +257,24 @@ function Templates() {
 
   const update = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Database["public"]["Tables"]["response_templates"]["Update"] }) => {
-      const { error } = await supabase.from("response_templates").update(patch).eq("id", id);
-      if (error) throw error;
-      await logAudit({ action: "response_template.updated", recordType: "response_templates", recordId: id, newValue: patch as Record<string, unknown> });
+      await saveTemplate({
+        data: {
+          action: "update",
+          id,
+          ...(patch.name !== undefined ? { name: String(patch.name) } : {}),
+          ...(patch.shortcut !== undefined ? { shortcut: patch.shortcut ?? null } : {}),
+          ...(patch.category !== undefined ? { category: patch.category ?? null } : {}),
+          ...(patch.body !== undefined ? { body: String(patch.body) } : {}),
+          ...(patch.approved !== undefined ? { approved: Boolean(patch.approved) } : {}),
+        },
+      });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["response-templates"] }),
   });
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("response_templates").delete().eq("id", id);
-      if (error) throw error;
-      await logAudit({ action: "response_template.deleted", recordType: "response_templates", recordId: id });
+      await saveTemplate({ data: { action: "delete", id } });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["response-templates"] }),
   });

@@ -562,15 +562,11 @@ function InboxPage() {
     },
   });
 
+  const saveInternalNote = useServerFn(addInternalNoteFn);
   const addNote = useMutation({
     mutationFn: async (body: string) => {
-      const { error } = await supabase.from("internal_notes").insert({
-        conversation_id: active!.id,
-        organization_id: active!.organization_id,
-        author_id: userId!,
-        body,
-      });
-      if (error) throw error;
+      // The author is stamped server-side from the session.
+      await saveInternalNote({ data: { conversationId: active!.id, body } });
     },
     onSuccess: () => {
       setNoteDraft("");
