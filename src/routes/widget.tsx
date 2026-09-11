@@ -213,10 +213,25 @@ function WidgetPage() {
   const [restored, setRestored] = useState(false);
   useEffect(() => {
     if (!websiteId) return;
-    const saved = safeStorage.getJson<{ conversationId: string; messages: Bubble[] }>(threadKey);
+    const saved = safeStorage.getJson<{
+      conversationId: string;
+      messages: Bubble[];
+      live?: boolean;
+      agentName?: string | null;
+      agentAvatar?: string | null;
+    }>(threadKey);
     if (saved?.conversationId && Array.isArray(saved.messages)) {
       setConversationId(saved.conversationId);
       setMessages(saved.messages);
+      // A live conversation must keep polling after the iframe is rebuilt,
+      // otherwise the representative's replies never arrive.
+      if (saved.live) {
+        setAgentName(saved.agentName ?? null);
+        setAgentAvatar(saved.agentAvatar ?? null);
+        if (saved.agentName) setAgentReplied(true);
+        setLiveStatus(saved.agentName ? "Representative connected" : "Connecting you");
+        setView("waiting");
+      }
     }
     setRestored(true);
   }, [websiteId, threadKey]);
@@ -227,9 +242,24 @@ function WidgetPage() {
     safeStorage.setJson(threadKey, {
       conversationId,
       messages: messages.filter((m) => m.role !== "system").slice(-60),
+      live: Boolean(liveStatus) || view === "waiting" || agentReplied,
+      agentName,
+      agentAvatar,
       updatedAt: Date.now(),
     });
-  }, [restored, conversationId, messages, ended, threadKey]);
+  }, [
+    restored,
+    conversationId,
+    messages,
+    ended,
+    threadKey,
+    liveStatus,
+    view,
+    agentReplied,
+    agentName,
+    agentAvatar,
+  ]);
+
 
   /* Rating dismissal is remembered per conversation, not per page view. */
   const ratingKey = conversationId ? `${storageKey}-rated-${conversationId}` : null;
