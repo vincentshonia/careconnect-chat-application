@@ -51,7 +51,9 @@ async function docxToText(bytes: Uint8Array): Promise<string> {
     .replace(/<w:tab[^>]*\/>/g, "\t")
     .replace(/<w:br[^>]*\/>/g, "\n")
     .replace(/<[^>]+>/g, "");
-  return decodeEntities(text).replace(/\n{3,}/g, "\n\n").trim();
+  return decodeEntities(text)
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function base64ToBytes(base64: string): Uint8Array {
@@ -107,7 +109,10 @@ export async function extractFromUrl(rawUrl: string): Promise<{ text: string; ti
 
   const res = await fetch(url.toString(), {
     redirect: "follow",
-    headers: { "User-Agent": "CareConnectKnowledgeBot/1.0", Accept: "text/html,application/pdf,text/plain,*/*" },
+    headers: {
+      "User-Agent": "CareConnectKnowledgeBot/1.0",
+      Accept: "text/html,application/pdf,text/plain,*/*",
+    },
   });
   if (!res.ok) throw new Error(`Could not fetch that link (${res.status}).`);
   const contentType = (res.headers.get("content-type") ?? "").toLowerCase();
@@ -115,7 +120,10 @@ export async function extractFromUrl(rawUrl: string): Promise<{ text: string; ti
   if (buffer.byteLength > MAX_SOURCE_BYTES) throw new Error("That document is larger than 8MB.");
 
   if (contentType.includes("pdf") || url.pathname.toLowerCase().endsWith(".pdf")) {
-    return { text: await pdfToText(new Uint8Array(buffer)), title: url.pathname.split("/").pop() || url.hostname };
+    return {
+      text: await pdfToText(new Uint8Array(buffer)),
+      title: url.pathname.split("/").pop() || url.hostname,
+    };
   }
   const raw = new TextDecoder().decode(buffer);
   if (contentType.includes("html") || raw.trimStart().startsWith("<")) {
@@ -132,7 +140,11 @@ export type DraftArticle = { title: string; summary: string; content: string };
 export type DraftFaq = { category: string; question: string; answer: string };
 
 function parseJson<T>(raw: string): T {
-  const cleaned = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  const cleaned = raw
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
+    .trim();
   return JSON.parse(cleaned) as T;
 }
 

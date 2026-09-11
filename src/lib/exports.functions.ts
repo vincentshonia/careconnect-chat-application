@@ -10,7 +10,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { resolveActor, requirePermission, requireOrganization, ForbiddenError } from "@/lib/authz.server";
+import {
+  resolveActor,
+  requirePermission,
+  requireOrganization,
+  ForbiddenError,
+} from "@/lib/authz.server";
 import { toCsv } from "@/lib/csv";
 
 /** Rows fetched per round trip, and the hard ceiling for one export. */
@@ -66,7 +71,10 @@ const PERMISSION: Record<ExportDataset, string> = {
 
 /** Escape a value for a PostgREST `or=` search expression. */
 function sanitize(term: string) {
-  return term.trim().replace(/[%,()*]/g, "").slice(0, 80);
+  return term
+    .trim()
+    .replace(/[%,()*]/g, "")
+    .slice(0, 80);
 }
 
 function applyFilters(
@@ -81,7 +89,9 @@ function applyFilters(
         `full_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%,county.ilike.%${term}%,health_plan.ilike.%${term}%,service_interest.ilike.%${term}%`,
       );
     } else if (dataset === "intake") {
-      query.or(`full_name.ilike.%${term}%,reference.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`);
+      query.or(
+        `full_name.ilike.%${term}%,reference.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`,
+      );
     } else if (dataset === "quality") {
       query.or(`reviewer_name.ilike.%${term}%,coaching_notes.ilike.%${term}%`);
     } else if (dataset === "audit") {
@@ -120,7 +130,10 @@ export const exportCsvFn = createServerFn({ method: "POST" })
         or: (f: string) => unknown;
         eq: (c: string, v: unknown) => unknown;
         order: (c: string, o: { ascending: boolean }) => unknown;
-        range: (a: number, b: number) => Promise<{ data: unknown; error: { message: string } | null }>;
+        range: (
+          a: number,
+          b: number,
+        ) => Promise<{ data: unknown; error: { message: string } | null }>;
       };
       applyFilters(query, data.dataset, data);
       query.order(ORDER[data.dataset].column, { ascending: ORDER[data.dataset].ascending });

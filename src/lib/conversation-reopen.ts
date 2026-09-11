@@ -34,7 +34,6 @@ export function decideReopen(input: {
   return { reopens: true, toHuman, keepAssignee };
 }
 
-
 /** True when the status means the chat is finished, however it ended. */
 export function isFinished(status: string): boolean {
   return (CLOSED_STATUSES as readonly string[]).includes(status);

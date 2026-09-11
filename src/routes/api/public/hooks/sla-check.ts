@@ -56,7 +56,10 @@ export const Route = createFileRoute("/api/public/hooks/sla-check")({
           .from("organizations")
           .select("id, sla_first_response_minutes");
         const targetByOrg = new Map<string, number>();
-        for (const o of (orgs ?? []) as { id: string; sla_first_response_minutes: number | null }[]) {
+        for (const o of (orgs ?? []) as {
+          id: string;
+          sla_first_response_minutes: number | null;
+        }[]) {
           targetByOrg.set(o.id, o.sla_first_response_minutes ?? DEFAULT_SLA_MINUTES);
         }
 

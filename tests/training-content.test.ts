@@ -112,7 +112,6 @@ describe("guides never teach a screen the reader cannot open", () => {
     }
   });
 
-
   it("administrators do see staff administration", () => {
     const visible = visibleGuide(GUIDES.administrator, permissionsFor("administrator", null));
     const ids = sectionIds(visible);
@@ -149,7 +148,9 @@ describe("guide access follows authority", () => {
   });
 
   it("opens on the reader's own guide", () => {
-    expect(defaultGuideRole("team_lead", null, permissionsFor("team_lead", null))).toBe("team_lead");
+    expect(defaultGuideRole("team_lead", null, permissionsFor("team_lead", null))).toBe(
+      "team_lead",
+    );
     expect(defaultGuideRole(null, null, new Set())).toBe("agent");
   });
 });

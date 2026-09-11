@@ -57,7 +57,8 @@ export const testAiAnswerFn = createServerFn({ method: "POST" })
     if (error || !website) throw new Error("Website not found or not accessible");
 
     const mod = await import("@/lib/public-chat.server");
-    const full = await mod.admin()
+    const full = await mod
+      .admin()
       .from("websites")
       .select("*")
       .eq("id", data.websiteId)
@@ -76,7 +77,6 @@ export const testAiAnswerFn = createServerFn({ method: "POST" })
     });
 
     await mod.recordUsage(organizationId, "ai_messages", 1);
-
 
     return {
       answer: result.answer,
@@ -103,13 +103,15 @@ export const cronHealthFn = createServerFn({ method: "POST" })
     const { data, error } = await admin().rpc("cron_health");
     if (error) throw new Error(error.message);
 
-    return ((data ?? []) as {
-      job_name: string | null;
-      status_code: number | null;
-      error_msg: string | null;
-      timed_out: boolean | null;
-      created: string;
-    }[]).map((row) => ({
+    return (
+      (data ?? []) as {
+        job_name: string | null;
+        status_code: number | null;
+        error_msg: string | null;
+        timed_out: boolean | null;
+        created: string;
+      }[]
+    ).map((row) => ({
       jobName: row.job_name ?? "Unknown job",
       statusCode: row.status_code,
       errorMsg: row.error_msg,
@@ -172,7 +174,10 @@ export const adminStatusFn = createServerFn({ method: "POST" })
     // Scheduled jobs: keep only the newest result per job.
     const { admin } = await import("@/lib/public-chat.server");
     const { data: cron } = await admin().rpc("cron_health");
-    const seen = new Map<string, { statusCode: number | null; created: string; timedOut: boolean }>();
+    const seen = new Map<
+      string,
+      { statusCode: number | null; created: string; timedOut: boolean }
+    >();
     for (const row of (cron ?? []) as {
       job_name: string | null;
       status_code: number | null;
@@ -195,7 +200,12 @@ export const adminStatusFn = createServerFn({ method: "POST" })
         : null,
       requireMfaForAdmins: Boolean(orgRes.data?.require_mfa_for_admins),
       productionWebsite: production
-        ? { id: production.id, name: production.name, domain: production.domain, devMode: production.dev_mode }
+        ? {
+            id: production.id,
+            name: production.name,
+            domain: production.domain,
+            devMode: production.dev_mode,
+          }
         : null,
       jobs: [...seen.entries()].map(([jobName, v]) => ({ jobName, ...v })),
     };

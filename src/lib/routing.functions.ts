@@ -40,7 +40,6 @@ export const transferConversationFn = createServerFn({ method: "POST" })
       throw new Error("Only open conversations can be transferred");
     }
 
-
     const { data: department } = await context.supabase
       .from("departments")
       .select("id, name")
@@ -80,7 +79,6 @@ export const transferConversationFn = createServerFn({ method: "POST" })
       sender_name: "System",
       body: `${actorName} transferred this conversation to ${department.name}${data.note ? ` — ${data.note}` : ""}`,
     });
-
 
     // Only auto-assign when the destination department round-robins; a shared
     // queue leaves the chat waiting for the first eligible agent to claim.

@@ -72,7 +72,8 @@ export const accessChapter: Chapter = {
     {
       id: "access-mfa",
       title: "Two-step verification",
-      summary: "Set up an authenticator app and know what to expect when your organization requires it.",
+      summary:
+        "Set up an authenticator app and know what to expect when your organization requires it.",
       blocks: [
         {
           kind: "p",
@@ -202,24 +203,84 @@ export const consoleChapter: Chapter = {
           head: ["Menu item", "What it is for", "Who sees it"],
           rows: [
             ["Dashboard", "Your live workload, what needs attention, and your numbers", "Everyone"],
-            ["Inbox", "Website chat conversations: claim, reply, resolve, close", "Everyone with chat access"],
-            ["Intake", "Referral and enrollment requests from first contact to a decision", "Everyone with chat access"],
-            ["Contacts", "The directory of visitors, leads and referral contacts", "Everyone with chat access"],
+            [
+              "Inbox",
+              "Website chat conversations: claim, reply, resolve, close",
+              "Everyone with chat access",
+            ],
+            [
+              "Intake",
+              "Referral and enrollment requests from first contact to a decision",
+              "Everyone with chat access",
+            ],
+            [
+              "Contacts",
+              "The directory of visitors, leads and referral contacts",
+              "Everyone with chat access",
+            ],
             ["Notifications", "Your alerts and how you want to receive them", "Everyone"],
             ["My settings", "Your profile, availability, appearance and security", "Everyone"],
-            ["Knowledge", "Articles that power the assistant, and widget FAQs", "Everyone (editing needs Manager and above)"],
-            ["AI console", "Test the assistant's answer to a question before visitors see it", "Manager and above"],
-            ["Quality & QA", "Satisfaction scores, transcript review and agent scorecards", "Team Lead and above"],
+            [
+              "Knowledge",
+              "Articles that power the assistant, and widget FAQs",
+              "Everyone (editing needs Manager and above)",
+            ],
+            [
+              "AI console",
+              "Test the assistant's answer to a question before visitors see it",
+              "Manager and above",
+            ],
+            [
+              "Quality & QA",
+              "Satisfaction scores, transcript review and agent scorecards",
+              "Team Lead and above",
+            ],
             ["Reports", "Operational reporting and CSV exports", "Team Lead and above"],
-            ["Admin → Websites", "Widget branding, copy, tabs and the embed snippet", "Administrator and above"],
-            ["Admin → Departments", "Departments, business hours and holiday closures", "Administrator and above"],
-            ["Admin → Routing", "Rules that send escalations to a department, plus reply templates", "Administrator and above"],
-            ["Admin → Staff", "Add teammates, set roles, departments and capacity", "Team Lead can view; Administrator can change"],
-            ["Admin → Organizations", "Tenants, brands and their websites", "Super Admin and platform administrators"],
-            ["Admin → Organization settings", "Contact details, chatbot guardrails, compliance notices", "Administrator and above"],
-            ["Admin → Security", "Organization MFA policy and your authenticator", "Super Admin and platform administrators"],
-            ["Admin → Audit log", "Append-only history of who changed what", "Administrator and above"],
-            ["Help & Training", "This training center: guides, checklists and knowledge checks", "Everyone"],
+            [
+              "Admin → Websites",
+              "Widget branding, copy, tabs and the embed snippet",
+              "Administrator and above",
+            ],
+            [
+              "Admin → Departments",
+              "Departments, business hours and holiday closures",
+              "Administrator and above",
+            ],
+            [
+              "Admin → Routing",
+              "Rules that send escalations to a department, plus reply templates",
+              "Administrator and above",
+            ],
+            [
+              "Admin → Staff",
+              "Add teammates, set roles, departments and capacity",
+              "Team Lead can view; Administrator can change",
+            ],
+            [
+              "Admin → Organizations",
+              "Tenants, brands and their websites",
+              "Super Admin and platform administrators",
+            ],
+            [
+              "Admin → Organization settings",
+              "Contact details, chatbot guardrails, compliance notices",
+              "Administrator and above",
+            ],
+            [
+              "Admin → Security",
+              "Organization MFA policy and your authenticator",
+              "Super Admin and platform administrators",
+            ],
+            [
+              "Admin → Audit log",
+              "Append-only history of who changed what",
+              "Administrator and above",
+            ],
+            [
+              "Help & Training",
+              "This training center: guides, checklists and knowledge checks",
+              "Everyone",
+            ],
           ],
         },
         {
@@ -239,9 +300,15 @@ export const consoleChapter: Chapter = {
           kind: "table",
           head: ["Where", "What the number means"],
           rows: [
-            ["Red badge on Inbox", "Conversations waiting for a response right now, in the queues you can see"],
+            [
+              "Red badge on Inbox",
+              "Conversations waiting for a response right now, in the queues you can see",
+            ],
             ["Red badge on Notifications", "Your unread alerts"],
-            ["Red dot on the bell in the header", "The same unread alert count, available from any screen"],
+            [
+              "Red dot on the bell in the header",
+              "The same unread alert count, available from any screen",
+            ],
           ],
         },
         {
@@ -408,12 +475,27 @@ export const troubleshootingChapter: Chapter = {
           head: ["Question", "Who can resolve it"],
           rows: [
             ["I need access to a screen", "An administrator in your organization"],
-            ["My role or departments are wrong", "An administrator (roles) or your team lead (departments)"],
-            ["A conversation is with the wrong team", "Your team lead — they can transfer or reassign it"],
-            ["The assistant needs better information", "A manager or administrator with knowledge editing rights"],
+            [
+              "My role or departments are wrong",
+              "An administrator (roles) or your team lead (departments)",
+            ],
+            [
+              "A conversation is with the wrong team",
+              "Your team lead — they can transfer or reassign it",
+            ],
+            [
+              "The assistant needs better information",
+              "A manager or administrator with knowledge editing rights",
+            ],
             ["Business hours, holidays or routing are wrong", "An administrator"],
-            ["Something on the widget looks wrong on the public site", "An administrator (Websites)"],
-            ["A possible privacy or security incident", "An administrator immediately, then follow your internal policy"],
+            [
+              "Something on the widget looks wrong on the public site",
+              "An administrator (Websites)",
+            ],
+            [
+              "A possible privacy or security incident",
+              "An administrator immediately, then follow your internal policy",
+            ],
           ],
         },
         {
@@ -484,8 +566,7 @@ export const glossaryChapter: Chapter = {
             },
             {
               term: "Capacity",
-              definition:
-                "The maximum simultaneous chats a person may own. Routing respects it.",
+              definition: "The maximum simultaneous chats a person may own. Routing respects it.",
             },
             {
               term: "Presence",
@@ -574,7 +655,8 @@ export const glossaryChapter: Chapter = {
 export const helpChapter: Chapter = {
   id: "help-center",
   title: "Using Help & Training",
-  intro: "How this training center works, and where to go when the guide does not answer your question.",
+  intro:
+    "How this training center works, and where to go when the guide does not answer your question.",
   sections: [
     {
       id: "help-how-to-use",

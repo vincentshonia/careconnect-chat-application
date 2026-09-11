@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: "node",
       include: ["tests/**/*.test.ts"],
+      globalSetup: ["tests/helpers/global-teardown.ts"],
       /**
        * Integration suites talk to the same database. Running the files in
        * parallel exhausts the connection pooler, so they run one at a time and
@@ -25,21 +26,22 @@ export default defineConfig(({ mode }) => {
 
       env: {
         WIDGET_SESSION_SECRET: env.WIDGET_SESSION_SECRET ?? "test-widget-secret-for-unit-tests",
-        SUPABASE_URL: process.env['SUPABASE_URL'] ?? env.SUPABASE_URL ?? env.VITE_SUPABASE_URL ?? "",
+        SUPABASE_URL:
+          process.env["SUPABASE_URL"] ?? env.SUPABASE_URL ?? env.VITE_SUPABASE_URL ?? "",
         SUPABASE_PUBLISHABLE_KEY:
-          process.env['SUPABASE_PUBLISHABLE_KEY'] ??
+          process.env["SUPABASE_PUBLISHABLE_KEY"] ??
           env.SUPABASE_PUBLISHABLE_KEY ??
           env.VITE_SUPABASE_PUBLISHABLE_KEY ??
           "",
         // Single-backend deployment: the integration suites require this
         // explicit opt-in before they will touch the primary project.
         ALLOW_INTEGRATION_TESTS_ON_PRIMARY:
-          process.env['ALLOW_INTEGRATION_TESTS_ON_PRIMARY'] ??
+          process.env["ALLOW_INTEGRATION_TESTS_ON_PRIMARY"] ??
           env.ALLOW_INTEGRATION_TESTS_ON_PRIMARY ??
           "",
         // Provisioned by the platform; only present for integration runs.
         SUPABASE_SERVICE_ROLE_KEY:
-          process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+          process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? env.SUPABASE_SERVICE_ROLE_KEY ?? "",
       },
     },
   };

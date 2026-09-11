@@ -33,7 +33,8 @@ export const addInternalNoteFn = createServerFn({ method: "POST" })
 
     const isAssignee = conversation.assigned_to === actor.userId;
     const supervises =
-      actor.permissions.has("conversation.reassign") || actor.permissions.has("conversation.view_all");
+      actor.permissions.has("conversation.reassign") ||
+      actor.permissions.has("conversation.view_all");
     if (!isAssignee && !supervises) {
       throw new ForbiddenError("Only the assigned agent or a supervisor can add notes here");
     }

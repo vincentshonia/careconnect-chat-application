@@ -5,7 +5,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { GUIDES, GUIDE_ORDER } from "../src/lib/training/registry";
 import { guideToMarkdown } from "../src/lib/training/markdown";
-import { formatReviewDate, TRAINING_APP_BUILD, TRAINING_GUIDE_VERSION } from "../src/lib/training/version";
+import {
+  formatReviewDate,
+  TRAINING_APP_BUILD,
+  TRAINING_GUIDE_VERSION,
+} from "../src/lib/training/version";
 
 const OUT = "docs/staff-manuals";
 mkdirSync(OUT, { recursive: true });

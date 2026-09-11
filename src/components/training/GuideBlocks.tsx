@@ -3,16 +3,7 @@
  * cleanly: the same markup serves the on-screen reader and the paper handout.
  */
 import { useState } from "react";
-import {
-  AlertTriangle,
-  Check,
-  CircleHelp,
-  Info,
-  Lightbulb,
-  Lock,
-  Minus,
-  X,
-} from "lucide-react";
+import { AlertTriangle, Check, CircleHelp, Info, Lightbulb, Lock, Minus, X } from "lucide-react";
 import type { Block, QuizItem } from "@/lib/training/types";
 import { FIGURES } from "./figures";
 import { Button } from "@/components/ui/button";
@@ -200,7 +191,9 @@ function Quiz({ items }: { items: QuizItem[] }) {
 export function BlockView({ block }: { block: Block }) {
   switch (block.kind) {
     case "lead":
-      return <p className="my-3 text-base font-medium leading-relaxed text-foreground">{block.text}</p>;
+      return (
+        <p className="my-3 text-base font-medium leading-relaxed text-foreground">{block.text}</p>
+      );
 
     case "p":
       return <p className="my-3 text-sm leading-relaxed text-muted-foreground">{block.text}</p>;

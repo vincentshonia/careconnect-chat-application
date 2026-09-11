@@ -113,7 +113,8 @@ const allOrgs = await loadOrganizations();
 const targetOrgs = allOrgs.filter((o) => ORG_ALLOW_LIST.includes(o.name));
 
 for (const org of targetOrgs) {
-  if (!ORG_ALLOW_LIST.includes(org.name)) fail(`organization "${org.name}" is not on the allow-list.`);
+  if (!ORG_ALLOW_LIST.includes(org.name))
+    fail(`organization "${org.name}" is not on the allow-list.`);
   if (org.name === PROTECTED_ORG) fail(`"${PROTECTED_ORG}" must never be deleted.`);
 }
 if (targetOrgs.some((o) => o.name.trim() === PROTECTED_ORG)) {
@@ -121,7 +122,8 @@ if (targetOrgs.some((o) => o.name.trim() === PROTECTED_ORG)) {
 }
 
 const missing = ORG_ALLOW_LIST.filter((n) => !targetOrgs.some((o) => o.name === n));
-if (missing.length > 0) console.log(`Note: allow-listed organizations not found (already gone): ${missing.join(", ")}`);
+if (missing.length > 0)
+  console.log(`Note: allow-listed organizations not found (already gone): ${missing.join(", ")}`);
 
 const targetUsers = await loadTargetUsers();
 const targetUserIds = targetUsers.map((u) => u.id);
@@ -165,21 +167,28 @@ await del("organizations", "id", targetOrgIds);
 // 3. auth accounts
 for (const u of targetUsers) {
   const { error } = await db.auth.admin.deleteUser(u.id);
-  if (error && !/not found/i.test(error.message)) failures.push(`auth user ${u.email}: ${error.message}`);
+  if (error && !/not found/i.test(error.message))
+    failures.push(`auth user ${u.email}: ${error.message}`);
 }
 
 const remainingOrgs = (await loadOrganizations()).filter((o) => ORG_ALLOW_LIST.includes(o.name));
 const remainingUsers = await loadTargetUsers();
-const after = await snapshot(remainingOrgs, remainingUsers.map((u) => u.id));
+const after = await snapshot(
+  remainingOrgs,
+  remainingUsers.map((u) => u.id),
+);
 printSnapshot("AFTER", after, remainingOrgs.length);
 console.log(`remaining target auth accounts: ${remainingUsers.length}`);
 
 const survivors = (await loadOrganizations()).map((o) => o.name);
 console.log(`\norganizations remaining: ${survivors.join(", ")}`);
-if (!survivors.includes(PROTECTED_ORG)) fail(`"${PROTECTED_ORG}" is missing after cleanup — investigate immediately.`);
+if (!survivors.includes(PROTECTED_ORG))
+  fail(`"${PROTECTED_ORG}" is missing after cleanup — investigate immediately.`);
 
 if (failures.length > 0) {
-  console.error(`\nPURGE COMPLETED WITH ${failures.length} ISSUE(S):\n - ${failures.join("\n - ")}`);
+  console.error(
+    `\nPURGE COMPLETED WITH ${failures.length} ISSUE(S):\n - ${failures.join("\n - ")}`,
+  );
   process.exit(1);
 }
 console.log("\nPURGE COMPLETE — synthetic fixtures removed.");

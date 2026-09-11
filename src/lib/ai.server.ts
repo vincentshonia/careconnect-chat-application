@@ -39,8 +39,7 @@ async function handle(res: Response) {
 
 /** A slow model is still better than none, but a hung socket must not hang the visitor. */
 const REQUEST_TIMEOUT_MS = 8000;
-const TIMEOUT_MESSAGE =
-  "The assistant is taking too long — try again or talk to a representative.";
+const TIMEOUT_MESSAGE = "The assistant is taking too long — try again or talk to a representative.";
 
 /**
  * One fetch, one retry. Only network/timeout failures are retried: an HTTP
@@ -129,7 +128,11 @@ export async function chatCompleteJson<T>(
 }
 
 function tryParse<T>(raw: string): { value: T | null; error: string } {
-  const text = (raw ?? "").trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  const text = (raw ?? "")
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
+    .trim();
   try {
     return { value: JSON.parse(text) as T, error: "" };
   } catch (error) {

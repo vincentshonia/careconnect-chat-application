@@ -180,7 +180,8 @@ function QualityPage() {
       const orgId = session.data?.organizationId;
       if (!orgId || !selected) throw new Error("Pick a conversation to review first.");
       const conversation = selectedConversation.data;
-      if (!conversation) throw new Error("Still loading this conversation — try again in a moment.");
+      if (!conversation)
+        throw new Error("Still loading this conversation — try again in a moment.");
       if (CRITERIA.some((c) => scores[c.key] == null)) {
         throw new Error("Score all four criteria before saving.");
       }
@@ -216,12 +217,12 @@ function QualityPage() {
   });
 
   const stats = summary.data ?? {};
-  const ratingsTotal = Number(stats['ratings_total'] ?? 0);
-  const reviewsTotal = Number(stats['reviews_total'] ?? 0);
-  const csat = stats['csat'] == null ? null : Number(stats['csat']);
-  const positiveRate = stats['positive_rate'] == null ? null : Number(stats['positive_rate']);
-  const avgQa = stats['avg_qa'] == null ? "—" : Number(stats['avg_qa']).toFixed(1);
-  const flaggedTotal = Number(stats['flagged_total'] ?? 0);
+  const ratingsTotal = Number(stats["ratings_total"] ?? 0);
+  const reviewsTotal = Number(stats["reviews_total"] ?? 0);
+  const csat = stats["csat"] == null ? null : Number(stats["csat"]);
+  const positiveRate = stats["positive_rate"] == null ? null : Number(stats["positive_rate"]);
+  const avgQa = stats["avg_qa"] == null ? "—" : Number(stats["avg_qa"]).toFixed(1);
+  const flaggedTotal = Number(stats["flagged_total"] ?? 0);
   const reviewRows = reviews.data?.rows ?? [];
   const conversationRows = conversations.data?.rows ?? [];
   const reviewedIds = new Set(reviewedQuery.data ?? []);
@@ -238,7 +239,8 @@ function QualityPage() {
       saveCsv("qa-reviews", result.csv);
       toast.success(`Exported ${result.rows.toLocaleString()} reviews`);
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not build that export"),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not build that export"),
   });
 
   return (
@@ -246,7 +248,12 @@ function QualityPage() {
       title="Quality & QA"
       description="Visitor satisfaction, transcript review, and agent scorecards for accuracy, tone and compliance."
       actions={
-        <Button variant="outline" size="sm" onClick={() => exportCsv.mutate()} disabled={exportCsv.isPending}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => exportCsv.mutate()}
+          disabled={exportCsv.isPending}
+        >
           {exportCsv.isPending ? "Preparing…" : "Export CSV"}
         </Button>
       }
@@ -269,7 +276,9 @@ function QualityPage() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[320px_1fr]">
         <section className="rounded-xl border border-border">
-          <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">Recent conversations</h2>
+          <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">
+            Recent conversations
+          </h2>
           {conversations.error ? (
             <QueryError
               className="m-3"
@@ -321,7 +330,9 @@ function QualityPage() {
             <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">Transcript</h2>
             <div className="max-h-72 space-y-3 overflow-y-auto p-4">
               {!selected ? (
-                <p className="text-sm text-muted-foreground">Select a conversation to review its transcript.</p>
+                <p className="text-sm text-muted-foreground">
+                  Select a conversation to review its transcript.
+                </p>
               ) : (transcript.data ?? []).length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   {transcript.isLoading ? "Loading…" : "No messages in this conversation."}
@@ -397,14 +408,18 @@ function QualityPage() {
                 {saveReview.isPending ? "Saving…" : "Save review"}
               </Button>
               {!scoresComplete ? (
-                <span className="text-sm text-muted-foreground">Score all four criteria to save.</span>
+                <span className="text-sm text-muted-foreground">
+                  Score all four criteria to save.
+                </span>
               ) : null}
               {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
             </div>
           </div>
 
           <div className="rounded-xl border border-border">
-            <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">Recent QA reviews</h2>
+            <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">
+              Recent QA reviews
+            </h2>
             {reviews.error ? (
               <QueryError
                 className="m-3"
@@ -427,7 +442,9 @@ function QualityPage() {
                 </li>
               ))}
               {reviewRows.length === 0 ? (
-                <li className="px-4 py-6 text-center text-sm text-muted-foreground">No reviews recorded yet.</li>
+                <li className="px-4 py-6 text-center text-sm text-muted-foreground">
+                  No reviews recorded yet.
+                </li>
               ) : null}
             </ul>
             <Pager

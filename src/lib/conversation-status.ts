@@ -39,7 +39,10 @@ export const OPEN_STATUSES = [
 ] as const satisfies readonly ConversationStatus[];
 
 /** Statuses that mean a real service interaction reached an outcome. */
-export const COMPLETED_STATUSES = ["resolved", "closed"] as const satisfies readonly ConversationStatus[];
+export const COMPLETED_STATUSES = [
+  "resolved",
+  "closed",
+] as const satisfies readonly ConversationStatus[];
 
 /** Traffic that is not a real service interaction and is excluded from rates. */
 export const EXCLUDED_STATUSES = [
@@ -96,11 +99,13 @@ export function isQueued(row: {
  * Apply the queue rule to a PostgREST query builder. Kept generic so both the
  * Inbox list and the waiting-count badge use the identical filter.
  */
-export function applyQueueFilter<T extends {
-  eq: (column: string, value: never) => T;
-  is: (column: string, value: null) => T;
-  in: (column: string, values: never[]) => T;
-}>(query: T): T {
+export function applyQueueFilter<
+  T extends {
+    eq: (column: string, value: never) => T;
+    is: (column: string, value: null) => T;
+    in: (column: string, values: never[]) => T;
+  },
+>(query: T): T {
   return query
     .eq("escalation_requested", true as never)
     .is("assigned_to", null)

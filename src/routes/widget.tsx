@@ -12,8 +12,6 @@ import {
 
 const BRAND_LOGO_URL = brandLogoAsset.url;
 
-
-
 export const Route = createFileRoute("/widget")({
   head: () => ({
     meta: [
@@ -23,15 +21,13 @@ export const Route = createFileRoute("/widget")({
     ],
     styles: [
       {
-        children:
-          "html,body,#root{background:transparent !important;margin:0;overflow:hidden;}",
+        children: "html,body,#root{background:transparent !important;margin:0;overflow:hidden;}",
       },
     ],
   }),
   component: WidgetPage,
   ssr: false,
 });
-
 
 type Config = {
   website: {
@@ -79,7 +75,6 @@ type Config = {
   };
   departments: Array<{ id: string; name: string; description: string | null }>;
   services: Array<{
-
     id: string;
     name: string;
     short_description: string;
@@ -93,7 +88,6 @@ type Config = {
   businessOpen: boolean;
   agentsAvailable: boolean;
 };
-
 
 type Bubble = {
   id: string;
@@ -118,7 +112,12 @@ type View = "menu" | "chat" | "services" | "faq" | "contact" | "form" | "waiting
 type Tab = "home" | "chat" | "help" | "services" | "requests";
 
 const TABS: { key: Tab; label: string; view: View; icon: string }[] = [
-  { key: "home", label: "Home", view: "menu", icon: "M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" },
+  {
+    key: "home",
+    label: "Home",
+    view: "menu",
+    icon: "M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z",
+  },
   {
     key: "chat",
     label: "Chat",
@@ -148,7 +147,6 @@ function tabForView(view: View): Tab {
   return "home";
 }
 
-
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -160,7 +158,9 @@ function post(type: string, payload: Record<string, unknown> = {}) {
 
 function WidgetPage() {
   const [params] = useState(() =>
-    typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search),
+    typeof window === "undefined"
+      ? new URLSearchParams()
+      : new URLSearchParams(window.location.search),
   );
   const websiteId = params.get("w") ?? "";
   const hostOrigin = params.get("h");
@@ -176,7 +176,9 @@ function WidgetPage() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [formKind, setFormKind] = useState<"live_agent" | "contact" | "referral" | "enrollment" | "message">("live_agent");
+  const [formKind, setFormKind] = useState<
+    "live_agent" | "contact" | "referral" | "enrollment" | "message"
+  >("live_agent");
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [agentName, setAgentName] = useState<string | null>(null);
   const [agentAvatar, setAgentAvatar] = useState<string | null>(null);
@@ -269,7 +271,6 @@ function WidgetPage() {
     return [...services, ...faqs];
   }, [config]);
 
-
   /* ------------------------- signed chat session ------------------------ */
   // The server mints and signs the session; the browser only stores it.
   const sessionRef = useRef<{ token: string; expiresAt: string } | null>(null);
@@ -297,7 +298,8 @@ function WidgetPage() {
             currentPage: page,
             landingPage: page,
             referrer: params.get("r"),
-            deviceType: typeof window !== "undefined" && window.innerWidth < 640 ? "mobile" : "desktop",
+            deviceType:
+              typeof window !== "undefined" && window.innerWidth < 640 ? "mobile" : "desktop",
             // So the assistant can answer in the visitor's own language.
             language: typeof navigator !== "undefined" ? navigator.language : null,
           },
@@ -334,7 +336,9 @@ function WidgetPage() {
       setError("Missing website id");
       return;
     }
-    fetch(`/api/public/chat/config?w=${encodeURIComponent(websiteId)}&h=${encodeURIComponent(hostOrigin ?? "")}&op=${encodeURIComponent(originProof ?? "")}`)
+    fetch(
+      `/api/public/chat/config?w=${encodeURIComponent(websiteId)}&h=${encodeURIComponent(hostOrigin ?? "")}&op=${encodeURIComponent(originProof ?? "")}`,
+    )
       .then(async (r) => {
         const json = await r.json();
         if (!r.ok) throw new Error(json.error ?? "Unable to load chat");
@@ -518,11 +522,14 @@ function WidgetPage() {
       // A crisis pulls a person in straight away: switch to the waiting view so
       // the widget starts polling for the representative's reply.
       if (data.crisis) setView("waiting");
-
     } catch (e) {
       setMessages((prev) => [
         ...prev,
-        { id: uid(), role: "system", text: (e as Error).message || "We could not reach the assistant." },
+        {
+          id: uid(),
+          role: "system",
+          text: (e as Error).message || "We could not reach the assistant.",
+        },
       ]);
     } finally {
       inFlight.current = false;
@@ -599,7 +606,10 @@ function WidgetPage() {
 
   if (!open) {
     return (
-      <div className="flex h-screen w-full flex-col items-end justify-end gap-3 p-2" style={{ fontFamily: config.website.fontFamily }}>
+      <div
+        className="flex h-screen w-full flex-col items-end justify-end gap-3 p-2"
+        style={{ fontFamily: config.website.fontFamily }}
+      >
         {showTeaser && (
           <div
             className="relative w-full max-w-[300px] border border-border/60 bg-card/95 p-4 text-sm shadow-float backdrop-blur"
@@ -612,7 +622,9 @@ function WidgetPage() {
             >
               ✕
             </button>
-            <p className="pr-6 font-medium leading-snug text-card-foreground">{config.website.triggerMessage}</p>
+            <p className="pr-6 font-medium leading-snug text-card-foreground">
+              {config.website.triggerMessage}
+            </p>
             <button
               onClick={openWidget}
               className="mt-3 w-full rounded-full px-3 py-2 text-sm font-semibold text-white shadow-panel transition hover:brightness-110"
@@ -626,14 +638,26 @@ function WidgetPage() {
           onClick={openWidget}
           aria-label="Open chat"
           className="group relative flex h-14 w-14 items-center justify-center rounded-full text-white shadow-float ring-1 ring-white/25 transition duration-200 hover:-translate-y-0.5 hover:scale-105 active:scale-95"
-          style={{ background: `linear-gradient(145deg, ${brand}, color-mix(in oklab, ${brand} 72%, black))` }}
+          style={{
+            background: `linear-gradient(145deg, ${brand}, color-mix(in oklab, ${brand} 72%, black))`,
+          }}
         >
           <span
             className="absolute inset-0 rounded-full opacity-0 transition group-hover:opacity-100"
             style={{ boxShadow: `0 0 0 6px color-mix(in oklab, ${brand} 22%, transparent)` }}
             aria-hidden="true"
           />
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
             <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
           </svg>
         </button>
@@ -649,7 +673,9 @@ function WidgetPage() {
       {view !== "menu" && (
         <header
           className="relative flex items-center gap-3 px-4 py-3.5 text-white"
-          style={{ background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 68%, black))` }}
+          style={{
+            background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 68%, black))`,
+          }}
         >
           <span
             className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-white/10 blur-2xl"
@@ -664,7 +690,17 @@ function WidgetPage() {
               />
             ) : (
               <div className="grid h-9 w-9 place-items-center rounded-full bg-white/15 ring-2 ring-white/25">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" />
                 </svg>
               </div>
@@ -713,9 +749,6 @@ function WidgetPage() {
         </header>
       )}
 
-
-
-
       <div
         ref={scroller}
         className={`flex-1 overflow-y-auto bg-background ${view === "menu" ? "" : "px-4 py-4"}`}
@@ -741,7 +774,6 @@ function WidgetPage() {
           />
         )}
 
-
         {view === "services" && (
           <div className="space-y-3">
             <h2 className="text-sm font-semibold text-foreground">Our services</h2>
@@ -756,7 +788,9 @@ function WidgetPage() {
                   </p>
                 )}
                 {s.counties?.length > 0 && (
-                  <p className="mt-1 text-[11px] text-muted-foreground">Counties: {s.counties.join(", ")}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Counties: {s.counties.join(", ")}
+                  </p>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
@@ -809,9 +843,13 @@ function WidgetPage() {
               )
               .map((f) => (
                 <details key={f.id} className="rounded-xl border border-border bg-card p-3">
-                  <summary className="cursor-pointer text-sm font-medium text-card-foreground">{f.question}</summary>
+                  <summary className="cursor-pointer text-sm font-medium text-card-foreground">
+                    {f.question}
+                  </summary>
                   <p className="mt-2 text-xs text-muted-foreground">{f.answer}</p>
-                  <span className="mt-2 block text-[10px] uppercase tracking-wide text-muted-foreground">{f.category}</span>
+                  <span className="mt-2 block text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {f.category}
+                  </span>
                 </details>
               ))}
           </div>
@@ -829,10 +867,16 @@ function WidgetPage() {
               {
                 key: "live_agent",
                 title: "Speak with a representative",
-                sub: config.agentsAvailable ? "Someone is available now" : "We will reply as soon as we are back",
+                sub: config.agentsAvailable
+                  ? "Someone is available now"
+                  : "We will reply as soon as we are back",
               },
               { key: "referral", title: "Submit a referral", sub: "Refer a patient or member" },
-              { key: "enrollment", title: "Enrollment assistance", sub: "Get help choosing or joining a plan" },
+              {
+                key: "enrollment",
+                title: "Enrollment assistance",
+                sub: "Get help choosing or joining a plan",
+              },
               { key: "message", title: "Leave a message", sub: "We will get back to you" },
             ].map((option) => (
               <button
@@ -853,8 +897,12 @@ function WidgetPage() {
                   aria-hidden="true"
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-card-foreground">{option.title}</span>
-                  <span className="block truncate text-[11px] text-muted-foreground">{option.sub}</span>
+                  <span className="block truncate text-sm font-medium text-card-foreground">
+                    {option.title}
+                  </span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {option.sub}
+                  </span>
                 </span>
               </button>
             ))}
@@ -868,11 +916,12 @@ function WidgetPage() {
         )}
 
         {view === "contact" && (
-
           <div className="space-y-3 text-sm">
             <div className="rounded-xl border border-border bg-card p-3">
               <p className="font-semibold text-card-foreground">{config.organization.name}</p>
-              <p className="mt-2 text-xs text-muted-foreground">Phone: {config.organization.phone}</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Phone: {config.organization.phone}
+              </p>
               <p className="text-xs text-muted-foreground">Email: {config.organization.email}</p>
               <p className="text-xs text-muted-foreground">{config.organization.address}</p>
               <p className="mt-2 text-xs text-muted-foreground">
@@ -912,7 +961,7 @@ function WidgetPage() {
               setConversationId(data.conversationId);
               // Remember who this visitor is so a return visit greets them by
               // name (the greeting already reads this key).
-              const givenName = String(payload['fullName'] ?? "").trim();
+              const givenName = String(payload["fullName"] ?? "").trim();
               if (givenName) {
                 safeStorage.set(`${storageKey}-name`, givenName);
                 setVisitorName(givenName.split(" ")[0] ?? null);
@@ -951,8 +1000,14 @@ function WidgetPage() {
               <EndedNotice brand={brand} onRestart={startNewChat} />
             ) : (
               <div className="rounded-xl border border-border bg-card p-4 text-center">
-                <p className="text-sm font-semibold text-card-foreground">{liveStatus ?? "Connecting you"}</p>
-                {agentName && <p className="mt-1 text-xs text-muted-foreground">You are chatting with {agentName}.</p>}
+                <p className="text-sm font-semibold text-card-foreground">
+                  {liveStatus ?? "Connecting you"}
+                </p>
+                {agentName && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    You are chatting with {agentName}.
+                  </p>
+                )}
                 {!agentName && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     You can keep typing below — a representative will see everything you send.
@@ -963,10 +1018,22 @@ function WidgetPage() {
             {messages
               .filter((m) => m.role !== "system")
               .map((m) => (
-                <MessageBubble key={m.id} bubble={m} brand={brand} onRate={rateAnswer} onAction={() => {}} />
+                <MessageBubble
+                  key={m.id}
+                  bubble={m}
+                  brand={brand}
+                  onRate={rateAnswer}
+                  onAction={() => {}}
+                />
               ))}
             {/* Only ask for a rating once a person replied or the chat ended. */}
-            {shouldShowRating({ conversationId, status: convStatus, agentReplied, dismissed: ratingDismissed, sending }) && (
+            {shouldShowRating({
+              conversationId,
+              status: convStatus,
+              agentReplied,
+              dismissed: ratingDismissed,
+              sending,
+            }) && (
               <SatisfactionPrompt
                 conversationId={conversationId!}
                 brand={brand}
@@ -975,7 +1042,6 @@ function WidgetPage() {
               />
             )}
           </div>
-
         )}
 
         {view === "chat" && (
@@ -1011,10 +1077,15 @@ function WidgetPage() {
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.1s]" />
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70" />
               </div>
-
             )}
             {ended && <EndedNotice brand={brand} onRestart={startNewChat} />}
-            {shouldShowRating({ conversationId, status: convStatus, agentReplied, dismissed: ratingDismissed, sending }) && (
+            {shouldShowRating({
+              conversationId,
+              status: convStatus,
+              agentReplied,
+              dismissed: ratingDismissed,
+              sending,
+            }) && (
               <SatisfactionPrompt
                 conversationId={conversationId!}
                 brand={brand}
@@ -1024,7 +1095,6 @@ function WidgetPage() {
             )}
           </div>
         )}
-
       </div>
 
       {(view === "chat" || view === "waiting") && !ended && (
@@ -1069,7 +1139,17 @@ function WidgetPage() {
               aria-label="Attach a file"
               title="Attach a file"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
               </svg>
             </button>
@@ -1080,7 +1160,17 @@ function WidgetPage() {
               style={{ background: brand }}
               aria-label="Send message"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </button>
@@ -1088,8 +1178,6 @@ function WidgetPage() {
           <p className="mt-2 line-clamp-2 px-1 text-[10px] leading-tight text-muted-foreground">
             {config.organization.privacyNotice}
           </p>
-
-
         </form>
       )}
 
@@ -1113,41 +1201,39 @@ function WidgetPage() {
             icon: tabIconPath(t.icon),
           }))
           .map((tab) => {
-          const active = tabForView(view) === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              aria-current={active ? "page" : undefined}
-              onClick={() => {
-                if (tab.key === "chat" && conversationId && liveStatus) setView("waiting");
-                else setView(tab.view);
-              }}
-              className="flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-medium transition hover:bg-muted/60"
-              style={active ? { color: brand } : undefined}
-            >
-              <svg
-                width="19"
-                height="19"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={active ? 2.2 : 1.7}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                className={active ? undefined : "text-muted-foreground"}
+            const active = tabForView(view) === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                aria-current={active ? "page" : undefined}
+                onClick={() => {
+                  if (tab.key === "chat" && conversationId && liveStatus) setView("waiting");
+                  else setView(tab.view);
+                }}
+                className="flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-medium transition hover:bg-muted/60"
+                style={active ? { color: brand } : undefined}
               >
-                <path d={tab.icon} />
-              </svg>
-              <span className={active ? undefined : "text-muted-foreground"}>{tab.label}</span>
-            </button>
-          );
-        })}
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={active ? 2.2 : 1.7}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  className={active ? undefined : "text-muted-foreground"}
+                >
+                  <path d={tab.icon} />
+                </svg>
+                <span className={active ? undefined : "text-muted-foreground"}>{tab.label}</span>
+              </button>
+            );
+          })}
       </nav>
-
     </div>
-
   );
 }
 
@@ -1229,7 +1315,7 @@ function HomeView({
 
         <div className="relative mt-7">
           <h1 className="text-[26px] font-semibold leading-tight tracking-tight text-white/95">
-            {visitorName ? `Hi, ${visitorName}.` : (config.website.homeGreeting || "Hi there.")}
+            {visitorName ? `Hi, ${visitorName}.` : config.website.homeGreeting || "Hi there."}
           </h1>
           <h2 className="text-[26px] font-semibold leading-tight tracking-tight text-white">
             {config.website.homeHeadline || "How can we help?"}
@@ -1258,21 +1344,40 @@ function HomeView({
             style={{ background: brand }}
             aria-hidden="true"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" />
             </svg>
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-card-foreground">{config.website.homeCtaTitle || "Send us a message"}</span>
+            <span className="block text-[15px] font-semibold text-card-foreground">
+              {config.website.homeCtaTitle || "Send us a message"}
+            </span>
             <span className="block truncate text-xs text-muted-foreground">
               {config.agentsAvailable
                 ? "Typical reply time is a few minutes"
-                : config.website.homeCtaSubtitle || "CareConnect AI can help now, or leave a message"}
+                : config.website.homeCtaSubtitle ||
+                  "CareConnect AI can help now, or leave a message"}
             </span>
           </span>
           <svg
-            width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
             className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
           >
             <path d="M9 6l6 6-6 6" />
@@ -1285,11 +1390,24 @@ function HomeView({
             className="flex w-full items-center gap-2.5 text-left"
             aria-label="Search for help"
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-muted-foreground">
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="text-muted-foreground"
+            >
               <circle cx="11" cy="11" r="7" />
               <path d="M21 21l-4.2-4.2" />
             </svg>
-            <span className="text-[15px] font-semibold text-card-foreground">{config.website.helpTitle || "Search for help"}</span>
+            <span className="text-[15px] font-semibold text-card-foreground">
+              {config.website.helpTitle || "Search for help"}
+            </span>
           </button>
 
           {topics.length > 0 && (
@@ -1300,8 +1418,21 @@ function HomeView({
                   onClick={() => onTopic(t)}
                   className="flex w-full items-center gap-2 py-2.5 text-left transition hover:opacity-80"
                 >
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-card-foreground">{t.label}</span>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-muted-foreground">
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-card-foreground">
+                    {t.label}
+                  </span>
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className="shrink-0 text-muted-foreground"
+                  >
                     <path d="M9 6l6 6-6 6" />
                   </svg>
                 </button>
@@ -1315,7 +1446,17 @@ function HomeView({
           onClick={() => setShowPrivacy((v) => !v)}
           className="flex w-full items-center justify-center gap-1.5 pt-1 text-[11px] text-muted-foreground hover:underline"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
           {config.website.privacyFooterText || "Your privacy matters to us."}
@@ -1329,7 +1470,6 @@ function HomeView({
     </div>
   );
 }
-
 
 function MessageBubble({
   bubble,
@@ -1345,7 +1485,10 @@ function MessageBubble({
   if (bubble.role === "visitor") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl px-3 py-2 text-sm text-white" style={{ background: brand }}>
+        <div
+          className="max-w-[85%] rounded-2xl px-3 py-2 text-sm text-white"
+          style={{ background: brand }}
+        >
           {bubble.text}
           {bubble.attachment?.url && bubble.attachment.type.startsWith("image/") ? (
             <img
@@ -1372,7 +1515,9 @@ function MessageBubble({
   }
   return (
     <div className="space-y-2">
-      {bubble.author && <p className="text-[10px] font-semibold uppercase text-muted-foreground">{bubble.author}</p>}
+      {bubble.author && (
+        <p className="text-[10px] font-semibold uppercase text-muted-foreground">{bubble.author}</p>
+      )}
       <p className="whitespace-pre-wrap text-sm text-foreground">{bubble.text}</p>
       {bubble.sources && bubble.sources.length > 0 && (
         <div className="text-[11px] text-muted-foreground">
@@ -1486,7 +1631,9 @@ function IntakeForm({
         }
       }}
     >
-      <h2 className="text-sm font-semibold text-foreground">{titles[kind] ?? "Request assistance"}</h2>
+      <h2 className="text-sm font-semibold text-foreground">
+        {titles[kind] ?? "Request assistance"}
+      </h2>
       {(kind === "referral" || kind === "enrollment") && (
         <p className="rounded-lg bg-muted p-2 text-[11px] text-muted-foreground">
           {config.organization.privacyNotice}
@@ -1509,16 +1656,45 @@ function IntakeForm({
           </select>
         </label>
       ) : null}
-      <Field label="Full name" required value={values.fullName} onChange={(v) => set("fullName", v)} />
+      <Field
+        label="Full name"
+        required
+        value={values.fullName}
+        onChange={(v) => set("fullName", v)}
+      />
 
-      <Field label="Phone number" required type="tel" value={values.phone} onChange={(v) => set("phone", v)} />
-      <Field label="Email address" required type="email" value={values.email} onChange={(v) => set("email", v)} />
+      <Field
+        label="Phone number"
+        required
+        type="tel"
+        value={values.phone}
+        onChange={(v) => set("phone", v)}
+      />
+      <Field
+        label="Email address"
+        required
+        type="email"
+        value={values.email}
+        onChange={(v) => set("email", v)}
+      />
       {(kind === "referral" || kind === "enrollment") && (
         <>
           <Field label="County" value={values.county} onChange={(v) => set("county", v)} />
-          <Field label="Health plan" value={values.healthPlan} onChange={(v) => set("healthPlan", v)} />
-          <Field label="Service of interest" value={values.serviceInterest} onChange={(v) => set("serviceInterest", v)} />
-          <Field label="Preferred language" value={values.preferredLanguage} onChange={(v) => set("preferredLanguage", v)} />
+          <Field
+            label="Health plan"
+            value={values.healthPlan}
+            onChange={(v) => set("healthPlan", v)}
+          />
+          <Field
+            label="Service of interest"
+            value={values.serviceInterest}
+            onChange={(v) => set("serviceInterest", v)}
+          />
+          <Field
+            label="Preferred language"
+            value={values.preferredLanguage}
+            onChange={(v) => set("preferredLanguage", v)}
+          />
         </>
       )}
       <label className="block text-xs font-medium text-foreground">
@@ -1550,7 +1726,11 @@ function IntakeForm({
         >
           {busy ? "Submitting…" : "Submit"}
         </button>
-        <button type="button" onClick={onCancel} className="rounded-lg border border-border px-3 py-2 text-sm">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-border px-3 py-2 text-sm"
+        >
           Cancel
         </button>
       </div>
@@ -1619,7 +1799,6 @@ function SatisfactionPrompt({
   const [comment, setComment] = useState("");
   const [done, setDone] = useState(false);
 
-
   if (done) {
     return (
       <div className="rounded-2xl border border-border bg-card p-3 text-xs text-muted-foreground">
@@ -1661,7 +1840,9 @@ function SatisfactionPrompt({
               if (n >= 4) void submit(n, "");
             }}
             className="h-8 w-8 rounded-lg border border-border text-xs font-semibold text-foreground transition"
-            style={score === n ? { background: brand, color: "#fff", borderColor: brand } : undefined}
+            style={
+              score === n ? { background: brand, color: "#fff", borderColor: brand } : undefined
+            }
           >
             {n}
           </button>

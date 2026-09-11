@@ -11,10 +11,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import {
-  reassignConversationFn,
-  reassignmentCandidatesFn,
-} from "@/lib/conversations.functions";
+import { reassignConversationFn, reassignmentCandidatesFn } from "@/lib/conversations.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -100,10 +97,7 @@ export function ReassignDialog({
               const isCurrent = c.user_id === currentAssignee;
               const showOverride = overrideFor === c.user_id;
               return (
-                <div
-                  key={c.user_id}
-                  className="rounded-lg border border-border/60 p-3 text-sm"
-                >
+                <div key={c.user_id} className="rounded-lg border border-border/60 p-3 text-sm">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{c.full_name}</span>
                     <Badge variant={c.presence === "available" ? "default" : "secondary"}>
@@ -151,7 +145,8 @@ export function ReassignDialog({
                         >
                           Assign
                         </Button>
-                      ) : canOverride && c.reason !== "Not in this department" &&
+                      ) : canOverride &&
+                        c.reason !== "Not in this department" &&
                         c.reason !== "Account is not active" ? (
                         <Button
                           size="sm"

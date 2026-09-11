@@ -48,8 +48,7 @@ export const CRISIS_FOLLOW_UP =
 export const CRISIS_FOLLOW_UP_ES =
   "También puedo comunicarlo con un representante durante el horario de atención.";
 
-export const EMERGENCY_FALLBACK =
-  "If this is a medical emergency, please call 911 immediately.";
+export const EMERGENCY_FALLBACK = "If this is a medical emergency, please call 911 immediately.";
 export const EMERGENCY_FALLBACK_ES =
   "Si se trata de una emergencia médica, llame al 911 de inmediato.";
 

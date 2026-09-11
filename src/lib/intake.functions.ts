@@ -56,7 +56,11 @@ export const updateIntakeFn = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => updateInput.parse(input))
   .handler(async ({ data, context }) => {
     const actor = await resolveActor(context.supabase, context.userId);
-    requirePermission(actor, "workflow.manage", "Only managers and above can change intake requests");
+    requirePermission(
+      actor,
+      "workflow.manage",
+      "Only managers and above can change intake requests",
+    );
     const organizationId = requireOrganization(actor);
 
     const intake = await loadIntake(context.supabase, data.id);
@@ -65,9 +69,9 @@ export const updateIntakeFn = createServerFn({ method: "POST" })
     }
 
     const patch: Record<string, unknown> = {};
-    if (data.stage !== undefined) patch['stage'] = data.stage;
-    if (data.assignedTo !== undefined) patch['assigned_to'] = data.assignedTo;
-    if (data.dueDate !== undefined) patch['due_date'] = data.dueDate || null;
+    if (data.stage !== undefined) patch["stage"] = data.stage;
+    if (data.assignedTo !== undefined) patch["assigned_to"] = data.assignedTo;
+    if (data.dueDate !== undefined) patch["due_date"] = data.dueDate || null;
     if (Object.keys(patch).length === 0) return { ok: true };
 
     // The assignee must be a member of the same organization.
@@ -81,7 +85,7 @@ export const updateIntakeFn = createServerFn({ method: "POST" })
       if (!target) throw new Error("That staff member is not in your organization");
     }
 
-    if (data.stage !== undefined) patch['stage_changed_at'] = new Date().toISOString();
+    if (data.stage !== undefined) patch["stage_changed_at"] = new Date().toISOString();
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
@@ -117,7 +121,11 @@ export const updateIntakeFn = createServerFn({ method: "POST" })
       action: "intake_request.updated",
       recordType: "intake_requests",
       recordId: intake.id,
-      previousValue: { stage: intake.stage, assigned_to: intake.assigned_to, due_date: intake.due_date },
+      previousValue: {
+        stage: intake.stage,
+        assigned_to: intake.assigned_to,
+        due_date: intake.due_date,
+      },
       newValue: patch,
     });
 

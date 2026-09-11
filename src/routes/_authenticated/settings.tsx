@@ -20,7 +20,6 @@ export const Route = createFileRoute("/_authenticated/settings")({
   },
 });
 
-
 export function SettingsPanel() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
@@ -46,7 +45,11 @@ export function SettingsPanel() {
     queryKey: ["org-settings", orgId],
     enabled: Boolean(orgId),
     queryFn: async () => {
-      const { data, error } = await supabase.from("organizations").select("*").eq("id", orgId!).maybeSingle();
+      const { data, error } = await supabase
+        .from("organizations")
+        .select("*")
+        .eq("id", orgId!)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -62,7 +65,8 @@ export function SettingsPanel() {
         address: org.data.address ?? "",
         timezone: org.data.timezone ?? "",
         sla_first_response_minutes: String(
-          (org.data as { sla_first_response_minutes?: number | null }).sla_first_response_minutes ?? 15,
+          (org.data as { sla_first_response_minutes?: number | null }).sla_first_response_minutes ??
+            15,
         ),
         ai_instructions: org.data.ai_instructions ?? "",
         emergency_message: org.data.emergency_message ?? "",
@@ -72,7 +76,6 @@ export function SettingsPanel() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [org.data?.id]);
-
 
   async function handleLogoUpload(file: File) {
     if (!orgId) return;
@@ -87,7 +90,10 @@ export function SettingsPanel() {
       if (uploadError) throw uploadError;
 
       const url = `/api/public/branding/${path}`;
-      const { error } = await supabase.from("organizations").update({ logo_url: url }).eq("id", orgId);
+      const { error } = await supabase
+        .from("organizations")
+        .update({ logo_url: url })
+        .eq("id", orgId);
       if (error) throw error;
 
       await logAudit({
@@ -110,7 +116,10 @@ export function SettingsPanel() {
   async function handleLogoRemove() {
     if (!orgId) return;
     setNotice(null);
-    const { error } = await supabase.from("organizations").update({ logo_url: null }).eq("id", orgId);
+    const { error } = await supabase
+      .from("organizations")
+      .update({ logo_url: null })
+      .eq("id", orgId);
     if (error) {
       setNotice(error.message);
       return;
@@ -181,7 +190,11 @@ export function SettingsPanel() {
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
               {logoUrl ? (
-                <img src={logoUrl} alt="Organization logo" className="h-full w-full object-contain" />
+                <img
+                  src={logoUrl}
+                  alt="Organization logo"
+                  className="h-full w-full object-contain"
+                />
               ) : (
                 <span className="text-xs text-muted-foreground">None</span>
               )}
@@ -205,7 +218,12 @@ export function SettingsPanel() {
                 }}
               />
               {logoUrl ? (
-                <Button type="button" variant="outline" disabled={!isAdmin} onClick={() => void handleLogoRemove()}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!isAdmin}
+                  onClick={() => void handleLogoRemove()}
+                >
                   Remove
                 </Button>
               ) : null}
@@ -215,21 +233,47 @@ export function SettingsPanel() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="name" label="Organization name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
-          <Field id="timezone" label="Timezone" value={form.timezone} onChange={(v) => setForm({ ...form, timezone: v })} />
+          <Field
+            id="name"
+            label="Organization name"
+            value={form.name}
+            onChange={(v) => setForm({ ...form, name: v })}
+          />
+          <Field
+            id="timezone"
+            label="Timezone"
+            value={form.timezone}
+            onChange={(v) => setForm({ ...form, timezone: v })}
+          />
           <Field
             id="sla_first_response_minutes"
             label="First reply target (minutes)"
             value={form.sla_first_response_minutes}
-            onChange={(v) => setForm({ ...form, sla_first_response_minutes: v.replace(/[^0-9]/g, "") })}
+            onChange={(v) =>
+              setForm({ ...form, sla_first_response_minutes: v.replace(/[^0-9]/g, "") })
+            }
           />
-          <Field id="phone" label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
-          <Field id="email" label="Email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
+          <Field
+            id="phone"
+            label="Phone"
+            value={form.phone}
+            onChange={(v) => setForm({ ...form, phone: v })}
+          />
+          <Field
+            id="email"
+            label="Email"
+            value={form.email}
+            onChange={(v) => setForm({ ...form, email: v })}
+          />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="address">Address</Label>
-          <Input id="address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          <Input
+            id="address"
+            value={form.address}
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
+          />
         </div>
 
         <div className="space-y-2">
@@ -242,8 +286,8 @@ export function SettingsPanel() {
             placeholder="Tone, escalation rules, phrases to avoid…"
           />
           <p className="text-xs text-muted-foreground">
-            Applied on top of the built-in safety rules: answers stay grounded in approved knowledge, and the bot never
-            diagnoses, promises eligibility, or gives legal advice.
+            Applied on top of the built-in safety rules: answers stay grounded in approved
+            knowledge, and the bot never diagnoses, promises eligibility, or gives legal advice.
           </p>
         </div>
 
@@ -274,7 +318,9 @@ export function SettingsPanel() {
             {save.isPending ? "Saving…" : "Save settings"}
           </Button>
           {!isAdmin ? (
-            <span className="text-sm text-muted-foreground">Administrators can edit these settings.</span>
+            <span className="text-sm text-muted-foreground">
+              Administrators can edit these settings.
+            </span>
           ) : null}
         </div>
       </form>
@@ -332,10 +378,18 @@ function ScheduledJobsCard() {
                 return (
                   <tr key={`${row.created}-${index}`} className="border-t border-border align-top">
                     <td className="py-2 pr-3">{row.jobName}</td>
-                    <td className={`py-2 pr-3 ${ok ? "text-muted-foreground" : "text-destructive"}`}>
-                      {row.timedOut ? "Timed out" : ok ? `OK (${row.statusCode})` : row.statusCode ?? "Failed"}
+                    <td
+                      className={`py-2 pr-3 ${ok ? "text-muted-foreground" : "text-destructive"}`}
+                    >
+                      {row.timedOut
+                        ? "Timed out"
+                        : ok
+                          ? `OK (${row.statusCode})`
+                          : (row.statusCode ?? "Failed")}
                     </td>
-                    <td className="py-2 pr-3 text-xs text-muted-foreground">{row.errorMsg || "—"}</td>
+                    <td className="py-2 pr-3 text-xs text-muted-foreground">
+                      {row.errorMsg || "—"}
+                    </td>
                     <td className="py-2 text-xs text-muted-foreground">
                       {new Date(row.created).toLocaleString()}
                     </td>

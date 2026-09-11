@@ -87,9 +87,7 @@ describe("anonymous access is denied to tenant data", () => {
 
   it("anon cannot escalate privileges through membership tables", async () => {
     for (const table of ["organization_memberships", "platform_admins"]) {
-      const { error } = await anon!
-        .from(table)
-        .insert({ user_id: crypto.randomUUID() } as never);
+      const { error } = await anon!.from(table).insert({ user_id: crypto.randomUUID() } as never);
       expect(error).not.toBeNull();
     }
   });

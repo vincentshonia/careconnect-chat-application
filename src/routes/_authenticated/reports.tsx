@@ -8,8 +8,22 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { saveCsv } from "@/lib/csv";
-import { runReportFn, reportFilterOptionsFn, exportReportFn, type ReportExport } from "@/lib/reports.functions";
-import { BarList, ColumnChart, DataTable, Panel, Stat, fmtDate, fmtMin, fmtNum } from "@/components/reports/primitives";
+import {
+  runReportFn,
+  reportFilterOptionsFn,
+  exportReportFn,
+  type ReportExport,
+} from "@/lib/reports.functions";
+import {
+  BarList,
+  ColumnChart,
+  DataTable,
+  Panel,
+  Stat,
+  fmtDate,
+  fmtMin,
+  fmtNum,
+} from "@/components/reports/primitives";
 import { Pager } from "@/components/admin/Pager";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { CONVERSATION_STATUSES, statusLabel } from "@/lib/conversation-status";
@@ -117,8 +131,14 @@ const DEFAULTS: Search = {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback?: T): T | undefined {
-  return typeof value === "string" && (allowed as readonly string[]).includes(value) ? (value as T) : fallback;
+function oneOf<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  fallback?: T,
+): T | undefined {
+  return typeof value === "string" && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : fallback;
 }
 
 function uuidOrUndefined(value: unknown): string | undefined {
@@ -127,22 +147,38 @@ function uuidOrUndefined(value: unknown): string | undefined {
 
 export const Route = createFileRoute("/_authenticated/reports")({
   validateSearch: (raw: Record<string, unknown>): Search => ({
-    tab: oneOf(raw['tab'], TABS.map((t) => t.id), DEFAULTS.tab)!,
-    preset: isDatePreset(raw['preset']) ? raw['preset'] : DEFAULTS.preset,
-    from: typeof raw['from'] === "string" && DATE.test(raw['from']) ? raw['from'] : undefined,
-    to: typeof raw['to'] === "string" && DATE.test(raw['to']) ? raw['to'] : undefined,
-    dept: uuidOrUndefined(raw['dept']),
-    staff: uuidOrUndefined(raw['staff']),
-    website: uuidOrUndefined(raw['website']),
-    type: oneOf(raw['type'], TYPES.map((t) => t.value), DEFAULTS.type)!,
-    transfer: oneOf(raw['transfer'], TRANSFERS.map((t) => t.value), DEFAULTS.transfer)!,
-    priority: oneOf(raw['priority'], PRIORITIES),
-    status: oneOf(raw['status'], CONVERSATION_STATUSES),
-    sla: Math.min(1440, Math.max(1, Number(raw['sla']) || DEFAULTS.sla)),
-    flag: oneOf(raw['flag'], TICKET_FLAGS.map((f) => f.value), DEFAULTS.flag)!,
-    sort: typeof raw['sort'] === "string" ? raw['sort'].slice(0, 30) : DEFAULTS.sort,
-    dir: raw['dir'] === "asc" ? "asc" : "desc",
-    page: Math.max(0, Math.min(2000, Number(raw['page']) || 0)),
+    tab: oneOf(
+      raw["tab"],
+      TABS.map((t) => t.id),
+      DEFAULTS.tab,
+    )!,
+    preset: isDatePreset(raw["preset"]) ? raw["preset"] : DEFAULTS.preset,
+    from: typeof raw["from"] === "string" && DATE.test(raw["from"]) ? raw["from"] : undefined,
+    to: typeof raw["to"] === "string" && DATE.test(raw["to"]) ? raw["to"] : undefined,
+    dept: uuidOrUndefined(raw["dept"]),
+    staff: uuidOrUndefined(raw["staff"]),
+    website: uuidOrUndefined(raw["website"]),
+    type: oneOf(
+      raw["type"],
+      TYPES.map((t) => t.value),
+      DEFAULTS.type,
+    )!,
+    transfer: oneOf(
+      raw["transfer"],
+      TRANSFERS.map((t) => t.value),
+      DEFAULTS.transfer,
+    )!,
+    priority: oneOf(raw["priority"], PRIORITIES),
+    status: oneOf(raw["status"], CONVERSATION_STATUSES),
+    sla: Math.min(1440, Math.max(1, Number(raw["sla"]) || DEFAULTS.sla)),
+    flag: oneOf(
+      raw["flag"],
+      TICKET_FLAGS.map((f) => f.value),
+      DEFAULTS.flag,
+    )!,
+    sort: typeof raw["sort"] === "string" ? raw["sort"].slice(0, 30) : DEFAULTS.sort,
+    dir: raw["dir"] === "asc" ? "asc" : "desc",
+    page: Math.max(0, Math.min(2000, Number(raw["page"]) || 0)),
   }),
   head: () => ({
     meta: [
@@ -208,7 +244,17 @@ function ReportsPage() {
       priority: (search.priority ?? null) as null,
       sla: search.sla,
     }),
-    [range, search.dept, search.staff, search.website, search.status, search.type, search.transfer, search.priority, search.sla],
+    [
+      range,
+      search.dept,
+      search.staff,
+      search.website,
+      search.status,
+      search.type,
+      search.transfer,
+      search.priority,
+      search.sla,
+    ],
   );
 
   // An identifier that is not in the caller's own option lists is dropped
@@ -219,8 +265,10 @@ function ReportsPage() {
     const patch: Partial<Search> = {};
     if (search.dept && !opts.departments.some((d) => d.id === search.dept)) patch.dept = undefined;
     if (search.staff && !opts.staff.some((s) => s.id === search.staff)) patch.staff = undefined;
-    if (search.website && !opts.websites.some((w) => w.id === search.website)) patch.website = undefined;
-    if (search.tab !== "overview" && opts.sections && !opts.sections.includes(search.tab)) patch.tab = "overview";
+    if (search.website && !opts.websites.some((w) => w.id === search.website))
+      patch.website = undefined;
+    if (search.tab !== "overview" && opts.sections && !opts.sections.includes(search.tab))
+      patch.tab = "overview";
     if (Object.keys(patch).length) update(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts, search.dept, search.staff, search.website, search.tab]);
@@ -255,8 +303,7 @@ function ReportsPage() {
     });
   };
 
-  const resetFilters = () =>
-    navigate({ search: { ...DEFAULTS, tab: search.tab }, replace: true });
+  const resetFilters = () => navigate({ search: { ...DEFAULTS, tab: search.tab }, replace: true });
 
   const tabProps = { filters, search, update, drill, drillLive };
 
@@ -305,14 +352,22 @@ function ReportsPage() {
             </>
           ) : null}
 
-          <Select value={search.dept ?? ""} onChange={(v) => update({ dept: v || undefined })} label="All departments">
+          <Select
+            value={search.dept ?? ""}
+            onChange={(v) => update({ dept: v || undefined })}
+            label="All departments"
+          >
             {(opts?.departments ?? []).map((d) => (
               <option key={d.id} value={d.id}>
                 {d.name}
               </option>
             ))}
           </Select>
-          <Select value={search.staff ?? ""} onChange={(v) => update({ staff: v || undefined })} label="All staff">
+          <Select
+            value={search.staff ?? ""}
+            onChange={(v) => update({ staff: v || undefined })}
+            label="All staff"
+          >
             {(opts?.staff ?? []).map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -330,21 +385,35 @@ function ReportsPage() {
               </option>
             ))}
           </Select>
-          <Select value={search.type} onChange={(v) => update({ type: v })} label="All conversations" hideBlank>
+          <Select
+            value={search.type}
+            onChange={(v) => update({ type: v })}
+            label="All conversations"
+            hideBlank
+          >
             {TYPES.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
               </option>
             ))}
           </Select>
-          <Select value={search.transfer} onChange={(v) => update({ transfer: v })} label="Any transfers" hideBlank>
+          <Select
+            value={search.transfer}
+            onChange={(v) => update({ transfer: v })}
+            label="Any transfers"
+            hideBlank
+          >
             {TRANSFERS.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
               </option>
             ))}
           </Select>
-          <Select value={search.status ?? ""} onChange={(v) => update({ status: v || undefined })} label="Any status">
+          <Select
+            value={search.status ?? ""}
+            onChange={(v) => update({ status: v || undefined })}
+            label="Any status"
+          >
             {CONVERSATION_STATUSES.map((s) => (
               <option key={s} value={s}>
                 {statusLabel(s)}
@@ -390,7 +459,9 @@ function ReportsPage() {
             type="button"
             onClick={() => update({ tab: t.id })}
             className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-              search.tab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              search.tab === t.id
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted"
             }`}
           >
             {t.label}
@@ -428,7 +499,9 @@ function DefinitionsPanel() {
           className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm font-semibold"
         >
           Definitions — how these numbers are calculated
-          <span aria-hidden className="text-xs text-muted-foreground">{open ? "Hide" : "Show"}</span>
+          <span aria-hidden className="text-xs text-muted-foreground">
+            {open ? "Hide" : "Show"}
+          </span>
         </button>
       </h2>
       <div id="report-definitions" hidden={!open} className="border-t border-border px-4 py-3">
@@ -508,7 +581,8 @@ function useReport<T>(section: string, filters: Filters, options?: Record<string
 }
 
 function Loading({ query }: { query: { isLoading: boolean; error: unknown } }) {
-  if (query.isLoading) return <p className="py-10 text-center text-sm text-muted-foreground">Building report…</p>;
+  if (query.isLoading)
+    return <p className="py-10 text-center text-sm text-muted-foreground">Building report…</p>;
   if (query.error)
     return (
       <p className="py-10 text-center text-sm text-destructive">
@@ -584,21 +658,28 @@ function OverviewTab({ filters, drill, drillLive }: TabProps) {
     outcomes: Array<{ label: string; conversations: number }>;
   }>("overview", filters);
 
-  const volume = useReport<{ by_day: Row[]; by_hour: Row[]; by_weekday: Row[]; peak_day: string | null; peak_day_count: number }>(
-    "volume",
-    filters,
-  );
+  const volume = useReport<{
+    by_day: Row[];
+    by_hour: Row[];
+    by_weekday: Row[];
+    peak_day: string | null;
+    peak_day_count: number;
+  }>("volume", filters);
   if (q.isLoading || q.error) return <Loading query={q} />;
   const k = q.data?.kpis ?? {};
   const f = q.data?.funnel ?? {};
   const s = q.data?.snapshot ?? {};
-  const total = Number(f['created'] ?? 0);
+  const total = Number(f["created"] ?? 0);
   const pct = (v: unknown) => (total ? `${Math.round((Number(v ?? 0) / total) * 100)}%` : "—");
 
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Conversations" value={fmtNum(k['total'])} hint={`${fmtNum(k['escalated'])} asked for a human`} />
+        <Stat
+          label="Conversations"
+          value={fmtNum(k["total"])}
+          hint={`${fmtNum(k["escalated"])} asked for a human`}
+        />
         {/*
           Deliberately *not* called "AI handled end-to-end": this only says a
           human was never requested. The defensible completion measure lives on
@@ -606,43 +687,45 @@ function OverviewTab({ filters, drill, drillLive }: TabProps) {
         */}
         <Stat
           label="Never asked for a human"
-          value={pct(f['ai_handled'])}
-          hint={`${fmtNum(f['ai_handled'])} of ${fmtNum(total)} conversations`}
+          value={pct(f["ai_handled"])}
+          hint={`${fmtNum(f["ai_handled"])} of ${fmtNum(total)} conversations`}
         />
         <Stat
           label="Avg. first response"
-          value={fmtMin(k['avg_first_response'])}
-          hint={`${fmtNum(k['sla_met'])}/${fmtNum(k['sla_eligible'])} within SLA`}
-          tone={Number(k['sla_eligible'] ?? 0) && !Number(k['sla_met'] ?? 0) ? "warn" : "default"}
+          value={fmtMin(k["avg_first_response"])}
+          hint={`${fmtNum(k["sla_met"])}/${fmtNum(k["sla_eligible"])} within SLA`}
+          tone={Number(k["sla_eligible"] ?? 0) && !Number(k["sla_met"] ?? 0) ? "warn" : "default"}
           onDrill={() => drill("breach")}
           drillLabel="SLA breaches"
         />
         <Stat
           label="Avg. resolution"
-          value={fmtMin(k['avg_resolution'])}
-          hint={`${fmtNum(k['completed'])} completed`}
+          value={fmtMin(k["avg_resolution"])}
+          hint={`${fmtNum(k["completed"])} completed`}
           onDrill={() => drill("completed")}
           drillLabel="completed tickets"
         />
         <Stat
           label="Open now"
-          value={fmtNum(s['open_now'])}
-          hint={`${fmtNum(s['unassigned_now'])} unassigned`}
+          value={fmtNum(s["open_now"])}
+          hint={`${fmtNum(s["unassigned_now"])} unassigned`}
           onDrill={() => drillLive("open")}
           drillLabel="open tickets"
         />
         <Stat
           label="Waiting for a human"
-          value={fmtNum(s['waiting_now'])}
-          tone={Number(s['waiting_now'] ?? 0) > 0 ? "warn" : "good"}
-          hint={s['oldest_waiting'] ? `Oldest since ${fmtDate(s['oldest_waiting'])}` : "Queue is clear"}
+          value={fmtNum(s["waiting_now"])}
+          tone={Number(s["waiting_now"] ?? 0) > 0 ? "warn" : "good"}
+          hint={
+            s["oldest_waiting"] ? `Oldest since ${fmtDate(s["oldest_waiting"])}` : "Queue is clear"
+          }
           onDrill={() => drillLive("waiting")}
           drillLabel="waiting tickets"
         />
         <Stat
           label="Breaching SLA now"
-          value={fmtNum(s['breaching_now'])}
-          tone={Number(s['breaching_now'] ?? 0) > 0 ? "warn" : "good"}
+          value={fmtNum(s["breaching_now"])}
+          tone={Number(s["breaching_now"] ?? 0) > 0 ? "warn" : "good"}
           onDrill={() => drillLive("breach")}
           drillLabel="breaching tickets"
         />
@@ -654,53 +737,89 @@ function OverviewTab({ filters, drill, drillLive }: TabProps) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Operational funnel" description="Where conversations end up after they start.">
+        <Panel
+          title="Operational funnel"
+          description="Where conversations end up after they start."
+        >
           <BarList
             rows={[
-              { label: "Created", value: Number(f['created'] ?? 0) },
-              { label: "Never asked for a human", value: Number(f['ai_handled'] ?? 0) },
-              { label: "Asked for a human", value: Number(f['human_requested'] ?? 0) },
-              { label: "Claimed by an agent", value: Number(f['claimed'] ?? 0) },
-              { label: "Agent responded", value: Number(f['responded'] ?? 0) },
-              { label: "Resolved", value: Number(f['resolved'] ?? 0) },
-              { label: "Closed", value: Number(f['closed'] ?? 0) },
-              { label: "Still waiting", value: Number(f['waiting'] ?? 0) },
+              { label: "Created", value: Number(f["created"] ?? 0) },
+              { label: "Never asked for a human", value: Number(f["ai_handled"] ?? 0) },
+              { label: "Asked for a human", value: Number(f["human_requested"] ?? 0) },
+              { label: "Claimed by an agent", value: Number(f["claimed"] ?? 0) },
+              { label: "Agent responded", value: Number(f["responded"] ?? 0) },
+              { label: "Resolved", value: Number(f["resolved"] ?? 0) },
+              { label: "Closed", value: Number(f["closed"] ?? 0) },
+              { label: "Still waiting", value: Number(f["waiting"] ?? 0) },
             ]}
           />
         </Panel>
         <Panel title="Volume by day">
-          {volume.data ? <ColumnChart data={volume.data.by_day} labelKey="day" valueKey="conversations" /> : null}
+          {volume.data ? (
+            <ColumnChart data={volume.data.by_day} labelKey="day" valueKey="conversations" />
+          ) : null}
           <p className="mt-3 text-xs text-muted-foreground">
-            Peak day {volume.data?.peak_day ?? "—"} ({fmtNum(volume.data?.peak_day_count)} conversations)
+            Peak day {volume.data?.peak_day ?? "—"} ({fmtNum(volume.data?.peak_day_count)}{" "}
+            conversations)
           </p>
         </Panel>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="Busiest hours" description="Conversations started, by hour of day.">
-          {volume.data ? <ColumnChart data={volume.data.by_hour} labelKey="hour" valueKey="conversations" height={120} /> : null}
+          {volume.data ? (
+            <ColumnChart
+              data={volume.data.by_hour}
+              labelKey="hour"
+              valueKey="conversations"
+              height={120}
+            />
+          ) : null}
         </Panel>
-        <Panel title="Workload health" description="Click a row's number on the Tickets tab to see the conversations.">
+        <Panel
+          title="Workload health"
+          description="Click a row's number on the Tickets tab to see the conversations."
+        >
           <BarList
             rows={[
-              { label: "Abandoned (no agent reply)", value: Number(k['abandoned'] ?? 0) },
-              { label: "Unanswered escalations", value: Number(k['unanswered'] ?? 0) },
-              { label: "Reopened", value: Number(k['reopened'] ?? 0) },
-              { label: "Transferred", value: Number(k['transferred'] ?? 0) },
-              { label: "Transferred 2+ times", value: Number(k['multi_transferred'] ?? 0) },
+              { label: "Abandoned (no agent reply)", value: Number(k["abandoned"] ?? 0) },
+              { label: "Unanswered escalations", value: Number(k["unanswered"] ?? 0) },
+              { label: "Reopened", value: Number(k["reopened"] ?? 0) },
+              { label: "Transferred", value: Number(k["transferred"] ?? 0) },
+              { label: "Transferred 2+ times", value: Number(k["multi_transferred"] ?? 0) },
             ]}
           />
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" className="text-xs" onClick={() => drill("no_response")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => drill("no_response")}
+            >
               No agent reply
             </Button>
-            <Button variant="outline" size="sm" className="text-xs" onClick={() => drill("reopened")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => drill("reopened")}
+            >
               Reopened
             </Button>
-            <Button variant="outline" size="sm" className="text-xs" onClick={() => drill("transferred")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => drill("transferred")}
+            >
               Transferred
             </Button>
-            <Button variant="outline" size="sm" className="text-xs" onClick={() => drill("multi_transfer")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => drill("multi_transfer")}
+            >
               Transferred 2+
             </Button>
           </div>
@@ -722,7 +841,6 @@ function OverviewTab({ filters, drill, drillLive }: TabProps) {
           />
         )}
       </Panel>
-
     </div>
   );
 }
@@ -743,18 +861,42 @@ function DepartmentsTab({ filters }: TabProps) {
         <DataTable
           rows={rows}
           columns={[
-            { key: "department_name", label: "Department", render: (r) => String(r['department_name'] ?? "—") },
+            {
+              key: "department_name",
+              label: "Department",
+              render: (r) => String(r["department_name"] ?? "—"),
+            },
             { key: "total", label: "Total", align: "right" },
             { key: "escalated", label: "To human", align: "right" },
             { key: "open_count", label: "Open", align: "right" },
             { key: "completed", label: "Completed", align: "right" },
-            { key: "avg_claim", label: "Avg claim", align: "right", render: (r) => fmtMin(r['avg_claim']) },
-            { key: "avg_first_response", label: "Avg response", align: "right", render: (r) => fmtMin(r['avg_first_response']) },
-            { key: "avg_resolution", label: "Avg resolution", align: "right", render: (r) => fmtMin(r['avg_resolution']) },
-            { key: "sla_pct", label: "SLA %", align: "right", render: (r) => fmtNum(r['sla_pct'], "%") },
+            {
+              key: "avg_claim",
+              label: "Avg claim",
+              align: "right",
+              render: (r) => fmtMin(r["avg_claim"]),
+            },
+            {
+              key: "avg_first_response",
+              label: "Avg response",
+              align: "right",
+              render: (r) => fmtMin(r["avg_first_response"]),
+            },
+            {
+              key: "avg_resolution",
+              label: "Avg resolution",
+              align: "right",
+              render: (r) => fmtMin(r["avg_resolution"]),
+            },
+            {
+              key: "sla_pct",
+              label: "SLA %",
+              align: "right",
+              render: (r) => fmtNum(r["sla_pct"], "%"),
+            },
             { key: "transfers_in", label: "In", align: "right" },
             { key: "transfers_out", label: "Out", align: "right" },
-            { key: "csat", label: "CSAT", align: "right", render: (r) => fmtNum(r['csat']) },
+            { key: "csat", label: "CSAT", align: "right", render: (r) => fmtNum(r["csat"]) },
           ]}
         />
       </Panel>
@@ -768,14 +910,18 @@ function DepartmentsTab({ filters }: TabProps) {
           rows={backlog.data ?? []}
           empty="Nothing open."
           columns={[
-            { key: "department_name", label: "Department", render: (r) => String(r['department_name'] ?? "—") },
+            {
+              key: "department_name",
+              label: "Department",
+              render: (r) => String(r["department_name"] ?? "—"),
+            },
             { key: "open", label: "Open", align: "right" },
             { key: "waiting", label: "Waiting", align: "right" },
             { key: "assigned", label: "Assigned", align: "right" },
             { key: "active", label: "Active", align: "right" },
             { key: "breaching", label: "Breaching", align: "right" },
             { key: "aged_24h", label: ">24h", align: "right" },
-            { key: "oldest_open_at", label: "Oldest", render: (r) => fmtDate(r['oldest_open_at']) },
+            { key: "oldest_open_at", label: "Oldest", render: (r) => fmtDate(r["oldest_open_at"]) },
           ]}
         />
       </Panel>
@@ -799,31 +945,60 @@ function StaffTab({ filters, update }: TabProps) {
         <DataTable
           rows={rows}
           onRowClick={(r) =>
-            r['user_id'] ? update({ tab: "tickets", staff: String(r['user_id']), flag: "all" }) : undefined
+            r["user_id"]
+              ? update({ tab: "tickets", staff: String(r["user_id"]), flag: "all" })
+              : undefined
           }
           columns={[
-            { key: "full_name", label: "Agent", render: (r) => String(r['full_name'] ?? "—") },
-            { key: "departments", label: "Departments", render: (r) => String(r['departments'] ?? "—") },
+            { key: "full_name", label: "Agent", render: (r) => String(r["full_name"] ?? "—") },
+            {
+              key: "departments",
+              label: "Departments",
+              render: (r) => String(r["departments"] ?? "—"),
+            },
             { key: "claimed", label: "Claimed", align: "right" },
             { key: "messages_sent", label: "Replies", align: "right" },
             { key: "resolved", label: "Resolved", align: "right" },
             { key: "closed", label: "Closed", align: "right" },
-            { key: "avg_claim", label: "Avg claim", align: "right", render: (r) => fmtMin(r['avg_claim']) },
-            { key: "avg_response", label: "Avg response", align: "right", render: (r) => fmtMin(r['avg_response']) },
-            { key: "avg_handle", label: "Avg handle", align: "right", render: (r) => fmtMin(r['avg_handle']) },
-            { key: "sla_pct", label: "SLA %", align: "right", render: (r) => fmtNum(r['sla_pct'], "%") },
+            {
+              key: "avg_claim",
+              label: "Avg claim",
+              align: "right",
+              render: (r) => fmtMin(r["avg_claim"]),
+            },
+            {
+              key: "avg_response",
+              label: "Avg response",
+              align: "right",
+              render: (r) => fmtMin(r["avg_response"]),
+            },
+            {
+              key: "avg_handle",
+              label: "Avg handle",
+              align: "right",
+              render: (r) => fmtMin(r["avg_handle"]),
+            },
+            {
+              key: "sla_pct",
+              label: "SLA %",
+              align: "right",
+              render: (r) => fmtNum(r["sla_pct"], "%"),
+            },
             { key: "transfers_initiated", label: "Transfers", align: "right" },
-            { key: "csat", label: "CSAT", align: "right", render: (r) => fmtNum(r['csat']) },
+            { key: "csat", label: "CSAT", align: "right", render: (r) => fmtNum(r["csat"]) },
           ]}
         />
       </Panel>
 
-      <Panel title="Live workload" description="Open chats against each agent's capacity right now.">
+      <Panel
+        title="Live workload"
+        description="Open chats against each agent's capacity right now."
+      >
         <BarList
           rows={(workload.data ?? []).map((w) => ({
-            label: `${String(w['full_name'])} · ${String(w['presence'])}`,
-            value: Number(w['utilisation'] ?? 0),
-            hint: `${fmtNum(w['open_chats'])}/${fmtNum(w['max_chats'])}`,
+            label: `${String(w["full_name"])} · ${String(w["presence"])}`,
+            value: Number(w["utilisation"] ?? 0),
+            hint: `${fmtNum(w["open_chats"])}/${fmtNum(w["max_chats"])}`,
           }))}
           emptyLabel="No staff in scope."
         />
@@ -869,7 +1044,11 @@ function TicketsTab({ filters, search, update }: TabProps) {
               </option>
             ))}
           </select>
-          <ExportButton dataset="tickets" filters={filters} options={{ flag: search.flag, sort: search.sort, dir: search.dir }} />
+          <ExportButton
+            dataset="tickets"
+            filters={filters}
+            options={{ flag: search.flag, sort: search.sort, dir: search.dir }}
+          />
         </div>
       }
     >
@@ -881,30 +1060,86 @@ function TicketsTab({ filters, search, update }: TabProps) {
             rows={rows}
             sort={{ key: search.sort, dir: search.dir }}
             onSort={toggleSort}
-            onRowClick={(r) => navigate({ to: "/inbox", search: { c: String(r['id']) } })}
+            onRowClick={(r) => navigate({ to: "/inbox", search: { c: String(r["id"]) } })}
             columns={[
-              { key: "reference", label: "Reference", sortable: true, render: (r) => String(r['reference'] ?? "—") },
-              { key: "created_at", label: "Started", sortable: true, render: (r) => fmtDate(r['created_at']) },
-              { key: "contact_name", label: "Visitor", render: (r) => String(r['contact_name'] ?? "Anonymous") },
-              { key: "department", label: "Department", sortable: true, render: (r) => String(r['department_name'] ?? "—") },
-              { key: "assigned", label: "Agent", sortable: true, render: (r) => String(r['assigned_name'] ?? "Unassigned") },
-              { key: "disposition", label: "Outcome", sortable: true, render: (r) => String(r['disposition'] ?? "—") },
+              {
+                key: "reference",
+                label: "Reference",
+                sortable: true,
+                render: (r) => String(r["reference"] ?? "—"),
+              },
+              {
+                key: "created_at",
+                label: "Started",
+                sortable: true,
+                render: (r) => fmtDate(r["created_at"]),
+              },
+              {
+                key: "contact_name",
+                label: "Visitor",
+                render: (r) => String(r["contact_name"] ?? "Anonymous"),
+              },
+              {
+                key: "department",
+                label: "Department",
+                sortable: true,
+                render: (r) => String(r["department_name"] ?? "—"),
+              },
+              {
+                key: "assigned",
+                label: "Agent",
+                sortable: true,
+                render: (r) => String(r["assigned_name"] ?? "Unassigned"),
+              },
+              {
+                key: "disposition",
+                label: "Outcome",
+                sortable: true,
+                render: (r) => String(r["disposition"] ?? "—"),
+              },
 
               {
                 key: "status",
                 label: "Status",
                 sortable: true,
                 render: (r) => (
-                  <Badge variant={r['sla_breached'] ? "destructive" : "outline"} className="capitalize">
-                    {statusLabel(String(r['status']))}
+                  <Badge
+                    variant={r["sla_breached"] ? "destructive" : "outline"}
+                    className="capitalize"
+                  >
+                    {statusLabel(String(r["status"]))}
                   </Badge>
                 ),
               },
               { key: "transfer_count", label: "Transfers", align: "right", sortable: true },
-              { key: "claim_min", label: "Claim", align: "right", sortable: true, render: (r) => fmtMin(r['claim_min']) },
-              { key: "resp_min", label: "Response", align: "right", sortable: true, render: (r) => fmtMin(r['resp_min']) },
-              { key: "res_min", label: "Resolution", align: "right", sortable: true, render: (r) => fmtMin(r['res_min']) },
-              { key: "csat", label: "CSAT", align: "right", sortable: true, render: (r) => fmtNum(r['csat']) },
+              {
+                key: "claim_min",
+                label: "Claim",
+                align: "right",
+                sortable: true,
+                render: (r) => fmtMin(r["claim_min"]),
+              },
+              {
+                key: "resp_min",
+                label: "Response",
+                align: "right",
+                sortable: true,
+                render: (r) => fmtMin(r["resp_min"]),
+              },
+              {
+                key: "res_min",
+                label: "Resolution",
+                align: "right",
+                sortable: true,
+                render: (r) => fmtMin(r["res_min"]),
+              },
+              {
+                key: "csat",
+                label: "CSAT",
+                align: "right",
+                sortable: true,
+                render: (r) => fmtNum(r["csat"]),
+              },
             ]}
           />
           <Pager
@@ -937,23 +1172,30 @@ function TransfersTab({ filters, search, update }: TabProps) {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Transfer events" value={fmtNum(o['transfer_events'])} hint="Individual hand-offs, not tickets" />
+        <Stat
+          label="Transfer events"
+          value={fmtNum(o["transfer_events"])}
+          hint="Individual hand-offs, not tickets"
+        />
         <Stat
           label="Conversations transferred"
-          value={fmtNum(o['transferred_conversations'])}
-          hint={`${fmtNum(o['transfer_rate'], "%")} of volume`}
+          value={fmtNum(o["transferred_conversations"])}
+          hint={`${fmtNum(o["transfer_rate"], "%")} of volume`}
           onDrill={() => update({ tab: "tickets", flag: "transferred" })}
           drillLabel="transferred tickets"
         />
         <Stat
           label="Transferred more than once"
-          value={fmtNum(o['multi_transfer_conversations'])}
-          hint={`${fmtNum(o['multi_transfer_rate'], "%")} of transferred`}
-          tone={Number(o['multi_transfer_rate'] ?? 0) > 25 ? "warn" : "default"}
+          value={fmtNum(o["multi_transfer_conversations"])}
+          hint={`${fmtNum(o["multi_transfer_rate"], "%")} of transferred`}
+          tone={Number(o["multi_transfer_rate"] ?? 0) > 25 ? "warn" : "default"}
           onDrill={() => update({ tab: "tickets", flag: "multi_transfer" })}
           drillLabel="tickets transferred 2+ times"
         />
-        <Stat label="Avg transfers per ticket" value={fmtNum(o['avg_transfers_per_conversation'])} />
+        <Stat
+          label="Avg transfers per ticket"
+          value={fmtNum(o["avg_transfers_per_conversation"])}
+        />
       </div>
 
       <Panel
@@ -964,21 +1206,28 @@ function TransfersTab({ filters, search, update }: TabProps) {
         <DataTable
           rows={q.data?.matrix ?? []}
           columns={[
-            { key: "from_department", label: "From", render: (r) => String(r['from_department']) },
-            { key: "to_department", label: "To", render: (r) => String(r['to_department']) },
+            { key: "from_department", label: "From", render: (r) => String(r["from_department"]) },
+            { key: "to_department", label: "To", render: (r) => String(r["to_department"]) },
             { key: "n", label: "Transfers", align: "right" },
           ]}
         />
       </Panel>
 
-      <Panel title="Repeatedly transferred" description="Tickets bounced between teams — usually a routing or knowledge gap.">
+      <Panel
+        title="Repeatedly transferred"
+        description="Tickets bounced between teams — usually a routing or knowledge gap."
+      >
         <DataTable
           rows={q.data?.repeat_conversations ?? []}
           empty="No ticket was transferred more than once."
           columns={[
-            { key: "reference", label: "Reference", render: (r) => String(r['reference']) },
+            { key: "reference", label: "Reference", render: (r) => String(r["reference"]) },
             { key: "transfers", label: "Transfers", align: "right" },
-            { key: "last_transfer_at", label: "Last transfer", render: (r) => fmtDate(r['last_transfer_at']) },
+            {
+              key: "last_transfer_at",
+              label: "Last transfer",
+              render: (r) => fmtDate(r["last_transfer_at"]),
+            },
           ]}
         />
       </Panel>
@@ -987,12 +1236,20 @@ function TransfersTab({ filters, search, update }: TabProps) {
         <DataTable
           rows={q.data?.rows ?? []}
           columns={[
-            { key: "transferred_at", label: "When", render: (r) => fmtDate(r['transferred_at']) },
-            { key: "reference", label: "Ticket", render: (r) => String(r['reference']) },
-            { key: "from_department", label: "From", render: (r) => String(r['from_department']) },
-            { key: "to_department", label: "To", render: (r) => String(r['to_department']) },
-            { key: "transferred_by", label: "By", render: (r) => String(r['transferred_by'] ?? "System") },
-            { key: "status_after", label: "Now", render: (r) => statusLabel(String(r['status_after'])) },
+            { key: "transferred_at", label: "When", render: (r) => fmtDate(r["transferred_at"]) },
+            { key: "reference", label: "Ticket", render: (r) => String(r["reference"]) },
+            { key: "from_department", label: "From", render: (r) => String(r["from_department"]) },
+            { key: "to_department", label: "To", render: (r) => String(r["to_department"]) },
+            {
+              key: "transferred_by",
+              label: "By",
+              render: (r) => String(r["transferred_by"] ?? "System"),
+            },
+            {
+              key: "status_after",
+              label: "Now",
+              render: (r) => statusLabel(String(r["status_after"])),
+            },
           ]}
         />
         <Pager
@@ -1019,8 +1276,8 @@ function SlaTab({ filters, drill }: TabProps) {
   }>("sla", filters);
   if (q.isLoading || q.error) return <Loading query={q} />;
   const m = q.data?.metrics ?? {};
-  const eligible = Number(m['sla_eligible'] ?? 0);
-  const met = Number(m['sla_met'] ?? 0);
+  const eligible = Number(m["sla_eligible"] ?? 0);
+  const met = Number(m["sla_met"] ?? 0);
 
   return (
     <div className="space-y-4">
@@ -1035,16 +1292,28 @@ function SlaTab({ filters, drill }: TabProps) {
         />
         <Stat
           label="Breaches"
-          value={fmtNum(m['breaches'])}
-          tone={Number(m['breaches'] ?? 0) > 0 ? "warn" : "good"}
+          value={fmtNum(m["breaches"])}
+          tone={Number(m["breaches"] ?? 0) > 0 ? "warn" : "good"}
           onDrill={() => drill("breach")}
           drillLabel="breached tickets"
         />
-        <Stat label="Median response" value={fmtMin(m['median_response'])} hint={`Avg ${fmtMin(m['avg_response'])}`} />
-        <Stat label="p90 / p95" value={`${fmtMin(m['p90'])} / ${fmtMin(m['p95'])}`} hint={`${fmtNum(m['sample'])} samples`} />
-        <Stat label="Median claim time" value={fmtMin(m['median_claim'])} hint={`Avg ${fmtMin(m['avg_claim'])}`} />
-        <Stat label="Avg handle time" value={fmtMin(m['avg_handle'])} />
-        <Stat label="Avg resolution" value={fmtMin(m['avg_resolution'])} />
+        <Stat
+          label="Median response"
+          value={fmtMin(m["median_response"])}
+          hint={`Avg ${fmtMin(m["avg_response"])}`}
+        />
+        <Stat
+          label="p90 / p95"
+          value={`${fmtMin(m["p90"])} / ${fmtMin(m["p95"])}`}
+          hint={`${fmtNum(m["sample"])} samples`}
+        />
+        <Stat
+          label="Median claim time"
+          value={fmtMin(m["median_claim"])}
+          hint={`Avg ${fmtMin(m["avg_claim"])}`}
+        />
+        <Stat label="Avg handle time" value={fmtMin(m["avg_handle"])} />
+        <Stat label="Avg resolution" value={fmtMin(m["avg_resolution"])} />
         <Stat label="Oldest waiting" value={fmtDate(q.data?.oldest_waiting_at)} />
       </div>
 
@@ -1054,14 +1323,27 @@ function SlaTab({ filters, drill }: TabProps) {
       </Panel>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="By department" actions={<ExportButton dataset="sla_departments" filters={filters} />}>
+        <Panel
+          title="By department"
+          actions={<ExportButton dataset="sla_departments" filters={filters} />}
+        >
           <DataTable
             rows={q.data?.by_department ?? []}
             columns={[
-              { key: "department", label: "Department", render: (r) => String(r['department']) },
+              { key: "department", label: "Department", render: (r) => String(r["department"]) },
               { key: "conversations", label: "Tickets", align: "right" },
-              { key: "avg_response", label: "Avg", align: "right", render: (r) => fmtMin(r['avg_response']) },
-              { key: "p90_response", label: "p90", align: "right", render: (r) => fmtMin(r['p90_response']) },
+              {
+                key: "avg_response",
+                label: "Avg",
+                align: "right",
+                render: (r) => fmtMin(r["avg_response"]),
+              },
+              {
+                key: "p90_response",
+                label: "p90",
+                align: "right",
+                render: (r) => fmtMin(r["p90_response"]),
+              },
               { key: "breaches", label: "Breaches", align: "right" },
             ]}
           />
@@ -1070,10 +1352,20 @@ function SlaTab({ filters, drill }: TabProps) {
           <DataTable
             rows={q.data?.by_staff ?? []}
             columns={[
-              { key: "staff", label: "Agent", render: (r) => String(r['staff']) },
+              { key: "staff", label: "Agent", render: (r) => String(r["staff"]) },
               { key: "conversations", label: "Tickets", align: "right" },
-              { key: "avg_response", label: "Avg", align: "right", render: (r) => fmtMin(r['avg_response']) },
-              { key: "p90_response", label: "p90", align: "right", render: (r) => fmtMin(r['p90_response']) },
+              {
+                key: "avg_response",
+                label: "Avg",
+                align: "right",
+                render: (r) => fmtMin(r["avg_response"]),
+              },
+              {
+                key: "p90_response",
+                label: "p90",
+                align: "right",
+                render: (r) => fmtMin(r["p90_response"]),
+              },
               { key: "breaches", label: "Breaches", align: "right" },
             ]}
           />
@@ -1087,7 +1379,7 @@ function AiTab({ filters, drill }: TabProps) {
   const q = useReport<Row>("ai", filters);
   if (q.isLoading || q.error) return <Loading query={q} />;
   const d = q.data ?? {};
-  const eligible = Number(d['eligible'] ?? 0);
+  const eligible = Number(d["eligible"] ?? 0);
 
   return (
     <div className="space-y-4">
@@ -1103,54 +1395,64 @@ function AiTab({ filters, drill }: TabProps) {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           label="AI answers"
-          value={fmtNum(d['ai_answers'])}
-          hint={`${fmtNum(d['answered_conversations'])} of ${fmtNum(d['conversations'])} conversations answered`}
+          value={fmtNum(d["ai_answers"])}
+          hint={`${fmtNum(d["answered_conversations"])} of ${fmtNum(d["conversations"])} conversations answered`}
         />
         <Stat
           label="Eligible AI conversations"
           value={fmtNum(eligible)}
-          hint={`Answered by the assistant, excluding ${fmtNum(d['excluded'])} spam/archived`}
+          hint={`Answered by the assistant, excluding ${fmtNum(d["excluded"])} spam/archived`}
         />
         <Stat
           label="AI-only completion rate"
-          value={d['ai_only_completion_rate'] == null ? "—" : fmtNum(d['ai_only_completion_rate'], "%")}
-          hint={`${fmtNum(d['ai_only_completed'])} completed with no human involved`}
-          tone={eligible === 0 ? "default" : Number(d['ai_only_completion_rate'] ?? 0) < 40 ? "warn" : "good"}
+          value={
+            d["ai_only_completion_rate"] == null ? "—" : fmtNum(d["ai_only_completion_rate"], "%")
+          }
+          hint={`${fmtNum(d["ai_only_completed"])} completed with no human involved`}
+          tone={
+            eligible === 0
+              ? "default"
+              : Number(d["ai_only_completion_rate"] ?? 0) < 40
+                ? "warn"
+                : "good"
+          }
           onDrill={eligible ? () => drill("ai_only_completed") : undefined}
           drillLabel="AI-only completed tickets"
         />
         <Stat
           label="Escalated to a human"
-          value={d['escalation_rate'] == null ? "—" : fmtNum(d['escalation_rate'], "%")}
-          hint={`${fmtNum(d['escalated'])} involved a person`}
-          tone={Number(d['escalation_rate'] ?? 0) > 50 ? "warn" : "default"}
+          value={d["escalation_rate"] == null ? "—" : fmtNum(d["escalation_rate"], "%")}
+          hint={`${fmtNum(d["escalated"])} involved a person`}
+          tone={Number(d["escalation_rate"] ?? 0) > 50 ? "warn" : "default"}
           onDrill={eligible ? () => drill("escalated") : undefined}
           drillLabel="escalated tickets"
         />
         <Stat
           label="Unresolved / abandoned"
-          value={fmtNum(d['ai_unresolved'])}
+          value={fmtNum(d["ai_unresolved"])}
           hint="Answered by AI, never reached an outcome"
-          tone={Number(d['ai_unresolved'] ?? 0) > 0 ? "warn" : "good"}
+          tone={Number(d["ai_unresolved"] ?? 0) > 0 ? "warn" : "good"}
           onDrill={eligible ? () => drill("ai_unresolved") : undefined}
           drillLabel="unresolved AI tickets"
         />
         <Stat
           label="Helpful rate"
-          value={d['helpful_rate'] == null ? "—" : fmtNum(d['helpful_rate'], "%")}
-          hint={`${fmtNum(d['rated'])} answers rated by visitors`}
-          tone={Number(d['rated'] ?? 0) > 0 && Number(d['helpful_rate'] ?? 0) < 60 ? "warn" : "default"}
+          value={d["helpful_rate"] == null ? "—" : fmtNum(d["helpful_rate"], "%")}
+          hint={`${fmtNum(d["rated"])} answers rated by visitors`}
+          tone={
+            Number(d["rated"] ?? 0) > 0 && Number(d["helpful_rate"] ?? 0) < 60 ? "warn" : "default"
+          }
         />
         <Stat
           label="Not helpful"
-          value={d['unhelpful_rate'] == null ? "—" : fmtNum(d['unhelpful_rate'], "%")}
-          hint={`${fmtNum(d['not_helpful'])} answers marked unhelpful`}
+          value={d["unhelpful_rate"] == null ? "—" : fmtNum(d["unhelpful_rate"], "%")}
+          hint={`${fmtNum(d["not_helpful"])} answers marked unhelpful`}
         />
         <Stat
           label="Avg confidence"
-          value={d['avg_confidence'] == null ? "—" : fmtNum(Number(d['avg_confidence']) * 100, "%")}
-          hint={`${fmtNum(d['low_confidence'])} low-confidence answers`}
-          tone={Number(d['avg_confidence'] ?? 1) < 0.5 ? "warn" : "default"}
+          value={d["avg_confidence"] == null ? "—" : fmtNum(Number(d["avg_confidence"]) * 100, "%")}
+          hint={`${fmtNum(d["low_confidence"])} low-confidence answers`}
+          tone={Number(d["avg_confidence"] ?? 1) < 0.5 ? "warn" : "default"}
         />
       </div>
 
@@ -1161,9 +1463,9 @@ function AiTab({ filters, drill }: TabProps) {
           actions={<ExportButton dataset="ai_questions" filters={filters} />}
         >
           <BarList
-            rows={((d['top_questions'] as Row[]) ?? []).map((r) => ({
-              label: String(r['question']),
-              value: Number(r['n'] ?? 0),
+            rows={((d["top_questions"] as Row[]) ?? []).map((r) => ({
+              label: String(r["question"]),
+              value: Number(r["n"] ?? 0),
             }))}
           />
         </Panel>
@@ -1173,9 +1475,9 @@ function AiTab({ filters, drill }: TabProps) {
           actions={<ExportButton dataset="ai_low_confidence" filters={filters} />}
         >
           <BarList
-            rows={((d['low_confidence_questions'] as Row[]) ?? []).map((r) => ({
-              label: String(r['question']),
-              value: Number(r['n'] ?? 0),
+            rows={((d["low_confidence_questions"] as Row[]) ?? []).map((r) => ({
+              label: String(r["question"]),
+              value: Number(r["n"] ?? 0),
             }))}
             emptyLabel="No low-confidence answers."
           />
@@ -1184,9 +1486,9 @@ function AiTab({ filters, drill }: TabProps) {
 
       <Panel title="Escalations by department">
         <BarList
-          rows={((d['escalations_by_department'] as Row[]) ?? []).map((r) => ({
-            label: String(r['department']),
-            value: Number(r['n'] ?? 0),
+          rows={((d["escalations_by_department"] as Row[]) ?? []).map((r) => ({
+            label: String(r["department"]),
+            value: Number(r["n"] ?? 0),
           }))}
         />
       </Panel>
@@ -1194,14 +1496,13 @@ function AiTab({ filters, drill }: TabProps) {
   );
 }
 
-
 function IntakeTab({ filters, search, update }: TabProps) {
   // The request list is paged in SQL; the tiles above it are SQL aggregates.
   const limit = 50;
   const q = useReport<Row>("intake", filters, { limit, offset: search.page * limit });
   if (q.isLoading || q.error) return <Loading query={q} />;
   const d = q.data ?? {};
-  const byType = (d['by_type'] as Row[]) ?? [];
+  const byType = (d["by_type"] as Row[]) ?? [];
 
   return (
     <div className="space-y-4">
@@ -1213,49 +1514,86 @@ function IntakeTab({ filters, search, update }: TabProps) {
         <DataTable
           rows={byType}
           columns={[
-            { key: "request_type", label: "Type", render: (r) => String(r['request_type']).replace(/_/g, " ") },
+            {
+              key: "request_type",
+              label: "Type",
+              render: (r) => String(r["request_type"]).replace(/_/g, " "),
+            },
             { key: "total", label: "Total", align: "right" },
             { key: "open", label: "Open", align: "right" },
             { key: "approved", label: "Approved", align: "right" },
             { key: "denied", label: "Denied", align: "right" },
-            { key: "conversion", label: "Conversion", align: "right", render: (r) => fmtNum(r['conversion'], "%") },
+            {
+              key: "conversion",
+              label: "Conversion",
+              align: "right",
+              render: (r) => fmtNum(r["conversion"], "%"),
+            },
           ]}
         />
       </Panel>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel title="By stage">
-          <BarList rows={((d['by_stage'] as Row[]) ?? []).map((r) => ({ label: String(r['stage']).replace(/_/g, " "), value: Number(r['n'] ?? 0) }))} />
+          <BarList
+            rows={((d["by_stage"] as Row[]) ?? []).map((r) => ({
+              label: String(r["stage"]).replace(/_/g, " "),
+              value: Number(r["n"] ?? 0),
+            }))}
+          />
         </Panel>
         <Panel title="By service interest">
-          <BarList rows={((d['by_service'] as Row[]) ?? []).map((r) => ({ label: String(r['service']), value: Number(r['n'] ?? 0) }))} />
+          <BarList
+            rows={((d["by_service"] as Row[]) ?? []).map((r) => ({
+              label: String(r["service"]),
+              value: Number(r["n"] ?? 0),
+            }))}
+          />
         </Panel>
         <Panel title="By county">
-          <BarList rows={((d['by_county'] as Row[]) ?? []).map((r) => ({ label: String(r['county']), value: Number(r['n'] ?? 0) }))} />
+          <BarList
+            rows={((d["by_county"] as Row[]) ?? []).map((r) => ({
+              label: String(r["county"]),
+              value: Number(r["n"] ?? 0),
+            }))}
+          />
         </Panel>
         <Panel title="By health plan">
-          <BarList rows={((d['by_health_plan'] as Row[]) ?? []).map((r) => ({ label: String(r['health_plan']), value: Number(r['n'] ?? 0) }))} />
+          <BarList
+            rows={((d["by_health_plan"] as Row[]) ?? []).map((r) => ({
+              label: String(r["health_plan"]),
+              value: Number(r["n"] ?? 0),
+            }))}
+          />
         </Panel>
       </div>
 
       <Panel title="Recent requests" actions={<ExportButton dataset="intake" filters={filters} />}>
         <DataTable
-          rows={(d['rows'] as Row[]) ?? []}
+          rows={(d["rows"] as Row[]) ?? []}
           columns={[
-            { key: "reference", label: "Reference", render: (r) => String(r['reference']) },
-            { key: "created_at", label: "Received", render: (r) => fmtDate(r['created_at']) },
-            { key: "full_name", label: "Name", render: (r) => String(r['full_name']) },
-            { key: "request_type", label: "Type", render: (r) => String(r['request_type']) },
-            { key: "service_interest", label: "Service", render: (r) => String(r['service_interest'] ?? "—") },
-            { key: "county", label: "County", render: (r) => String(r['county'] ?? "—") },
-            { key: "stage", label: "Stage", render: (r) => String(r['stage']).replace(/_/g, " ") },
-            { key: "assigned_name", label: "Owner", render: (r) => String(r['assigned_name'] ?? "Unassigned") },
+            { key: "reference", label: "Reference", render: (r) => String(r["reference"]) },
+            { key: "created_at", label: "Received", render: (r) => fmtDate(r["created_at"]) },
+            { key: "full_name", label: "Name", render: (r) => String(r["full_name"]) },
+            { key: "request_type", label: "Type", render: (r) => String(r["request_type"]) },
+            {
+              key: "service_interest",
+              label: "Service",
+              render: (r) => String(r["service_interest"] ?? "—"),
+            },
+            { key: "county", label: "County", render: (r) => String(r["county"] ?? "—") },
+            { key: "stage", label: "Stage", render: (r) => String(r["stage"]).replace(/_/g, " ") },
+            {
+              key: "assigned_name",
+              label: "Owner",
+              render: (r) => String(r["assigned_name"] ?? "Unassigned"),
+            },
           ]}
         />
         <Pager
           page={search.page}
           pageSize={limit}
-          total={Number(d['rows_total'] ?? 0)}
+          total={Number(d["rows_total"] ?? 0)}
           onPage={(p) => update({ page: p }, true)}
           noun="requests"
           busy={q.isFetching}

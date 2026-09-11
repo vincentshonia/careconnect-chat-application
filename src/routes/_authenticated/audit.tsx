@@ -25,11 +25,14 @@ export const Route = createFileRoute("/_authenticated/audit")({
 
 type AuditRow = Database["public"]["Tables"]["audit_logs"]["Row"];
 
-
 const PAGE_SIZE = 50;
 
 /** Strip characters that would break a PostgREST `or=` expression. */
-const sanitize = (term: string) => term.trim().replace(/[%,()*]/g, "").slice(0, 80);
+const sanitize = (term: string) =>
+  term
+    .trim()
+    .replace(/[%,()*]/g, "")
+    .slice(0, 80);
 
 export function AuditPanel() {
   const [search, setSearch] = useState("");
@@ -74,7 +77,8 @@ export function AuditPanel() {
       saveCsv("audit-log", result.csv);
       toast.success(`Exported ${result.rows.toLocaleString()} entries`);
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not build that export"),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not build that export"),
   });
 
   return (
@@ -89,12 +93,16 @@ export function AuditPanel() {
             placeholder="Search action, record, or person"
             className="w-72"
           />
-          <Button variant="outline" size="sm" disabled={exportCsv.isPending} onClick={() => exportCsv.mutate()}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={exportCsv.isPending}
+            onClick={() => exportCsv.mutate()}
+          >
             {exportCsv.isPending ? "Preparing…" : "Export CSV"}
           </Button>
         </>
       }
-
     >
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-sm">
@@ -132,7 +140,14 @@ export function AuditPanel() {
           </tbody>
         </table>
       </div>
-      <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} noun="entries" busy={logs.isFetching} />
+      <Pager
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        onPage={setPage}
+        noun="entries"
+        busy={logs.isFetching}
+      />
     </PanelShell>
   );
 }

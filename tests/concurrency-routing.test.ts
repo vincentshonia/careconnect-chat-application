@@ -560,7 +560,10 @@ describe("claim & routing concurrency", () => {
      * eligible teammate is chosen instead of the stale pick.
      */
     const mutations: Array<[string, (userId: string, department: string) => Promise<void>]> = [
-      ["becomes busy", async (id) => void (await db.from("profiles").update({ presence: "busy" }).eq("id", id))],
+      [
+        "becomes busy",
+        async (id) => void (await db.from("profiles").update({ presence: "busy" }).eq("id", id)),
+      ],
       [
         "goes offline",
         async (id) => void (await db.from("profiles").update({ presence: "offline" }).eq("id", id)),
@@ -795,17 +798,17 @@ describe("claim & routing concurrency", () => {
       live = (await candidates()).find((c) => c.user_id === target);
       expect(live?.eligible).toBe(false);
       expect(live?.reason).toMatch(/capacity|full|chats/i);
-      expect(
-        decideTransfer({ target: live, override: true, actorCanOverride: true }).allowed,
-      ).toBe(true);
+      expect(decideTransfer({ target: live, override: true, actorCanOverride: true }).allowed).toBe(
+        true,
+      );
 
       // Condition 3: profile deactivated — never overridable.
       await db.from("profiles").update({ status: "inactive" }).eq("id", target);
       live = (await candidates()).find((c) => c.user_id === target);
       expect(live?.eligible).toBe(false);
-      expect(
-        decideTransfer({ target: live, override: true, actorCanOverride: true }).allowed,
-      ).toBe(false);
+      expect(decideTransfer({ target: live, override: true, actorCanOverride: true }).allowed).toBe(
+        false,
+      );
 
       // Condition 4: membership suspended — the target disappears entirely.
       await db
@@ -814,9 +817,9 @@ describe("claim & routing concurrency", () => {
         .eq("user_id", target)
         .eq("organization_id", orgId);
       expect((await candidates()).find((c) => c.user_id === target)).toBeUndefined();
-      expect(decideTransfer({ target: undefined, override: true, actorCanOverride: true }).allowed).toBe(
-        false,
-      );
+      expect(
+        decideTransfer({ target: undefined, override: true, actorCanOverride: true }).allowed,
+      ).toBe(false);
 
       // Department mismatch is never overridable: SQL never returns someone
       // outside the conversation's department, so no override can reach them.
@@ -944,4 +947,3 @@ describe("claim & routing concurrency", () => {
     }, 60_000);
   });
 });
-

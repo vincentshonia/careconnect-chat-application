@@ -20,6 +20,9 @@ import {
   type WidgetTabConfig,
 } from "@/lib/widget-tabs";
 
+import { Link } from "@tanstack/react-router";
+import { useSessionContext } from "@/hooks/use-session-context";
+import { useLaunchReadiness } from "@/components/admin/LaunchReadinessCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +39,6 @@ export const Route = createFileRoute("/_authenticated/websites")({
 
 type Website = Database["public"]["Tables"]["websites"]["Row"];
 
-
 export function WebsitesPanel() {
   const queryClient = useQueryClient();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -49,6 +51,12 @@ export function WebsitesPanel() {
   const [tabs, setTabs] = useState<WidgetTabConfig[]>(DEFAULT_WIDGET_TABS);
 
   useEffect(() => setOrigin(window.location.origin), []);
+
+  // A website may not be switched on while a launch-readiness item still fails.
+  const session = useSessionContext();
+  const canSeeReadiness = Boolean(session.data?.permissions?.has("settings.manage"));
+  const readiness = useLaunchReadiness(canSeeReadiness);
+  const activationBlocked = (readiness.data?.criticalFailures ?? 0) > 0;
 
   const listQuery = useQuery({
     queryKey: ["websites"],
@@ -93,7 +101,13 @@ export function WebsitesPanel() {
           domain: (form.domain ?? "").trim().toLowerCase(),
           allowed_domains: String(domainsText)
             .split(/[\s,]+/)
-            .map((d) => d.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""))
+            .map((d) =>
+              d
+                .trim()
+                .toLowerCase()
+                .replace(/^https?:\/\//, "")
+                .replace(/\/.*$/, ""),
+            )
             .filter(Boolean),
           chatbot_name: form.chatbot_name,
           welcome_message: form.welcome_message,
@@ -126,7 +140,11 @@ export function WebsitesPanel() {
         recordType: "websites",
         recordId: active.id,
         websiteId: active.id,
-        newValue: { name: form.name, chatbot_name: form.chatbot_name, widget_position: form.widget_position },
+        newValue: {
+          name: form.name,
+          chatbot_name: form.chatbot_name,
+          widget_position: form.widget_position,
+        },
       });
     },
     onSuccess: () => {
@@ -147,7 +165,11 @@ export function WebsitesPanel() {
         organizationId = prof?.organization_id ?? null;
       }
       if (!organizationId) throw new Error("No organization found for this account.");
-      const domain = newSite.domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+      const domain = newSite.domain
+        .trim()
+        .toLowerCase()
+        .replace(/^https?:\/\//, "")
+        .replace(/\/.*$/, "");
       if (!newSite.name.trim() || !domain) throw new Error("Name and domain are required.");
       const { data, error } = await supabase
         .from("websites")
@@ -193,7 +215,11 @@ export function WebsitesPanel() {
       });
     },
     onSuccess: (_d, status) => {
-      setNotice(status === "suspended" ? "Website suspended — the widget will stop loading." : "Website reactivated.");
+      setNotice(
+        status === "suspended"
+          ? "Website suspended — the widget will stop loading."
+          : "Website reactivated.",
+      );
       queryClient.invalidateQueries({ queryKey: ["websites"] });
     },
     onError: (err) => setNotice(err instanceof Error ? err.message : "Update failed"),
@@ -227,13 +253,14 @@ export function WebsitesPanel() {
   const PUBLIC_EMBED_ORIGIN = "https://chat.mypacifichealth.com";
   const isPrivateOrigin =
     !origin ||
-    /lovableproject\.com|gpt-eng\.com|id-preview|-dev\.lovable\.app|localhost|127\.0\.0\.1/.test(origin);
+    /lovableproject\.com|gpt-eng\.com|id-preview|-dev\.lovable\.app|localhost|127\.0\.0\.1/.test(
+      origin,
+    );
   const embedOrigin = isPrivateOrigin ? PUBLIC_EMBED_ORIGIN : origin;
 
   const snippet = active
     ? `<script src="${embedOrigin}/api/public/widget.js" data-website-id="${active.id}"></script>`
     : "";
-
 
   return (
     <PanelShell
@@ -266,7 +293,12 @@ export function WebsitesPanel() {
                   <Button type="submit" size="sm" disabled={create.isPending}>
                     {create.isPending ? "Creating…" : "Create"}
                   </Button>
-                  <Button type="button" size="sm" variant="outline" onClick={() => setCreating(false)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCreating(false)}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -292,7 +324,6 @@ export function WebsitesPanel() {
                     </span>
                   ) : null}
                   <p className="text-xs text-muted-foreground">{w.domain}</p>
-
                 </button>
               </li>
             ))}
@@ -383,7 +414,6 @@ export function WebsitesPanel() {
                   <Label htmlFor="auto-open">Auto-open the widget after the trigger delay</Label>
                 </div>
               </div>
-
 
               <div className="rounded-lg border border-border p-4">
                 <h3 className="text-sm font-semibold">Home screen</h3>
@@ -479,8 +509,6 @@ export function WebsitesPanel() {
                   </Field>
                 </div>
               </div>
-
-
 
               <div className="rounded-lg border border-border p-4">
                 <h3 className="text-sm font-semibold">Bottom navigation buttons</h3>
@@ -581,8 +609,6 @@ export function WebsitesPanel() {
                 </Button>
               </div>
 
-
-
               {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
               <Button type="submit" disabled={save.isPending}>
                 {save.isPending ? "Saving…" : "Save settings"}
@@ -628,10 +654,10 @@ export function WebsitesPanel() {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={setStatus.isPending}
+                    disabled={setStatus.isPending || activationBlocked}
                     onClick={() => setStatus.mutate("active")}
                   >
-                    Reactivate website
+                    Activate website
                   </Button>
                 )}
                 <Button
@@ -648,6 +674,20 @@ export function WebsitesPanel() {
                   Delete website
                 </Button>
               </div>
+              {active.status !== "active" && activationBlocked ? (
+                <p className="mt-2 text-sm text-destructive">
+                  This website can't be switched on yet — {readiness.data?.criticalFailures} launch
+                  readiness item(s) still need attention.{" "}
+                  <Link
+                    to="/admin"
+                    search={{ tab: "settings" }}
+                    hash="launch-readiness"
+                    className="underline"
+                  >
+                    Open launch readiness
+                  </Link>
+                </p>
+              ) : null}
               {notice ? <p className="mt-2 text-sm text-muted-foreground">{notice}</p> : null}
             </div>
           </section>
@@ -705,7 +745,6 @@ function ColorInput({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
@@ -714,7 +753,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
-
 
 function ServicesCard({ organizationId }: { organizationId: string }) {
   const queryClient = useQueryClient();
@@ -831,7 +869,6 @@ function ServicesCard({ organizationId }: { organizationId: string }) {
     </div>
   );
 }
-
 
 function moveTab(list: WidgetTabConfig[], index: number, delta: number): WidgetTabConfig[] {
   const next = [...list];

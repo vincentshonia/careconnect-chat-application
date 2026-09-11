@@ -75,10 +75,7 @@ export async function signSession(
 /** Seven days: how long an expired token may still prove visitor identity. */
 export const RENEWAL_GRACE_SECONDS = 60 * 60 * 24 * 7;
 
-async function verifySigned(
-  token: unknown,
-  graceSeconds: number,
-): Promise<WidgetSessionClaims> {
+async function verifySigned(token: unknown, graceSeconds: number): Promise<WidgetSessionClaims> {
   if (typeof token !== "string" || token.length < 20 || token.length > 4000) {
     throw new PublicChatError(401, "Chat session is missing or invalid");
   }

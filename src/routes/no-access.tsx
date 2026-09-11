@@ -28,7 +28,9 @@ function NoAccessPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-6">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
-        <h1 className="text-xl font-semibold text-card-foreground">You don't have workspace access</h1>
+        <h1 className="text-xl font-semibold text-card-foreground">
+          You don't have workspace access
+        </h1>
         <p className="mt-3 text-sm text-muted-foreground">
           Your sign-in worked, but your account isn't a member of any organization yet. Access is
           granted only through an administrator invitation — signing in with Google or Microsoft

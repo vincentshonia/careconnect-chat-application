@@ -13,7 +13,7 @@ describe("csv serialisation", () => {
   });
 
   it("neutralises spreadsheet formula injection", () => {
-    const csv = toCsv([{ a: "=HYPERLINK(\"http://evil\")", b: "+1", c: "-2", d: "@SUM(A1)" }]);
+    const csv = toCsv([{ a: '=HYPERLINK("http://evil")', b: "+1", c: "-2", d: "@SUM(A1)" }]);
     const [, row] = csv.split("\n");
     expect(row!.startsWith("\"'=HYPERLINK")).toBe(true);
     expect(csv).toContain("'+1");

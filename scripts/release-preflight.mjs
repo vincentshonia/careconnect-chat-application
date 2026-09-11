@@ -250,7 +250,6 @@ async function checkDatabase(label, urlVar, keyVar) {
 
 await checkDatabase("vitest backend", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY");
 
-
 try {
   const { ensureBrowserLibraryPath } = await import("../tests/e2e/helpers/browser-libs.ts");
   ensureBrowserLibraryPath();
@@ -265,11 +264,17 @@ try {
   const root = "/opt/ms-playwright";
   let executablePath;
   if (existsSync(root)) {
-    const build = readdirSync(root).filter((e) => /^chromium-\d+$/.test(e)).sort().pop();
+    const build = readdirSync(root)
+      .filter((e) => /^chromium-\d+$/.test(e))
+      .sort()
+      .pop();
     const candidate = build ? path.join(root, build, "chrome-linux", "chrome") : null;
     if (candidate && existsSync(candidate)) executablePath = candidate;
   }
-  const browser = await chromium.launch({ headless: true, ...(executablePath ? { executablePath } : {}) });
+  const browser = await chromium.launch({
+    headless: true,
+    ...(executablePath ? { executablePath } : {}),
+  });
   const version = browser.version();
   await browser.close();
   record("browser:chromium launches", true, version);
@@ -286,7 +291,9 @@ try {
  * ------------------------------------------------------------------ */
 
 for (const check of checks) {
-  console.log(`${check.ok ? "PASS" : "FAIL"}  ${check.name}${check.ok ? "" : ` — ${check.detail}`}`);
+  console.log(
+    `${check.ok ? "PASS" : "FAIL"}  ${check.name}${check.ok ? "" : ` — ${check.detail}`}`,
+  );
 }
 
 if (failures.length > 0) {

@@ -32,7 +32,6 @@ type Holiday = Database["public"]["Tables"]["holidays"]["Row"];
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-
 export function DepartmentsPanel() {
   return (
     <PanelShell
@@ -79,7 +78,9 @@ function DepartmentsTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("department_members")
-        .select("department_id, user_id, profiles:profiles!department_members_user_id_fkey(full_name)");
+        .select(
+          "department_id, user_id, profiles:profiles!department_members_user_id_fkey(full_name)",
+        );
       if (error) return [] as Array<{ department_id: string; user_id: string }>;
       return (data ?? []) as Array<{ department_id: string; user_id: string }>;
     },
@@ -100,7 +101,13 @@ function DepartmentsTab() {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Database["public"]["Tables"]["departments"]["Update"] }) => {
+    mutationFn: async ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: Database["public"]["Tables"]["departments"]["Update"];
+    }) => {
       await saveDepartment({
         data: {
           action: "update",
@@ -115,8 +122,10 @@ function DepartmentsTab() {
       return patch;
     },
     onSuccess: (patch) => {
-      if (patch?.routing_method) toast.success(`Routing set to ${String(patch.routing_method).replace(/_/g, " ")}`);
-      else if (patch?.status) toast.success(`Department ${patch.status === "active" ? "activated" : "deactivated"}`);
+      if (patch?.routing_method)
+        toast.success(`Routing set to ${String(patch.routing_method).replace(/_/g, " ")}`);
+      else if (patch?.status)
+        toast.success(`Department ${patch.status === "active" ? "activated" : "deactivated"}`);
       queryClient.invalidateQueries({ queryKey: ["departments"] });
     },
     onError: (error: unknown) =>
@@ -135,7 +144,6 @@ function DepartmentsTab() {
     onError: (error: unknown) =>
       toast.error(error instanceof Error ? error.message : "Could not set the default department"),
   });
-
 
   const remove = useMutation({
     mutationFn: async (dept: Department) => {
@@ -177,15 +185,17 @@ function DepartmentsTab() {
       {(() => {
         const fallback = (list.data ?? []).find((d) => d.is_default);
         if (!fallback) return null;
-        const fallbackCount = (members.data ?? []).filter((m) => m.department_id === fallback.id).length;
+        const fallbackCount = (members.data ?? []).filter(
+          (m) => m.department_id === fallback.id,
+        ).length;
         if (fallbackCount > 0) return null;
         return (
           <div
             role="alert"
             className="rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           >
-            The default department “{fallback.name}” has no members. Conversations that fall back to it cannot be
-            routed to anyone — add at least one team member.
+            The default department “{fallback.name}” has no members. Conversations that fall back to
+            it cannot be routed to anyone — add at least one team member.
           </div>
         );
       })()}
@@ -198,18 +208,25 @@ function DepartmentsTab() {
               <div>
                 <p className="text-sm font-medium">{d.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {d.routing_method.replace(/_/g, " ")} · {count} member{count === 1 ? "" : "s"} · {d.timezone}
+                  {d.routing_method.replace(/_/g, " ")} · {count} member{count === 1 ? "" : "s"} ·{" "}
+                  {d.timezone}
                 </p>
               </div>
               {d.is_default ? <Badge>Default</Badge> : null}
-              {count === 0 ? <Badge variant="destructive">No members — routing will fail</Badge> : null}
+              {count === 0 ? (
+                <Badge variant="destructive">No members — routing will fail</Badge>
+              ) : null}
               <Badge variant="outline">{d.status}</Badge>
               <div className="ml-auto flex gap-2">
                 <Button
                   size="sm"
                   variant="outline"
                   disabled={d.is_default || setDefault.isPending}
-                  title={d.is_default ? "Already the default department" : "Make this the default department"}
+                  title={
+                    d.is_default
+                      ? "Already the default department"
+                      : "Make this the default department"
+                  }
                   onClick={() => setDefault.mutate(d)}
                 >
                   {d.is_default ? "Default" : "Make default"}
@@ -222,7 +239,8 @@ function DepartmentsTab() {
                     update.mutate({
                       id: d.id,
                       patch: {
-                        routing_method: d.routing_method === "round_robin" ? "first_available" : "round_robin",
+                        routing_method:
+                          d.routing_method === "round_robin" ? "first_available" : "round_robin",
                       },
                     })
                   }
@@ -277,7 +295,10 @@ function HoursTab() {
   const hours = useQuery({
     queryKey: ["business-hours"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("business_hours").select("*").order("day_of_week");
+      const { data, error } = await supabase
+        .from("business_hours")
+        .select("*")
+        .order("day_of_week");
       if (error) throw error;
       return (data ?? []) as BusinessHour[];
     },
@@ -285,7 +306,13 @@ function HoursTab() {
 
   const saveHours = useServerFn(saveBusinessHoursFn);
   const upsert = useMutation({
-    mutationFn: async (row: { day: number; open: string; close: string; closed: boolean; id?: string }) => {
+    mutationFn: async (row: {
+      day: number;
+      open: string;
+      close: string;
+      closed: boolean;
+      id?: string;
+    }) => {
       if (!orgId) return;
       await saveHours({
         data: {
@@ -380,7 +407,9 @@ function HolidaysTab() {
   const create = useMutation({
     mutationFn: async () => {
       if (!orgId || !form.name.trim() || !form.date) return;
-      await saveHolidayFnCall({ data: { action: "create", name: form.name.trim(), date: form.date } });
+      await saveHolidayFnCall({
+        data: { action: "create", name: form.name.trim(), date: form.date },
+      });
     },
     onSuccess: () => {
       setForm({ name: "", date: "" });
@@ -434,7 +463,12 @@ function HolidaysTab() {
           <li key={h.id} className="flex items-center gap-3 px-4 py-3 text-sm">
             <span className="font-medium">{h.name}</span>
             <span className="text-muted-foreground">{h.holiday_date}</span>
-            <Button size="sm" variant="outline" className="ml-auto" onClick={() => remove.mutate(h.id)}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-auto"
+              onClick={() => remove.mutate(h.id)}
+            >
               Remove
             </Button>
           </li>

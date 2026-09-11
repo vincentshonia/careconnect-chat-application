@@ -86,13 +86,7 @@ describe("who may open which guide", () => {
 
   it("an administrator reads every organization guide but not the platform appendix", () => {
     const available = availableGuideRoles("administrator", null, perms("administrator"));
-    expect(available).toEqual([
-      "agent",
-      "team_lead",
-      "manager",
-      "administrator",
-      "super_admin",
-    ]);
+    expect(available).toEqual(["agent", "team_lead", "manager", "administrator", "super_admin"]);
     expect(available).not.toContain("platform_owner");
   });
 
@@ -139,9 +133,9 @@ describe("which guide the reader lands on", () => {
   });
 
   it("keeps a platform administrator on their organization role by default", () => {
-    expect(defaultGuideRole("administrator", "platform_owner", perms("administrator", "platform_owner"))).toBe(
-      "administrator",
-    );
+    expect(
+      defaultGuideRole("administrator", "platform_owner", perms("administrator", "platform_owner")),
+    ).toBe("administrator");
   });
 
   it("falls back to the platform appendix when there is no organization role", () => {

@@ -41,7 +41,12 @@ function hostOf(value: string | null | undefined): string | null {
   try {
     return new URL(value).hostname.toLowerCase();
   } catch {
-    return value.toLowerCase().replace(/^https?:\/\//, "").split("/")[0] || null;
+    return (
+      value
+        .toLowerCase()
+        .replace(/^https?:\/\//, "")
+        .split("/")[0] || null
+    );
   }
 }
 
@@ -76,14 +81,15 @@ export async function provenHost(proofToken: unknown, websiteId?: string): Promi
   return claims.host;
 }
 
-
-
 export function matchesAllowedDomains(website: Record<string, any>, host: string | null) {
   const allowed: string[] = website.allowed_domains ?? [];
   return (
     !!host &&
     allowed.some((d) => {
-      const clean = String(d).toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
+      const clean = String(d)
+        .toLowerCase()
+        .replace(/^https?:\/\//, "")
+        .replace(/\/$/, "");
       return !!clean && (host === clean || host.endsWith(`.${clean}`));
     })
   );
@@ -151,7 +157,8 @@ export function assertHostAllowed(
 
   const host = hostOf(hostOrigin ?? clientHint);
   const permitted = !host || isTrustedHost(host) || matchesAllowedDomains(website, host);
-  if (!permitted) throw new PublicChatError(403, "This chat widget is not authorized on this domain");
+  if (!permitted)
+    throw new PublicChatError(403, "This chat widget is not authorized on this domain");
 }
 
 /**
@@ -160,7 +167,10 @@ export function assertHostAllowed(
  * best-effort cache: a stale entry can only be up to a minute old.
  */
 const WIDGET_CONFIG_TTL_MS = 60_000;
-const widgetConfigCache = new Map<string, { at: number; value: Awaited<ReturnType<typeof buildWidgetConfig>> }>();
+const widgetConfigCache = new Map<
+  string,
+  { at: number; value: Awaited<ReturnType<typeof buildWidgetConfig>> }
+>();
 
 export async function loadWidgetConfig(
   websiteId: string,
@@ -194,58 +204,55 @@ async function buildWidgetConfig(
     { data: departments },
     { data: team },
   ] = await Promise.all([
-      db.from("organizations").select("*").eq("id", website.organization_id).maybeSingle(),
-      db
-        .from("services")
-        .select("id,name,short_description,eligibility_overview,counties,health_plans,learn_more_url")
-        .eq("organization_id", website.organization_id)
-        .eq("status", "active")
-        .order("sort_order"),
-      db
-        .from("faqs")
-        .select("id,category,question,answer")
-        .eq("organization_id", website.organization_id)
-        .eq("status", "active")
-        .order("sort_order"),
-      // Hours are configured at organization level in the admin UI, so read
-      // the organization rows and keep any that are not scoped to another
-      // website or to a specific department.
-      db
-        .from("business_hours")
-        .select("*")
-        .eq("organization_id", website.organization_id)
-        .is("department_id", null)
-        .or(`website_id.is.null,website_id.eq.${website.id}`),
-      db
-        .from("holidays")
-        .select("holiday_date,website_id")
-        .eq("organization_id", website.organization_id)
-        .or(`website_id.is.null,website_id.eq.${website.id}`),
-      db
-        .from("departments")
-        .select("id,name,description,website_id")
-        .eq("organization_id", website.organization_id)
-        .eq("status", "active")
-        .order("name"),
-      // Real staff photos only, and only for staff who explicitly opted in.
-      // `show_in_widget_team` defaults to false, so no employee photo can ever
-      // reach an anonymous visitor by accident.
-      db
-        .from("profiles")
-        .select("id,display_name,full_name,avatar_url")
-        .eq("organization_id", website.organization_id)
-        .eq("status", "active")
-        .eq("show_in_widget_team", true)
-        .not("avatar_url", "is", null)
-        .limit(3),
-
-    ]);
-
+    db.from("organizations").select("*").eq("id", website.organization_id).maybeSingle(),
+    db
+      .from("services")
+      .select("id,name,short_description,eligibility_overview,counties,health_plans,learn_more_url")
+      .eq("organization_id", website.organization_id)
+      .eq("status", "active")
+      .order("sort_order"),
+    db
+      .from("faqs")
+      .select("id,category,question,answer")
+      .eq("organization_id", website.organization_id)
+      .eq("status", "active")
+      .order("sort_order"),
+    // Hours are configured at organization level in the admin UI, so read
+    // the organization rows and keep any that are not scoped to another
+    // website or to a specific department.
+    db
+      .from("business_hours")
+      .select("*")
+      .eq("organization_id", website.organization_id)
+      .is("department_id", null)
+      .or(`website_id.is.null,website_id.eq.${website.id}`),
+    db
+      .from("holidays")
+      .select("holiday_date,website_id")
+      .eq("organization_id", website.organization_id)
+      .or(`website_id.is.null,website_id.eq.${website.id}`),
+    db
+      .from("departments")
+      .select("id,name,description,website_id")
+      .eq("organization_id", website.organization_id)
+      .eq("status", "active")
+      .order("name"),
+    // Real staff photos only, and only for staff who explicitly opted in.
+    // `show_in_widget_team` defaults to false, so no employee photo can ever
+    // reach an anonymous visitor by accident.
+    db
+      .from("profiles")
+      .select("id,display_name,full_name,avatar_url")
+      .eq("organization_id", website.organization_id)
+      .eq("status", "active")
+      .eq("show_in_widget_team", true)
+      .not("avatar_url", "is", null)
+      .limit(3),
+  ]);
 
   // The organization clock is the single source of truth for open/closed.
   const open = isOpenNow((hours ?? []) as any, (holidays ?? []) as any, org?.timezone);
   const agentsAvailable = await hasAvailableAgent(website.organization_id);
-
 
   return {
     website: {
@@ -296,7 +303,11 @@ async function buildWidgetConfig(
     },
     departments: ((departments ?? []) as Array<Record<string, any>>)
       .filter((d) => !d.website_id || d.website_id === website.id)
-      .map((d) => ({ id: d.id as string, name: d.name as string, description: d.description ?? null })),
+      .map((d) => ({
+        id: d.id as string,
+        name: d.name as string,
+        description: d.description ?? null,
+      })),
     services: services ?? [],
 
     faqs: faqs ?? [],
@@ -309,7 +320,6 @@ async function buildWidgetConfig(
       })),
     businessOpen: open,
     agentsAvailable: open && agentsAvailable,
-
   };
 }
 
@@ -320,7 +330,6 @@ export const DEFAULT_MENU = [
   { key: "referral", label: "Submit a Referral", icon: "send" },
   { key: "enrollment", label: "Enrollment Assistance", icon: "clipboard" },
 ];
-
 
 async function hasAvailableAgent(organizationId: string) {
   const { count } = await admin()
@@ -347,7 +356,10 @@ export async function ensureVisitor(
   if (existing) {
     await db
       .from("visitors")
-      .update({ current_page: meta.currentPage ?? existing.current_page, last_seen_at: new Date().toISOString() })
+      .update({
+        current_page: meta.currentPage ?? existing.current_page,
+        last_seen_at: new Date().toISOString(),
+      })
       .eq("id", existing.id);
     return existing;
   }
@@ -409,7 +421,12 @@ export async function ensureConversation(
     .select("*")
     .single();
   if (error) throw new PublicChatError(500, "Could not start a conversation");
-  await logEvent(data.id, website.organization_id, "conversation_created", "Visitor started a chat");
+  await logEvent(
+    data.id,
+    website.organization_id,
+    "conversation_created",
+    "Visitor started a chat",
+  );
   return data;
 }
 
@@ -461,12 +478,14 @@ export async function logEvent(
   eventType: string,
   detail?: string,
 ) {
-  await admin().from("conversation_events").insert({
-    conversation_id: conversationId,
-    organization_id: organizationId,
-    event_type: eventType,
-    detail: detail ?? null,
-  });
+  await admin()
+    .from("conversation_events")
+    .insert({
+      conversation_id: conversationId,
+      organization_id: organizationId,
+      event_type: eventType,
+      detail: detail ?? null,
+    });
 }
 
 export async function insertMessage(
@@ -517,7 +536,9 @@ export async function insertMessage(
     .update({
       last_message_at: now,
       unread_agent_count:
-        senderType === "visitor" ? (conversation.unread_agent_count ?? 0) + 1 : conversation.unread_agent_count,
+        senderType === "visitor"
+          ? (conversation.unread_agent_count ?? 0) + 1
+          : conversation.unread_agent_count,
     })
     .eq("id", conversation.id);
 
@@ -539,7 +560,6 @@ export async function insertMessage(
     });
   }
   if (decision.reopens && decision.toHuman) {
-
     const { notifyStaff } = await import("@/lib/notifications.server");
     await notifyStaff({
       organizationId: conversation.organization_id,
@@ -576,7 +596,6 @@ export async function insertMessage(
   return data;
 }
 
-
 /* --------------------------------- RAG ----------------------------------- */
 
 export {
@@ -604,7 +623,6 @@ export {
  */
 export const MIN_SIMILARITY = 0.3;
 export const MIN_TEXT_SCORE = 0.18;
-
 
 export type AnswerDiagnostics = {
   retrieval: Array<{ title: string; fused: number; similarity: number; text: number }>;
@@ -681,9 +699,7 @@ export async function answerQuestion(opts: {
   if (detectCrisis(question)) {
     return {
       answer:
-        (org?.emergency_message ?? emergencyFallback(language)) +
-        "\n\n" +
-        crisisFollowUp(language),
+        (org?.emergency_message ?? emergencyFallback(language)) + "\n\n" + crisisFollowUp(language),
       sources: [],
       confidence: 1,
       escalate: true,
@@ -733,9 +749,7 @@ export async function answerQuestion(opts: {
     };
   }
 
-  const context = relevant
-    .map((m, i) => `[Source ${i + 1}] ${m.title}\n${m.content}`)
-    .join("\n\n");
+  const context = relevant.map((m, i) => `[Source ${i + 1}] ${m.title}\n${m.content}`).join("\n\n");
 
   const system = [
     `You are ${website.chatbot_name}, the website assistant for ${org?.name ?? "this organization"}.`,
@@ -888,9 +902,8 @@ export async function startWidgetSession(opts: {
   /** The token being replaced, so a renewal keeps the same visitor. */
   priorSession?: string | null;
 }) {
-  const { newSessionId, signSession, verifySessionForRenewal, verifyOriginProof } = await import(
-    "./widget-session.server"
-  );
+  const { newSessionId, signSession, verifySessionForRenewal, verifyOriginProof } =
+    await import("./widget-session.server");
   const clientHint = opts.clientHost ?? null;
   const proof = opts.originProof ? await verifyOriginProof(opts.originProof) : null;
   // The proof was issued after a cross-origin check of the embedding page, so
@@ -903,9 +916,6 @@ export async function startWidgetSession(opts: {
   if (website.dev_mode === false && proof?.wid !== website.id) {
     throw new PublicChatError(403, "This chat widget is not authorized on this domain");
   }
-
-
-
 
   // A renewal presents its previous token. When that token is genuine (even if
   // it expired in the last week) and belongs to this website, the visitor is
@@ -948,9 +958,14 @@ export async function sessionContext(token: unknown, host: string | null): Promi
   const claims = await verifySession(token);
   const db = admin();
 
-  const { data: website } = await db.from("websites").select("*").eq("id", claims.wid).maybeSingle();
+  const { data: website } = await db
+    .from("websites")
+    .select("*")
+    .eq("id", claims.wid)
+    .maybeSingle();
   if (!website || website.status !== "active") throw new PublicChatError(404, "Website not found");
-  if (website.organization_id !== claims.org) throw new PublicChatError(401, "Chat session is invalid");
+  if (website.organization_id !== claims.org)
+    throw new PublicChatError(401, "Chat session is invalid");
   assertHostAllowed(website, host, claims.host ?? null);
 
   const { data: visitor } = await db
@@ -966,7 +981,8 @@ export async function sessionContext(token: unknown, host: string | null): Promi
 
 /** Load a conversation only if it belongs to this session's visitor. */
 export async function conversationForSession(ctx: SessionContext, conversationId: string) {
-  if (!/^[0-9a-f-]{36}$/i.test(conversationId)) throw new PublicChatError(400, "Invalid conversation id");
+  if (!/^[0-9a-f-]{36}$/i.test(conversationId))
+    throw new PublicChatError(400, "Invalid conversation id");
   const { data } = await admin()
     .from("conversations")
     .select("*")
@@ -1038,15 +1054,19 @@ export async function widgetFrameAncestors(websiteId: string): Promise<string[]>
     .maybeSingle();
   if (!data) return [];
   const domains: string[] = (data.allowed_domains ?? [])
-    .map((d: string) => String(d).toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, ""))
+    .map((d: string) =>
+      String(d)
+        .toLowerCase()
+        .replace(/^https?:\/\//, "")
+        .replace(/\/$/, ""),
+    )
     .filter(Boolean)
     .flatMap((d: string) => [`https://${d}`, `https://*.${d}`]);
-  if (data.dev_mode !== false) domains.push("https://*.lovable.app", "https://*.lovable.dev", "http://localhost:*");
+  if (data.dev_mode !== false)
+    domains.push("https://*.lovable.app", "https://*.lovable.dev", "http://localhost:*");
   frameAncestorsCache.set(websiteId, { at: Date.now(), value: domains });
   return domains;
 }
-
-
 
 export async function orgLimits(organizationId: string): Promise<OrgLimits> {
   const { data } = await admin()

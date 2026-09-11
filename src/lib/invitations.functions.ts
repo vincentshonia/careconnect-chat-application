@@ -78,9 +78,7 @@ export async function issueInvitation(
   const email = params.email.toLowerCase();
   const token = randomToken();
   const tokenHash = await sha256Hex(token);
-  const expiresAt = new Date(
-    Date.now() + (params.expiresInDays ?? 7) * 86_400_000,
-  ).toISOString();
+  const expiresAt = new Date(Date.now() + (params.expiresInDays ?? 7) * 86_400_000).toISOString();
 
   const { error } = await context.supabase.from("organization_invitations").insert({
     organization_id: params.organizationId,
@@ -149,9 +147,7 @@ export const revokeInvitationFn = createServerFn({ method: "POST" })
  */
 export const acceptInvitationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ token: z.string().min(32).max(200) }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ token: z.string().min(32).max(200) }).parse(input))
   .handler(async ({ data, context }) => {
     const email = String(context.claims["email"] ?? "").toLowerCase();
     if (!email) throw new Error("Your account has no verified email address");
@@ -165,7 +161,8 @@ export const acceptInvitationFn = createServerFn({ method: "POST" })
       .eq("token_hash", tokenHash)
       .maybeSingle();
 
-    if (!invite || invite.status !== "pending") throw new Error("This invitation is no longer valid");
+    if (!invite || invite.status !== "pending")
+      throw new Error("This invitation is no longer valid");
     if (new Date(invite.expires_at).getTime() < Date.now()) {
       await supabaseAdmin
         .from("organization_invitations")
@@ -179,26 +176,26 @@ export const acceptInvitationFn = createServerFn({ method: "POST" })
 
     const organizationId = invite.organization_id as string;
 
-    await supabaseAdmin.from("profiles").upsert(
-      { id: context.userId, email, organization_id: organizationId, title: invite.title ?? null },
-      { onConflict: "id" },
-    );
-
-    const { error: membershipError } = await supabaseAdmin
-      .from("organization_memberships")
+    await supabaseAdmin
+      .from("profiles")
       .upsert(
-        {
-          organization_id: organizationId,
-          user_id: context.userId,
-          role: invite.role,
-          status: "active",
-          title: invite.title ?? null,
-          invited_by: invite.invited_by,
-          invited_at: invite.created_at,
-          accepted_at: new Date().toISOString(),
-        },
-        { onConflict: "organization_id,user_id" },
+        { id: context.userId, email, organization_id: organizationId, title: invite.title ?? null },
+        { onConflict: "id" },
       );
+
+    const { error: membershipError } = await supabaseAdmin.from("organization_memberships").upsert(
+      {
+        organization_id: organizationId,
+        user_id: context.userId,
+        role: invite.role,
+        status: "active",
+        title: invite.title ?? null,
+        invited_by: invite.invited_by,
+        invited_at: invite.created_at,
+        accepted_at: new Date().toISOString(),
+      },
+      { onConflict: "organization_id,user_id" },
+    );
     if (membershipError) throw new Error(membershipError.message);
 
     const departmentIds: string[] = invite.department_ids ?? [];

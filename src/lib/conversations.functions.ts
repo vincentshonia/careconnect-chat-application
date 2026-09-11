@@ -131,7 +131,6 @@ export const claimConversationFn = createServerFn({ method: "POST" })
 
     // The "claimed" history entry is written inside the lifecycle routine.
 
-
     await db.from("messages").insert({
       conversation_id: conversation.id,
       organization_id: conversation.organization_id,
@@ -217,7 +216,6 @@ export const replyToConversationFn = createServerFn({ method: "POST" })
       db,
       payload: { detail: `First reply by ${name}` },
     });
-
 
     await writeAudit(db as never, {
       actor,
@@ -351,7 +349,6 @@ export const reassignConversationFn = createServerFn({ method: "POST" })
       },
     });
 
-
     const { notifyStaff } = await import("@/lib/notifications.server");
     await notifyStaff({
       organizationId: conversation.organization_id,
@@ -373,7 +370,11 @@ export const reassignConversationFn = createServerFn({ method: "POST" })
       recordType: "conversations",
       recordId: conversation.id,
       previousValue: { assigned_to: conversation.assigned_to },
-      newValue: { assigned_to: data.userId, override: overrideUsed, override_reason: overrideReason },
+      newValue: {
+        assigned_to: data.userId,
+        override: overrideUsed,
+        override_reason: overrideReason,
+      },
     });
 
     if (overrideUsed) {
@@ -423,7 +424,6 @@ export const closeConversationFn = createServerFn({ method: "POST" })
       payload: { detail: `Closed by ${actor.fullName ?? "an agent"}` },
     });
 
-
     await writeAudit(db as never, {
       actor,
       organizationId: conversation.organization_id,
@@ -444,9 +444,7 @@ export const closeConversationFn = createServerFn({ method: "POST" })
 export const resolveConversationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z
-      .object({ conversationId: z.string().uuid(), dispositionId: z.string().uuid() })
-      .parse(input),
+    z.object({ conversationId: z.string().uuid(), dispositionId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
     const actor = await resolveActor(context.supabase, context.userId);
@@ -484,7 +482,6 @@ export const resolveConversationFn = createServerFn({ method: "POST" })
       },
     });
 
-
     await writeAudit(db as never, {
       actor,
       organizationId: conversation.organization_id,
@@ -497,7 +494,6 @@ export const resolveConversationFn = createServerFn({ method: "POST" })
 
     return { ok: true, disposition: disposition.label };
   });
-
 
 /**
  * Mint a short-lived signed URL for a visitor attachment so the agent can

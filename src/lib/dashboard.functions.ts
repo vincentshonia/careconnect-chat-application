@@ -11,11 +11,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveActor, requireOrganization, ForbiddenError } from "@/lib/authz.server";
 import { periodWindow, safeTimeZone } from "@/lib/org-time";
-import {
-  dashboardScopeFor,
-  scopeDashboardMetrics,
-  type DashboardScope,
-} from "@/lib/report-scope";
+import { dashboardScopeFor, scopeDashboardMetrics, type DashboardScope } from "@/lib/report-scope";
 
 export const DASHBOARD_PERIODS = ["today", "week", "last7", "month", "last30"] as const;
 export type DashboardPeriod = (typeof DASHBOARD_PERIODS)[number];

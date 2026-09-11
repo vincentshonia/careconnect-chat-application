@@ -119,8 +119,7 @@ function TrainingPage() {
     [role, platformRole, permissions],
   );
   const [selected, setSelected] = useState<GuideRole | null>(null);
-  const activeRole: GuideRole =
-    selected && available.includes(selected) ? selected : fallbackRole;
+  const activeRole: GuideRole = selected && available.includes(selected) ? selected : fallbackRole;
 
   const guide = useMemo(
     () => visibleGuide(guideByRole(activeRole), permissions),
@@ -139,10 +138,7 @@ function TrainingPage() {
   const completedSet = useMemo(() => new Set(completed), [completed]);
   const doneCount = flatSections.filter((section) => completedSet.has(section.id)).length;
   const percent = completionPercent(doneCount, totalSections);
-  const nextUnread = useMemo(
-    () => nextUnreadSection(guide, completedSet),
-    [guide, completedSet],
-  );
+  const nextUnread = useMemo(() => nextUnreadSection(guide, completedSet), [guide, completedSet]);
 
   const toggleSection = useCallback(
     (sectionId: string, done: boolean) => {
@@ -304,9 +300,7 @@ function TrainingPage() {
                   {guide.label} guide
                 </h2>
                 {activeRole === role ? <Badge variant="secondary">Your role</Badge> : null}
-                {activeRole === "platform_owner" ? (
-                  <Badge variant="outline">Appendix</Badge>
-                ) : null}
+                {activeRole === "platform_owner" ? <Badge variant="outline">Appendix</Badge> : null}
               </div>
               <p className="text-sm text-muted-foreground">{guide.tagline}</p>
               <p className="text-xs text-muted-foreground">
@@ -544,7 +538,11 @@ function TrainingPage() {
               </div>
             ) : (
               chapters.map((chapter, chapterIndex) => (
-                <section key={chapter.id} className="space-y-4" aria-labelledby={`chapter-${chapter.id}`}>
+                <section
+                  key={chapter.id}
+                  className="space-y-4"
+                  aria-labelledby={`chapter-${chapter.id}`}
+                >
                   <header className="space-y-1 border-b border-border pb-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                       Chapter {chapterIndex + 1}
@@ -587,7 +585,9 @@ function TrainingPage() {
                               {chapterIndex + 1}.{sectionIndex + 1} {section.title}
                             </h4>
                             {section.summary ? (
-                              <p className="mt-1 text-sm text-muted-foreground">{section.summary}</p>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {section.summary}
+                              </p>
                             ) : null}
                           </div>
                           <div className="flex items-center gap-2 print:hidden">
@@ -721,9 +721,10 @@ function TrainingPage() {
                 {formatReviewDate()} · application build {TRAINING_APP_BUILD}
               </p>
               <p>
-                This guide only describes features that exist in the console today. Illustrations are
-                drawn diagrams with invented names and numbers, never pictures of real member data.
-                If a screen looks different, tell an administrator so the material can be re-checked.
+                This guide only describes features that exist in the console today. Illustrations
+                are drawn diagrams with invented names and numbers, never pictures of real member
+                data. If a screen looks different, tell an administrator so the material can be
+                re-checked.
               </p>
             </footer>
           </div>

@@ -71,7 +71,6 @@ export const Route = createFileRoute("/api/public/hooks/abandonment-sweep")({
           }
         }
 
-
         const durationMs = Date.now() - startedAt;
         if (durationMs > SLOW_RUN_MS) {
           console.warn(

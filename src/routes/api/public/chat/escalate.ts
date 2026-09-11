@@ -15,8 +15,9 @@ const bodySchema = z.object({
   preferredLanguage: z.string().trim().max(60).optional().nullable(),
   consent: z.literal(true),
   departmentId: z.string().uuid().nullable().optional(),
-  kind: z.enum(["live_agent", "contact", "referral", "enrollment", "message"]).default("live_agent"),
-
+  kind: z
+    .enum(["live_agent", "contact", "referral", "enrollment", "message"])
+    .default("live_agent"),
 });
 
 export const Route = createFileRoute("/api/public/chat/escalate")({
@@ -28,7 +29,10 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
           const parsed = bodySchema.safeParse(await request.json());
           if (!parsed.success) {
             return Response.json(
-              { error: "Please check the form and try again.", issues: parsed.error.issues.map((i) => i.path.join(".")) },
+              {
+                error: "Please check the form and try again.",
+                issues: parsed.error.issues.map((i) => i.path.join(".")),
+              },
               { status: 400 },
             );
           }
@@ -46,9 +50,8 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
           // De-duplicate contacts within the organization using two separate
           // parameterized lookups. Values are never interpolated into a filter
           // string, so a visitor cannot smuggle operators into the query.
-          const { normalizeEmail, normalizePhone, visitorSuppliedDetails, appendNote } = await import(
-            "@/lib/contact-normalize"
-          );
+          const { normalizeEmail, normalizePhone, visitorSuppliedDetails, appendNote } =
+            await import("@/lib/contact-normalize");
           const normalizedEmail = normalizeEmail(input.email);
           const normalizedPhone = normalizePhone(input.phone);
           const now = new Date().toISOString();
@@ -106,7 +109,8 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               })
               .select("id")
               .single();
-            if (error) return Response.json({ error: "Could not save your details." }, { status: 500 });
+            if (error)
+              return Response.json({ error: "Could not save your details." }, { status: 500 });
             contactId = created.id;
           }
 
@@ -143,8 +147,6 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               subject: `${input.kind.replace("_", " ")} — ${input.fullName}`,
             })
             .eq("id", conversation.id);
-
-
 
           await mod.insertMessage(
             conversation,
@@ -220,7 +222,6 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             });
           }
 
-
           const { count } = await db
             .from("profiles")
             .select("id", { count: "exact", head: true })
@@ -233,13 +234,15 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             agentsAvailable: (count ?? 0) > 0,
             assignedAgent: assigned?.fullName ?? null,
           });
-
         } catch (error) {
           if (error instanceof mod.PublicChatError) {
             return Response.json({ error: error.message }, { status: error.status });
           }
           console.error("[chat/escalate]", error);
-          return Response.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+          return Response.json(
+            { error: "Something went wrong. Please try again." },
+            { status: 500 },
+          );
         }
       },
     },

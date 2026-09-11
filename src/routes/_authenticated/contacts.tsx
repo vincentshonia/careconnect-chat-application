@@ -23,7 +23,10 @@ export const Route = createFileRoute("/_authenticated/contacts")({
   head: () => ({
     meta: [
       { title: "Contacts — Pacific Health Group Support Console" },
-      { name: "description", content: "Directory of visitors, leads and referral contacts captured by chat." },
+      {
+        name: "description",
+        content: "Directory of visitors, leads and referral contacts captured by chat.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -36,7 +39,11 @@ const LEAD_STATUSES = ["new", "working", "qualified", "converted", "closed"];
 const PAGE_SIZE = 25;
 
 /** Strip characters that would break a PostgREST `or=` expression. */
-const sanitize = (term: string) => term.trim().replace(/[%,()*]/g, "").slice(0, 80);
+const sanitize = (term: string) =>
+  term
+    .trim()
+    .replace(/[%,()*]/g, "")
+    .slice(0, 80);
 
 function ContactsPage() {
   const queryClient = useQueryClient();
@@ -88,7 +95,11 @@ function ContactsPage() {
     queryKey: ["contact-record", activeId],
     enabled: Boolean(activeId),
     queryFn: async () => {
-      const { data, error } = await supabase.from("contacts").select("*").eq("id", activeId!).maybeSingle();
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("id", activeId!)
+        .maybeSingle();
       if (error) throw error;
       return (data ?? null) as Contact | null;
     },
@@ -104,7 +115,14 @@ function ContactsPage() {
         data: {
           id: active.id,
           ...(patch.lead_status !== undefined
-            ? { leadStatus: patch.lead_status as "new" | "working" | "qualified" | "converted" | "closed" }
+            ? {
+                leadStatus: patch.lead_status as
+                  | "new"
+                  | "working"
+                  | "qualified"
+                  | "converted"
+                  | "closed",
+              }
             : {}),
           ...(patch.notes !== undefined ? { notes: patch.notes ?? null } : {}),
           ...(patch.owner_id !== undefined ? { ownerId: patch.owner_id ?? null } : {}),
@@ -145,7 +163,13 @@ function ContactsPage() {
   const runExport = useServerFn(exportCsvFn);
   const exportCsv = useMutation({
     mutationFn: async () =>
-      runExport({ data: { dataset: "contacts", search: debouncedSearch, status: status === "all" ? null : status } }),
+      runExport({
+        data: {
+          dataset: "contacts",
+          search: debouncedSearch,
+          status: status === "all" ? null : status,
+        },
+      }),
     onSuccess: (result) => {
       if (!result.rows) {
         toast.info("Nothing to export with these filters.");
@@ -156,7 +180,8 @@ function ContactsPage() {
         `Exported ${result.rows.toLocaleString()} contacts${result.truncated ? " (capped — narrow the filters for the rest)" : ""}`,
       );
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not build that export"),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not build that export"),
   });
 
   return (
@@ -184,7 +209,12 @@ function ContactsPage() {
               </option>
             ))}
           </select>
-          <Button variant="outline" size="sm" disabled={exportCsv.isPending} onClick={() => exportCsv.mutate()}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={exportCsv.isPending}
+            onClick={() => exportCsv.mutate()}
+          >
             {exportCsv.isPending ? "Preparing…" : "Export CSV"}
           </Button>
         </>
@@ -221,7 +251,8 @@ function ContactsPage() {
                         <Badge variant="outline">{c.lead_status}</Badge>
                       </div>
                       <p className="mt-1 truncate text-xs text-muted-foreground">
-                        {[c.email, c.phone, c.county].filter(Boolean).join(" · ") || "No contact details"}
+                        {[c.email, c.phone, c.county].filter(Boolean).join(" · ") ||
+                          "No contact details"}
                       </p>
                     </button>
                   </li>
@@ -279,7 +310,9 @@ function ContactsPage() {
               </dl>
 
               <div className="flex flex-wrap items-center gap-2">
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">Lead status</Label>
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Lead status
+                </Label>
                 {LEAD_STATUSES.map((s) => (
                   <Button
                     key={s}

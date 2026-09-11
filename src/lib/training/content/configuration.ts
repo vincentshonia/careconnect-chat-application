@@ -43,7 +43,10 @@ export const websitesChapter: Chapter = {
           rows: [
             ["Basics", "Website name, domain, brand colors, logo and the assistant's display name"],
             ["Home", "The greeting shown when the widget opens, plus quick-start buttons"],
-            ["Chat", "Chat header text, the “Talk to an agent” option, attachments and the satisfaction prompt"],
+            [
+              "Chat",
+              "Chat header text, the “Talk to an agent” option, attachments and the satisfaction prompt",
+            ],
             ["Navigation", "Which tabs the widget shows and what each one contains"],
           ],
         },

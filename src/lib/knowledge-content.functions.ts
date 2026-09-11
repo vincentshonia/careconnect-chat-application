@@ -42,7 +42,10 @@ export const aiReviewQueueFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
     z
-      .object({ page: z.number().int().min(0).default(0), pageSize: z.number().int().min(1).max(50).default(10) })
+      .object({
+        page: z.number().int().min(0).default(0),
+        pageSize: z.number().int().min(1).max(50).default(10),
+      })
       .parse(input ?? {}),
   )
   .handler(async ({ data, context }) => {

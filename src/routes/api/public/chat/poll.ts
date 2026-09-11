@@ -39,7 +39,6 @@ export const Route = createFileRoute("/api/public/chat/poll")({
             agentAvatarUrl = agent?.show_in_widget_team ? (agent?.avatar_url ?? null) : null;
           }
 
-
           return Response.json(
             {
               status: conversation.status,
@@ -50,7 +49,6 @@ export const Route = createFileRoute("/api/public/chat/poll")({
             },
             { headers: { "Cache-Control": "no-store" } },
           );
-
         } catch (error) {
           const status = error instanceof mod.PublicChatError ? error.status : 500;
           return Response.json(

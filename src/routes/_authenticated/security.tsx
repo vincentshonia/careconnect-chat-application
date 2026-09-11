@@ -20,7 +20,6 @@ export const Route = createFileRoute("/_authenticated/security")({
 
 type Factor = { id: string; friendly_name?: string | null; status: string; factor_type: string };
 
-
 export function SecurityPanel() {
   const queryClient = useQueryClient();
   const [enroll, setEnroll] = useState<{ id: string; qr: string; secret: string } | null>(null);
@@ -69,7 +68,11 @@ export function SecurityPanel() {
         code: code.trim(),
       });
       if (error) throw error;
-      await logAudit({ action: "security.mfa_enabled", recordType: "auth_factor", recordId: enroll.id });
+      await logAudit({
+        action: "security.mfa_enabled",
+        recordType: "auth_factor",
+        recordId: enroll.id,
+      });
     },
     onSuccess: () => {
       setEnroll(null);
@@ -84,7 +87,11 @@ export function SecurityPanel() {
     mutationFn: async (factorId: string) => {
       const { error } = await supabase.auth.mfa.unenroll({ factorId });
       if (error) throw error;
-      await logAudit({ action: "security.mfa_disabled", recordType: "auth_factor", recordId: factorId });
+      await logAudit({
+        action: "security.mfa_disabled",
+        recordType: "auth_factor",
+        recordId: factorId,
+      });
     },
     onSuccess: () => {
       setStatus("Authenticator removed.");
@@ -108,7 +115,8 @@ export function SecurityPanel() {
             </Badge>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Add a time-based code from an authenticator app such as Google Authenticator, 1Password or Authy.
+            Add a time-based code from an authenticator app such as Google Authenticator, 1Password
+            or Authy.
           </p>
 
           <ul className="mt-4 space-y-2">
@@ -132,9 +140,14 @@ export function SecurityPanel() {
 
           {enroll ? (
             <div className="mt-4 space-y-3">
-              <img src={enroll.qr} alt="Two-factor QR code" className="h-44 w-44 rounded-lg bg-white p-2" />
+              <img
+                src={enroll.qr}
+                alt="Two-factor QR code"
+                className="h-44 w-44 rounded-lg bg-white p-2"
+              />
               <p className="text-xs text-muted-foreground">
-                Can't scan? Enter this key manually: <code className="font-mono">{enroll.secret}</code>
+                Can't scan? Enter this key manually:{" "}
+                <code className="font-mono">{enroll.secret}</code>
               </p>
               <div className="space-y-2">
                 <Label htmlFor="code">6-digit code</Label>
@@ -149,7 +162,10 @@ export function SecurityPanel() {
                 />
               </div>
               <div className="flex gap-2">
-                <Button onClick={() => verify.mutate()} disabled={code.length !== 6 || verify.isPending}>
+                <Button
+                  onClick={() => verify.mutate()}
+                  disabled={code.length !== 6 || verify.isPending}
+                >
                   {verify.isPending ? "Verifying…" : "Confirm"}
                 </Button>
                 <Button variant="ghost" onClick={() => setEnroll(null)}>
@@ -158,7 +174,11 @@ export function SecurityPanel() {
               </div>
             </div>
           ) : (
-            <Button className="mt-4" onClick={() => startEnroll.mutate()} disabled={startEnroll.isPending}>
+            <Button
+              className="mt-4"
+              onClick={() => startEnroll.mutate()}
+              disabled={startEnroll.isPending}
+            >
               {startEnroll.isPending ? "Preparing…" : "Add authenticator app"}
             </Button>
           )}
@@ -170,8 +190,12 @@ export function SecurityPanel() {
           <h2 className="text-sm font-semibold">Account hygiene</h2>
           <ul className="mt-3 space-y-3 text-sm text-muted-foreground">
             <li>· Every sign-in, role change and record edit is written to the audit log.</li>
-            <li>· Sessions end when you sign out; close shared browsers when you leave a workstation.</li>
-            <li>· Never paste protected health information into external tools or the AI console.</li>
+            <li>
+              · Sessions end when you sign out; close shared browsers when you leave a workstation.
+            </li>
+            <li>
+              · Never paste protected health information into external tools or the AI console.
+            </li>
             <li>· Report suspected account compromise to an administrator immediately.</li>
           </ul>
           <Button

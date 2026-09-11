@@ -63,11 +63,12 @@ export function Stat({
       className="rounded-xl border border-border bg-card p-4 text-left transition hover:border-primary hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {body}
-      <span className="mt-2 block text-[11px] font-medium text-primary">View the {drillLabel ?? "records"} →</span>
+      <span className="mt-2 block text-[11px] font-medium text-primary">
+        View the {drillLabel ?? "records"} →
+      </span>
     </button>
   );
 }
-
 
 export function Panel({
   title,
@@ -104,14 +105,21 @@ export function DataTable({
   sort,
   onSort,
 }: {
-  columns: { key: string; label: string; align?: "right"; sortable?: boolean; render?: (row: Record<string, unknown>) => ReactNode }[];
+  columns: {
+    key: string;
+    label: string;
+    align?: "right";
+    sortable?: boolean;
+    render?: (row: Record<string, unknown>) => ReactNode;
+  }[];
   rows: Record<string, unknown>[];
   empty?: string;
   onRowClick?: (row: Record<string, unknown>) => void;
   sort?: { key: string; dir: "asc" | "desc" };
   onSort?: (key: string) => void;
 }) {
-  if (!rows.length) return <p className="py-6 text-center text-sm text-muted-foreground">{empty}</p>;
+  if (!rows.length)
+    return <p className="py-6 text-center text-sm text-muted-foreground">{empty}</p>;
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[560px] text-sm">
@@ -126,7 +134,9 @@ export function DataTable({
                 onClick={c.sortable && onSort ? () => onSort(c.key) : undefined}
               >
                 {c.label}
-                {sort?.key === c.key ? <span className="ml-1">{sort.dir === "asc" ? "↑" : "↓"}</span> : null}
+                {sort?.key === c.key ? (
+                  <span className="ml-1">{sort.dir === "asc" ? "↑" : "↓"}</span>
+                ) : null}
               </th>
             ))}
           </tr>
@@ -134,14 +144,17 @@ export function DataTable({
         <tbody>
           {rows.map((row, i) => (
             <tr
-              key={String(row['id'] ?? row['user_id'] ?? row['department_id'] ?? i)}
+              key={String(row["id"] ?? row["user_id"] ?? row["department_id"] ?? i)}
               className={`border-b border-border/60 last:border-0 ${
                 onRowClick ? "cursor-pointer hover:bg-muted/60" : ""
               }`}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
             >
               {columns.map((c) => (
-                <td key={c.key} className={`px-2 py-2 ${c.align === "right" ? "text-right tabular-nums" : ""}`}>
+                <td
+                  key={c.key}
+                  className={`px-2 py-2 ${c.align === "right" ? "text-right tabular-nums" : ""}`}
+                >
                   {c.render ? c.render(row) : fmtNum(row[c.key])}
                 </td>
               ))}
@@ -171,9 +184,14 @@ export function BarList({
             {r.label}
           </span>
           <div className="h-2 flex-1 rounded-full bg-muted">
-            <div className="h-2 rounded-full bg-primary" style={{ width: `${(r.value / peak) * 100}%` }} />
+            <div
+              className="h-2 rounded-full bg-primary"
+              style={{ width: `${(r.value / peak) * 100}%` }}
+            />
           </div>
-          <span className="w-16 shrink-0 text-right tabular-nums">{r.hint ?? r.value.toLocaleString()}</span>
+          <span className="w-16 shrink-0 text-right tabular-nums">
+            {r.hint ?? r.value.toLocaleString()}
+          </span>
         </li>
       ))}
     </ul>
@@ -193,7 +211,8 @@ export function ColumnChart({
   height?: number;
 }) {
   const peak = Math.max(1, ...data.map((d) => Number(d[valueKey] ?? 0)));
-  if (!data.length) return <p className="py-6 text-sm text-muted-foreground">No activity in this period.</p>;
+  if (!data.length)
+    return <p className="py-6 text-sm text-muted-foreground">No activity in this period.</p>;
   return (
     <div>
       <div className="flex items-end gap-1" style={{ height }}>

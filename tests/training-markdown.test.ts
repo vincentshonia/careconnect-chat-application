@@ -34,7 +34,6 @@ describe("staff manual markdown", () => {
     expect(md).not.toMatch(/Interface illustration[^\n]*screenshot/i);
   });
 
-
   it.each(GUIDE_ORDER)("%s manual on disk matches the current guide content", (role) => {
     const file = `docs/staff-manuals/${role.replace(/_/g, "-")}.md`;
     expect(readFileSync(file, "utf8")).toBe(guideToMarkdown(GUIDES[role]));

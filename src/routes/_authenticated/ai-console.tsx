@@ -15,7 +15,10 @@ export const Route = createFileRoute("/_authenticated/ai-console")({
   head: () => ({
     meta: [
       { title: "AI Console — Pacific Health Group Support Console" },
-      { name: "description", content: "Test chatbot answers against the live knowledge base before visitors see them." },
+      {
+        name: "description",
+        content: "Test chatbot answers against the live knowledge base before visitors see them.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -108,13 +111,15 @@ function AiConsolePage() {
         <div className="rounded-xl border border-border p-4">
           {!result ? (
             <p className="text-sm text-muted-foreground">
-              Run a test to see the answer, confidence score, escalation decision, and which knowledge articles were
-              used.
+              Run a test to see the answer, confidence score, escalation decision, and which
+              knowledge articles were used.
             </p>
           ) : (
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">Confidence {Math.round((result.confidence ?? 0) * 100)}%</Badge>
+                <Badge variant="outline">
+                  Confidence {Math.round((result.confidence ?? 0) * 100)}%
+                </Badge>
                 <Badge variant={result.escalate ? "default" : "secondary"}>
                   {result.escalate ? "Would offer a live agent" : "Answered by AI"}
                 </Badge>
@@ -122,17 +127,23 @@ function AiConsolePage() {
               </div>
               <p className="whitespace-pre-wrap text-sm leading-relaxed">{result.answer}</p>
               <div>
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sources</h2>
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Sources
+                </h2>
                 <ul className="mt-2 space-y-1 text-sm">
                   {(result.sources ?? []).length === 0 ? (
-                    <li className="text-muted-foreground">No knowledge articles matched this question.</li>
+                    <li className="text-muted-foreground">
+                      No knowledge articles matched this question.
+                    </li>
                   ) : (
-                    (result.sources ?? []).map((s: { title?: string; url?: string | null }, i: number) => (
-                      <li key={i} className="text-muted-foreground">
-                        {s.title ?? "Untitled article"}
-                        {s.url ? ` — ${s.url}` : ""}
-                      </li>
-                    ))
+                    (result.sources ?? []).map(
+                      (s: { title?: string; url?: string | null }, i: number) => (
+                        <li key={i} className="text-muted-foreground">
+                          {s.title ?? "Untitled article"}
+                          {s.url ? ` — ${s.url}` : ""}
+                        </li>
+                      ),
+                    )
                   )}
                 </ul>
               </div>

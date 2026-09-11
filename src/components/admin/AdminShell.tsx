@@ -47,7 +47,6 @@ const navGroups = [
       { to: "/notifications", label: "Notifications", icon: Bell, perms: undefined },
       { to: "/training", label: "Help & Training", icon: GraduationCap, perms: undefined },
       { to: "/profile", label: "My settings", icon: UserCog, perms: undefined },
-
     ],
   },
   {

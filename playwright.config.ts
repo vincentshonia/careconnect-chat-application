@@ -8,7 +8,6 @@ import { ensureBrowserLibraryPath } from "./tests/e2e/helpers/browser-libs";
 // Make the downloaded Chromium loadable on Nix-based sandboxes; no-op elsewhere.
 ensureBrowserLibraryPath();
 
-
 /**
  * CareConnect browser E2E harness.
  *

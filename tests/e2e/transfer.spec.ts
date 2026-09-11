@@ -9,7 +9,13 @@ import {
   type E2EStaff,
   type E2ETenant,
 } from "./fixtures/e2e-fixtures";
-import { escalateToHuman, openConversation, openWidget, signIn, waitForConversation } from "./helpers/flows";
+import {
+  escalateToHuman,
+  openConversation,
+  openWidget,
+  signIn,
+  waitForConversation,
+} from "./helpers/flows";
 
 /**
  * Transfer / reassignment, proven in a real browser against the real backend.
@@ -55,7 +61,9 @@ test.afterAll(async () => {
   await destroyE2ETenant(tenant);
 });
 
-test("a claimed conversation transfers to another department and changes hands", async ({ browser }) => {
+test("a claimed conversation transfers to another department and changes hands", async ({
+  browser,
+}) => {
   const visitorContext = await browser.newContext();
   const visitor = await visitorContext.newPage();
   await openWidget(visitor, tenant);
@@ -78,7 +86,7 @@ test("a claimed conversation transfers to another department and changes hands",
 
   /* A Standard User is never offered transfer or reassignment. */
   await expect(
-    owner.getByLabel("Transfer to department"),
+    owner.getByRole("button", { name: "Transfer…" }),
     "a Standard User must not be offered the transfer control",
   ).toHaveCount(0);
   await expect(
@@ -91,9 +99,14 @@ test("a claimed conversation transfers to another department and changes hands",
   const supervisorPage = await supervisorContext.newPage();
   await signIn(supervisorPage, supervisor);
   await openConversation(supervisorPage, conversation.reference, "All conversations");
-  await supervisorPage
-    .getByLabel("Transfer to department")
-    .selectOption({ label: secondDepartment.name });
+  await supervisorPage.getByRole("button", { name: "Transfer…" }).click();
+  const transferDialog = supervisorPage.getByRole("dialog");
+  await expect(transferDialog).toBeVisible({ timeout: 15_000 });
+  await transferDialog.locator("#transfer-dept").selectOption({ label: secondDepartment.name });
+  await transferDialog
+    .locator("#transfer-note")
+    .fill("Handing over for department-specific follow-up.");
+  await transferDialog.getByRole("button", { name: "Transfer", exact: true }).click();
 
   const transferred = await waitForConversation(
     tenant.websiteId,
@@ -162,13 +175,18 @@ test("an availability override requires an administrator and is audited", async 
   const dialog = supervisorPage.getByRole("dialog");
   await expect(dialog.getByText(busyAgent.fullName)).toBeVisible({ timeout: 30_000 });
 
-  const offlineCard = dialog.locator("div.rounded-lg").filter({ hasText: busyAgent.fullName }).first();
+  const offlineCard = dialog
+    .locator("div.rounded-lg")
+    .filter({ hasText: busyAgent.fullName })
+    .first();
   // An unavailable teammate is never directly assignable — only overridable.
   await expect(offlineCard.getByText("Current owner")).toHaveCount(0);
   await expect(offlineCard.getByRole("button", { name: "Assign" })).toHaveCount(0);
 
   await offlineCard.getByRole("button", { name: "Override…" }).click();
-  await dialog.getByPlaceholder("Reason for overriding availability").fill("E2E escalation coverage");
+  await dialog
+    .getByPlaceholder("Reason for overriding availability")
+    .fill("E2E escalation coverage");
   await dialog.getByRole("button", { name: "Confirm override" }).click();
 
   const overridden = await waitForConversation(

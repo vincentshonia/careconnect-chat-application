@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  ROLE_PERMISSIONS,
-  permissionsFor,
-  roleTransitionError,
-} from "../src/lib/permissions";
+import { ROLE_PERMISSIONS, permissionsFor, roleTransitionError } from "../src/lib/permissions";
 
 describe("role permission bundles", () => {
   it("standard users only reach their own conversations", () => {

@@ -99,7 +99,11 @@ export async function handoffToHumans(input: {
     !["resolved", "closed", "abandoned"].includes(String(existing.status))
   ) {
     const { data: currentDept } = existing.department_id
-      ? await db.from("departments").select("id, name").eq("id", existing.department_id).maybeSingle()
+      ? await db
+          .from("departments")
+          .select("id, name")
+          .eq("id", existing.department_id)
+          .maybeSingle()
       : { data: null as { id: string; name: string } | null };
     let assigned: AssignedAgent | null = null;
     if (existing.assigned_to) {
@@ -169,7 +173,6 @@ export async function handoffToHumans(input: {
       new_value: assigned.userId,
     });
   }
-
 
   const who = input.visitorLabel?.trim() || "A visitor";
   const where = department?.name ? ` — ${department.name}` : "";

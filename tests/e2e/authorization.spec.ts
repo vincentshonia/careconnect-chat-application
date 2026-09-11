@@ -71,7 +71,9 @@ test("a Standard User in another department cannot open the conversation", async
   for (const tab of ["Waiting", "Department", "Active", "Closed"] as const) {
     await page.getByRole("button", { name: tab, exact: true }).click();
     await page.getByPlaceholder("Search reference or subject").fill(conversationReference);
-    await expect(page.getByRole("button", { name: new RegExp(conversationReference) })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: new RegExp(conversationReference) })).toHaveCount(
+      0,
+    );
   }
 
   await context.close();
@@ -89,7 +91,9 @@ test("a member of a different tenant cannot open the conversation", async ({ bro
   await context.close();
 });
 
-test("calling the data API from the browser does not bypass backend authorization", async ({ browser }) => {
+test("calling the data API from the browser does not bypass backend authorization", async ({
+  browser,
+}) => {
   const supabaseUrl = process.env["SUPABASE_URL"];
   const publishableKey = process.env["SUPABASE_PUBLISHABLE_KEY"];
   expect(supabaseUrl, "SUPABASE_URL must be configured for this suite").toBeTruthy();
@@ -118,7 +122,9 @@ test("calling the data API from the browser does not bypass backend authorizatio
       };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const read = await fetch(`${url}/rest/v1/conversations?id=eq.${id}&select=id,status`, { headers });
+      const read = await fetch(`${url}/rest/v1/conversations?id=eq.${id}&select=id,status`, {
+        headers,
+      });
       const readBody = await read.text();
 
       const write = await fetch(`${url}/rest/v1/conversations?id=eq.${id}`, {
@@ -139,7 +145,10 @@ test("calling the data API from the browser does not bypass backend authorizatio
     { url: supabaseUrl as string, key: publishableKey as string, id: conversationId },
   );
 
-  expect(result.hadToken, "the page must be authenticated for this to be a real bypass attempt").toBe(true);
+  expect(
+    result.hadToken,
+    "the page must be authenticated for this to be a real bypass attempt",
+  ).toBe(true);
   // A read either errors or returns nothing — never the other department's chat.
   if (result.readStatus < 400) expect(JSON.parse(result.readBody)).toHaveLength(0);
   // A write must never take effect.

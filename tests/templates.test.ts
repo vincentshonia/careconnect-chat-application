@@ -21,12 +21,12 @@ const templates: ResponseTemplate[] = [
 
 describe("response templates", () => {
   it("substitutes visitor and agent names with sensible fallbacks", () => {
-    expect(
-      applyTemplateVars(templates[1]!.body, { visitorName: "Ana", agentName: "Sam" }),
-    ).toBe("Hi Ana, this is Sam.");
-    expect(applyTemplateVars(templates[1]!.body, { visitorName: null, agentName: null })).not.toContain(
-      "{visitor_name}",
+    expect(applyTemplateVars(templates[1]!.body, { visitorName: "Ana", agentName: "Sam" })).toBe(
+      "Hi Ana, this is Sam.",
     );
+    expect(
+      applyTemplateVars(templates[1]!.body, { visitorName: null, agentName: null }),
+    ).not.toContain("{visitor_name}");
   });
 
   it("detects a slash query only at the start of a word", () => {

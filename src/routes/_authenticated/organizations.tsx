@@ -22,7 +22,6 @@ export const Route = createFileRoute("/_authenticated/organizations")({
 
 type Organization = Database["public"]["Tables"]["organizations"]["Row"];
 
-
 export function OrganizationsPanel() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
@@ -84,7 +83,12 @@ export function OrganizationsPanel() {
         })
         .eq("id", active.id);
       if (error) throw error;
-      await logAudit({ action: "organization.updated", recordType: "organizations", recordId: active.id, newValue: { name: form.name, timezone: form.timezone } });
+      await logAudit({
+        action: "organization.updated",
+        recordType: "organizations",
+        recordId: active.id,
+        newValue: { name: form.name, timezone: form.timezone },
+      });
     },
     onSuccess: () => {
       setNotice("Organization saved.");
@@ -102,7 +106,11 @@ export function OrganizationsPanel() {
         slug: brand.slug || brand.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
       });
       if (error) throw error;
-      await logAudit({ action: "brand.created", recordType: "workspaces", newValue: { name: brand.name } });
+      await logAudit({
+        action: "brand.created",
+        recordType: "workspaces",
+        newValue: { name: brand.name },
+      });
     },
     onSuccess: () => {
       setBrand({ name: "", slug: "" });
@@ -121,7 +129,11 @@ export function OrganizationsPanel() {
         public_key: `cc_pk_${crypto.randomUUID().replace(/-/g, "")}`,
       });
       if (error) throw error;
-      await logAudit({ action: "website.created", recordType: "websites", newValue: { name: site.name, domain: site.domain } });
+      await logAudit({
+        action: "website.created",
+        recordType: "websites",
+        newValue: { name: site.name, domain: site.domain },
+      });
     },
     onSuccess: () => {
       setSite({ name: "", domain: "" });

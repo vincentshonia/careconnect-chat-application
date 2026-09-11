@@ -3,9 +3,9 @@
 > Generated automatically by `bun run release:gate`. PASS/FAIL is derived
 > from process exit codes only. No credentials or secrets are recorded.
 
-**Executed (UTC):** 2026-09-02T04:04:50.255Z
-**Completed (UTC):** 2026-09-02T04:21:12.539Z
-**Build identification:** unavailable (no VCS metadata in this environment)
+**Executed (UTC):** 2026-09-11T06:25:08.587Z
+**Completed (UTC):** 2026-09-11T06:40:38.690Z
+**Build identification:** 5f50356a4f2163881012ca431bf4b95ce96a9c2f
 **Node:** v22.22.0
 
 ## Overall: PASS
@@ -15,6 +15,7 @@
 | Stage | Command | Exit code | Result |
 | --- | --- | --- | --- |
 | Preflight | `node scripts/release-preflight.mjs` | 0 | PASS |
+| Lint | `bunx eslint .` | 0 | PASS |
 | Typecheck | `bunx tsgo --noEmit` | 0 | PASS |
 | Production build | `bun run build` | 0 | PASS |
 | Vitest | `bunx vitest run --reporter=json --reporter=default --outputFile.json=/dev-server/.release/vitest.json` | 0 | PASS |
@@ -23,16 +24,16 @@
 
 ## Vitest
 
-- Test files: 9
-- Passed: 171
+- Test files: 22
+- Passed: 386
 - Failed: 0
 - Skipped: 0
-- Total: 171
+- Total: 386
 
 ## Playwright (browser E2E)
 
-- Tests: 14
-- Passed: 14
+- Tests: 17
+- Passed: 17
 - Failed: 0
 - Skipped: 0
 
