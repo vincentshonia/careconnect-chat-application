@@ -50,8 +50,20 @@ export const Route = createFileRoute("/api/public/widget.js")({
     if (d.type === 'hide') { frame.style.display = 'none'; }
   });
   }
-  if (document.body) { mount(); }
-  else { document.addEventListener('DOMContentLoaded', mount); }
+  // This request is cross-origin, so the browser attaches a trustworthy Origin
+  // header. The signed proof it returns is what authorizes the chat session.
+  function start() {
+    fetch(widgetOrigin + '/api/public/chat/origin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ websiteId: id })
+    }).then(function (r) { return r.json(); })
+      .then(function (j) { if (j && j.proof) originProof = j.proof; })
+      .catch(function () {})
+      .then(function () { mount(); });
+  }
+  if (document.body) { start(); }
+  else { document.addEventListener('DOMContentLoaded', start); }
 })();`;
         return new Response(js, {
           headers: {
