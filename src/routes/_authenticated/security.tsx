@@ -1,10 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { RequirePermission } from "@/components/admin/RequirePermission";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
-import { AdminShell } from "@/components/admin/AdminShell";
+import { PanelShell } from "@/components/admin/PanelShell";
 import { MfaPolicyCard } from "@/components/admin/MfaPolicyCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,30 +11,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_authenticated/security")({
-  head: () => ({
-    meta: [
-      { title: "Security — Pacific Health Group Support Console" },
-      {
-        name: "description",
-        content: "Two-factor authentication, active sessions, and account security for staff accounts.",
-      },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
-  component: SecurityPageRoute,
+  // Moved into the Admin hub. The old address still works so existing links,
+  // notifications and the staff manuals keep resolving.
+  beforeLoad: () => {
+    throw redirect({ to: "/admin", search: { tab: "security" } });
+  },
 });
 
 type Factor = { id: string; friendly_name?: string | null; status: string; factor_type: string };
 
-function SecurityPageRoute() {
-  return (
-    <RequirePermission permission="security.manage" title="Security">
-      <SecurityPage />
-    </RequirePermission>
-  );
-}
 
-function SecurityPage() {
+export function SecurityPanel() {
   const queryClient = useQueryClient();
   const [enroll, setEnroll] = useState<{ id: string; qr: string; secret: string } | null>(null);
   const [code, setCode] = useState("");
@@ -108,7 +94,7 @@ function SecurityPage() {
   });
 
   return (
-    <AdminShell
+    <PanelShell
       title="Security"
       description="Protect your staff account with an authenticator app. Required for anyone handling protected health information."
     >
@@ -200,6 +186,6 @@ function SecurityPage() {
           </Button>
         </section>
       </div>
-    </AdminShell>
+    </PanelShell>
   );
 }

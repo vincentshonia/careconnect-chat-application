@@ -1,5 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { RequirePermission } from "@/components/admin/RequirePermission";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { useSessionContext } from "@/hooks/use-session-context";
-import { AdminShell } from "@/components/admin/AdminShell";
+import { PanelShell } from "@/components/admin/PanelShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +14,11 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_authenticated/departments")({
-  head: () => ({
-    meta: [
-      { title: "Departments & Hours — Pacific Health Group Support Console" },
-      { name: "description", content: "Manage support departments, coverage hours and holidays." },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
-  component: DepartmentsPageRoute,
+  // Moved into the Admin hub. The old address still works so existing links,
+  // notifications and the staff manuals keep resolving.
+  beforeLoad: () => {
+    throw redirect({ to: "/admin", search: { tab: "departments" } });
+  },
 });
 
 type Department = Database["public"]["Tables"]["departments"]["Row"];
@@ -31,17 +27,10 @@ type Holiday = Database["public"]["Tables"]["holidays"]["Row"];
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-function DepartmentsPageRoute() {
-  return (
-    <RequirePermission permission="department.manage" title="Departments">
-      <DepartmentsPage />
-    </RequirePermission>
-  );
-}
 
-function DepartmentsPage() {
+export function DepartmentsPanel() {
   return (
-    <AdminShell
+    <PanelShell
       title="Departments & hours"
       description="Routing targets, coverage windows and closures used by the widget and escalation flow."
     >
@@ -61,7 +50,7 @@ function DepartmentsPage() {
           <HolidaysTab />
         </TabsContent>
       </Tabs>
-    </AdminShell>
+    </PanelShell>
   );
 }
 

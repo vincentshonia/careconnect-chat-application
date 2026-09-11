@@ -1,5 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { RequirePermission } from "@/components/admin/RequirePermission";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -11,7 +10,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
-import { AdminShell } from "@/components/admin/AdminShell";
+import { PanelShell } from "@/components/admin/PanelShell";
 import { WidgetPreview } from "@/components/admin/WidgetPreview";
 import {
   DEFAULT_WIDGET_TABS,
@@ -28,30 +27,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/websites")({
-  head: () => ({
-    meta: [
-      { title: "Websites & Widget Settings — Pacific Health Group" },
-      {
-        name: "description",
-        content: "Configure widget branding, greetings, proactive triggers, and the embed snippet.",
-      },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
-  component: WebsitesPageRoute,
+  // Moved into the Admin hub. The old address still works so existing links,
+  // notifications and the staff manuals keep resolving.
+  beforeLoad: () => {
+    throw redirect({ to: "/admin", search: { tab: "websites" } });
+  },
 });
 
 type Website = Database["public"]["Tables"]["websites"]["Row"];
 
-function WebsitesPageRoute() {
-  return (
-    <RequirePermission permission="website.manage" title="Websites">
-      <WebsitesPage />
-    </RequirePermission>
-  );
-}
 
-function WebsitesPage() {
+export function WebsitesPanel() {
   const queryClient = useQueryClient();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Website>>({});
@@ -250,7 +236,7 @@ function WebsitesPage() {
 
 
   return (
-    <AdminShell
+    <PanelShell
       title="Websites & widget"
       description="Branding, greetings, proactive triggers, and the embed snippet for each site."
     >
@@ -699,7 +685,7 @@ function WebsitesPage() {
           }}
         />
       ) : null}
-    </AdminShell>
+    </PanelShell>
   );
 }
 

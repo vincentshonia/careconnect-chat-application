@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useDebounced } from "@/hooks/use-debounced";
 import { Pager } from "@/components/admin/Pager";
@@ -10,10 +10,9 @@ import { logAudit } from "@/lib/audit";
 import { createStaffFn, setStaffAccessFn } from "@/lib/staff.functions";
 import { setUserRoleFn } from "@/lib/rbac.functions";
 import { ROLE_LABEL, roleTransitionError, type OrgRole } from "@/lib/permissions";
-import { RequirePermission } from "@/components/admin/RequirePermission";
 import { InvitationsCard } from "@/components/admin/InvitationsCard";
 import type { Database } from "@/integrations/supabase/types";
-import { AdminShell } from "@/components/admin/AdminShell";
+import { PanelShell } from "@/components/admin/PanelShell";
 import { useSessionContext, ROLE_RANK, type AppRole } from "@/hooks/use-session-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,31 +22,18 @@ import { formatDateInZone } from "@/lib/org-time";
 
 
 export const Route = createFileRoute("/_authenticated/staff")({
-  head: () => ({
-    meta: [
-      { title: "Staff & Roles — Pacific Health Group Support Console" },
-      {
-        name: "description",
-        content: "Manage staff members, assign roles and departments, and set chat availability.",
-      },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
-  component: StaffRoute,
+  // Moved into the Admin hub. The old address still works so existing links,
+  // notifications and the staff manuals keep resolving.
+  beforeLoad: () => {
+    throw redirect({ to: "/admin", search: { tab: "staff" } });
+  },
 });
 
-function StaffRoute() {
-  return (
-    <RequirePermission permission="staff.view" title="Staff & roles">
-      <StaffPage />
-    </RequirePermission>
-  );
-}
 
 const ROLES: AppRole[] = ["agent", "team_lead", "manager", "administrator", "super_admin"];
 const PRESENCE = ["available", "busy", "away", "offline"];
 
-function StaffPage() {
+export function StaffPanel() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
   const can = (p: string) => session.data?.permissions.has(p) ?? false;
@@ -205,7 +191,7 @@ function StaffPage() {
 
 
   return (
-    <AdminShell
+    <PanelShell
       title="Staff & roles"
       description="Roles control what each teammate can change. Departments drive conversation routing."
       actions={
@@ -596,6 +582,6 @@ function StaffPage() {
       {setRole.error ? (
         <p className="mt-4 text-sm text-destructive">{(setRole.error as Error).message}</p>
       ) : null}
-    </AdminShell>
+    </PanelShell>
   );
 }

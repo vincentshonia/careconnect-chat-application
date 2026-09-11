@@ -1,11 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { RequirePermission } from "@/components/admin/RequirePermission";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
 import type { Database } from "@/integrations/supabase/types";
-import { AdminShell } from "@/components/admin/AdminShell";
+import { PanelShell } from "@/components/admin/PanelShell";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,30 +13,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/organizations")({
-  head: () => ({
-    meta: [
-      { title: "Organizations & Brands — Pacific Health Group Support Console" },
-      {
-        name: "description",
-        content: "Manage tenant organizations, their brands, and the websites each brand serves.",
-      },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
-  component: OrganizationsPageRoute,
+  // Moved into the Admin hub. The old address still works so existing links,
+  // notifications and the staff manuals keep resolving.
+  beforeLoad: () => {
+    throw redirect({ to: "/admin", search: { tab: "organizations" } });
+  },
 });
 
 type Organization = Database["public"]["Tables"]["organizations"]["Row"];
 
-function OrganizationsPageRoute() {
-  return (
-    <RequirePermission permission="organization.manage" title="Organizations">
-      <OrganizationsPage />
-    </RequirePermission>
-  );
-}
 
-function OrganizationsPage() {
+export function OrganizationsPanel() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
   const isAdmin = session.data?.isAdmin ?? false;
@@ -144,7 +130,7 @@ function OrganizationsPage() {
   });
 
   return (
-    <AdminShell
+    <PanelShell
       title="Organizations & brands"
       description="Each organization is an isolated tenant with its own brands, websites, knowledge, and conversations."
     >
@@ -348,7 +334,7 @@ function OrganizationsPage() {
           <p className="text-sm text-muted-foreground">No organization selected.</p>
         )}
       </div>
-    </AdminShell>
+    </PanelShell>
   );
 }
 
