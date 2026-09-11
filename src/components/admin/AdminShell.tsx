@@ -24,6 +24,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/use-notifications";
+import { DesktopAlertBar } from "@/components/admin/DesktopAlertBar";
 import { useWaitingCount } from "@/hooks/use-waiting-count";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { useTheme } from "@/hooks/use-theme";
@@ -357,6 +358,8 @@ export function AdminShell({
             </div>
           </div>
         </header>
+
+        <DesktopAlertBar />
 
         <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 print:px-0 print:py-0">{children}</main>
       </div>
