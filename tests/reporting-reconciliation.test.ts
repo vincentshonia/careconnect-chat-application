@@ -220,6 +220,7 @@ describe("reporting at volume", () => {
       siteB = await makeWebsite(orgB, "scaleb");
       deptOne = await makeDepartment(orgA, "Enrollment");
       deptTwo = await makeDepartment(orgA, "Referrals");
+      const owner = await makeOwner(orgA, "bulk");
 
       // Everything is seeded inside a fixed, closed window so the reporting
       // range can never drift while the suite runs.
@@ -240,6 +241,10 @@ describe("reporting at volume", () => {
           department_id: i % 2 === 0 ? deptOne : deptTwo,
           reference: `SC-${suffix}-${String(i).padStart(5, "0")}`,
           status,
+          // A conversation being worked on must name its owner.
+          assigned_to: status === "active" ? owner : null,
+          claimed_at: status === "active" ? created : null,
+
           // Every bulk row shares one timestamp per minute; ties are what expose
           // an unstable sort, so they are deliberately present.
           created_at: created,
