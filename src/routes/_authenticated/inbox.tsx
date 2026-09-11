@@ -1068,7 +1068,60 @@ function InboxPage() {
               No contact record captured for this conversation yet.
             </p>
           )}
+
+          {active ? (
+            <div className="mt-6 border-t border-border pt-4">
+              <h2 className="text-sm font-semibold">Internal notes</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Only your team can see these — the visitor never does.
+              </p>
+              <form
+                className="mt-3 space-y-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (noteDraft.trim() && userId) addNote.mutate(noteDraft.trim());
+                }}
+              >
+                <Textarea
+                  value={noteDraft}
+                  onChange={(e) => setNoteDraft(e.target.value)}
+                  placeholder="Add a note for the team…"
+                  rows={2}
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="outline"
+                  disabled={addNote.isPending || !noteDraft.trim()}
+                >
+                  {addNote.isPending ? "Saving…" : "Add note"}
+                </Button>
+              </form>
+              {notesQuery.error ? (
+                <QueryError
+                  className="mt-3"
+                  error={notesQuery.error}
+                  onRetry={() => notesQuery.refetch()}
+                  busy={notesQuery.isFetching}
+                />
+              ) : (notesQuery.data ?? []).length === 0 ? (
+                <p className="mt-3 text-sm text-muted-foreground">No notes yet.</p>
+              ) : (
+                <ul className="mt-3 space-y-3">
+                  {(notesQuery.data ?? []).map((n) => (
+                    <li key={n.id} className="rounded-md border border-border p-2 text-sm">
+                      <p className="text-xs text-muted-foreground">
+                        {noteAuthorName(n.author_id)} · {formatInZone(n.created_at)}
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap">{n.body}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
         </aside>
+
       </div>
     </AdminShell>
   );
