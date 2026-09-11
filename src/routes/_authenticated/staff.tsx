@@ -11,6 +11,7 @@ import { createStaffFn, setStaffAccessFn } from "@/lib/staff.functions";
 import { setUserRoleFn } from "@/lib/rbac.functions";
 import { ROLE_LABEL, roleTransitionError, type OrgRole } from "@/lib/permissions";
 import { QueryError } from "@/components/admin/QueryError";
+import { toast } from "sonner";
 import { InvitationsCard } from "@/components/admin/InvitationsCard";
 import type { Database } from "@/integrations/supabase/types";
 import { PanelShell } from "@/components/admin/PanelShell";
