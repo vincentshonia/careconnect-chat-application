@@ -183,25 +183,18 @@ function QualityPage() {
       if (CRITERIA.some((c) => scores[c.key] == null)) {
         throw new Error("Score all four criteria before saving.");
       }
-      const { error } = await supabase.from("qa_reviews").insert({
-        organization_id: conversation.organization_id ?? orgId,
-        conversation_id: selected,
-        reviewer_id: session.data?.userId ?? null,
-        reviewer_name: session.data?.profile?.full_name ?? session.data?.email ?? null,
-        agent_id: conversation.assigned_to ?? null,
-        accuracy_score: scores.accuracy_score!,
-        tone_score: scores.tone_score!,
-        compliance_score: scores.compliance_score!,
-        resolution_score: scores.resolution_score!,
-        coaching_notes: notes || null,
-        flagged,
-      });
-      if (error) throw error;
-      await logAudit({
-        action: "qa_review.created",
-        recordType: "conversations",
-        recordId: selected,
-        newValue: { ...scores, flagged },
+      // The reviewer and the agent are stamped server-side from the session
+      // and the conversation record.
+      await saveQaReview({
+        data: {
+          conversationId: selected,
+          accuracy: scores.accuracy_score!,
+          tone: scores.tone_score!,
+          compliance: scores.compliance_score!,
+          resolution: scores.resolution_score!,
+          notes: notes || null,
+          flagged,
+        },
       });
     },
     onSuccess: () => {

@@ -95,17 +95,20 @@ function ContactsPage() {
   });
   const active = activeQuery.data ?? null;
 
+  // Contact edits run server-side behind a permission check with an audit row.
+  const saveContact = useServerFn(updateContactFn);
   const update = useMutation({
     mutationFn: async (patch: Database["public"]["Tables"]["contacts"]["Update"]) => {
       if (!active) return;
-      const { error } = await supabase.from("contacts").update(patch).eq("id", active.id);
-      if (error) throw error;
-      await logAudit({
-        action: "contact.updated",
-        recordType: "contacts",
-        recordId: active.id,
-        previousValue: { lead_status: active.lead_status, owner_id: active.owner_id },
-        newValue: patch as Record<string, unknown>,
+      await saveContact({
+        data: {
+          id: active.id,
+          ...(patch.lead_status !== undefined
+            ? { leadStatus: patch.lead_status as "new" | "working" | "qualified" | "converted" | "closed" }
+            : {}),
+          ...(patch.notes !== undefined ? { notes: patch.notes ?? null } : {}),
+          ...(patch.owner_id !== undefined ? { ownerId: patch.owner_id ?? null } : {}),
+        },
       });
     },
     onSuccess: () => {
