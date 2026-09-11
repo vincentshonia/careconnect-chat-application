@@ -118,7 +118,7 @@ export const Route = createFileRoute("/api/public/chat/upload")({
           const db = mod.admin();
           const { error: uploadError } = await db.storage
             .from("chat-attachments")
-            .upload(path, await file.arrayBuffer(), { contentType: type, upsert: false });
+            .upload(path, bytes, { contentType: type, upsert: false });
           if (uploadError) {
             console.error("[chat/upload]", uploadError);
             return Response.json({ error: "Could not upload that file" }, { status: 500 });
