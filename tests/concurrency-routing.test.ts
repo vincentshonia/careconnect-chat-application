@@ -873,4 +873,83 @@ describe("claim & routing concurrency", () => {
       expect(Date.now() - started).toBeLessThan(5_000);
     }, 60_000);
   });
+
+  describe("20. illegal lifecycle transitions are refused by the database", () => {
+    /** Calls the lifecycle routine and returns the error message, if any. */
+    async function transition(
+      conversationId: string,
+      event: string,
+      actor: string | null = null,
+      payload: Record<string, unknown> = {},
+    ) {
+      const { error } = await db.rpc("transition_conversation", {
+        _id: conversationId,
+        _event: event,
+        _actor: actor,
+        _payload: payload,
+      } as never);
+      return error?.message ?? null;
+    }
+
+    it("a resolved conversation cannot be claimed", async () => {
+      const department = await makeDepartment("Lifecycle-Resolved");
+      const agent = await makeStaff("lc-resolved", { departments: [department] });
+      const conversation = await makeConversation(department, "resolved");
+
+      const message = await transition(conversation, "claim", agent, { user_id: agent });
+      expect(message).toMatch(/cannot claim/i);
+
+      // The public claim path refuses it too, with a readable reason.
+      const outcome = await claim(conversation, agent);
+      expect(outcome.ok).toBeFalsy();
+      expect(outcome.code).toBe("not_claimable");
+
+      const after = await readConversation(conversation);
+      expect(after.status).toBe("resolved");
+      expect(after.assigned_to).toBeNull();
+    }, 60_000);
+
+    it("a conversation nobody owns cannot be replied to", async () => {
+      const department = await makeDepartment("Lifecycle-Reply");
+      const conversation = await makeConversation(department, "waiting");
+
+      const message = await transition(conversation, "reply", null, { detail: "hello" });
+      expect(message).toMatch(/nobody is handling|cannot reply/i);
+
+      const after = await readConversation(conversation);
+      expect(after.status).toBe("waiting");
+      expect(after.assigned_to).toBeNull();
+    }, 60_000);
+
+    it("a conversation nobody owns cannot be released", async () => {
+      const department = await makeDepartment("Lifecycle-Release");
+      const conversation = await makeConversation(department, "waiting");
+
+      const message = await transition(conversation, "release");
+      expect(message).toMatch(/nobody is handling|cannot release/i);
+
+      const after = await readConversation(conversation);
+      expect(after.status).toBe("waiting");
+      expect(after.assigned_to).toBeNull();
+    }, 60_000);
+
+    it("a legal claim still succeeds and is recorded once", async () => {
+      const department = await makeDepartment("Lifecycle-Legal");
+      const agent = await makeStaff("lc-legal", { departments: [department] });
+      const conversation = await makeConversation(department);
+
+      expect((await claim(conversation, agent)).ok).toBe(true);
+      const after = await readConversation(conversation);
+      expect(after.status).toBe("assigned");
+      expect(after.assigned_to).toBe(agent);
+
+      const { data: events } = await db
+        .from("conversation_events")
+        .select("event_type")
+        .eq("conversation_id", conversation)
+        .eq("event_type", "claimed");
+      expect((events ?? []).length).toBe(1);
+    }, 60_000);
+  });
 });
+
