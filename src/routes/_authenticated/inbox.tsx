@@ -513,15 +513,66 @@ function InboxPage() {
     onError: (e) => fail(e, "Could not close this conversation"),
   });
 
+  /** The outcomes an agent may record when resolving, configured per tenant. */
+  const dispositionsQuery = useQuery({
+    queryKey: ["conversation-dispositions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("conversation_dispositions")
+        .select("id, label")
+        .eq("is_active", true)
+        .order("sort_order")
+        .order("label");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   // Resolving credits the outcome to this agent for reporting; closing does not.
   const resolveConversation = useMutation({
-    mutationFn: async () => resolveFn({ data: { conversationId: active!.id } }),
+    mutationFn: async (dispositionId: string) =>
+      resolveFn({ data: { conversationId: active!.id, dispositionId } }),
     onSuccess: () => {
       toast.success("Conversation resolved");
+      setResolveOpen(false);
       invalidate();
     },
     onError: (e) => fail(e, "Could not resolve this conversation"),
   });
+
+  /** Staff-only notes about the visitor; never shown in the widget. */
+  const notesQuery = useQuery({
+    queryKey: ["internal-notes", activeId],
+    enabled: Boolean(activeId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("internal_notes")
+        .select("id, body, created_at, author_id")
+        .eq("conversation_id", activeId!)
+        .order("created_at", { ascending: false })
+        .range(0, 49);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const addNote = useMutation({
+    mutationFn: async (body: string) => {
+      const { error } = await supabase.from("internal_notes").insert({
+        conversation_id: active!.id,
+        organization_id: active!.organization_id,
+        author_id: userId!,
+        body,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setNoteDraft("");
+      queryClient.invalidateQueries({ queryKey: ["internal-notes", activeId] });
+    },
+    onError: (e) => fail(e, "Could not save that note"),
+  });
+
 
 
 
