@@ -369,7 +369,6 @@ export const launchReadinessFn = createServerFn({ method: "POST" })
             : `The release report passed, but for a different build (${reportBuild.slice(0, 12) || "none"} vs ${buildId.slice(0, 12)}) — re-run the release gate.`,
     });
 
-
     const criticalFailures = checks.filter((c) => c.critical && !c.pass).length;
     return {
       generatedAt: new Date().toISOString(),
