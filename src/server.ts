@@ -71,7 +71,11 @@ async function withSecurityHeaders(request: Request, response: Response): Promis
       `frame-ancestors ${ancestors.length ? ancestors.join(" ") : "'none'"}`,
     );
   } else {
-    headers.set("Content-Security-Policy", "frame-ancestors 'none'");
+    // Nothing may frame the staff app except the Lovable editor preview.
+    headers.set(
+      "Content-Security-Policy",
+      "frame-ancestors 'self' https://lovable.dev https://*.lovable.dev https://*.lovable.app",
+    );
   }
 
   return new Response(response.body, {
