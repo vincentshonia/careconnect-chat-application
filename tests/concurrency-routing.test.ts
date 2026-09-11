@@ -894,7 +894,7 @@ describe("claim & routing concurrency", () => {
       // The public claim path refuses it too, with a readable reason.
       const outcome = await claim(conversation, agent);
       expect(outcome.ok).toBeFalsy();
-      expect(outcome.code).toBe("resolved");
+      expect(outcome.code).toBe("closed");
 
       const after = await readConversation(conversation);
       expect(after.status).toBe("resolved");
