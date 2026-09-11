@@ -706,6 +706,23 @@ function OverviewTab({ filters, drill, drillLive }: TabProps) {
           </div>
         </Panel>
       </div>
+
+      <Panel
+        title="Outcomes"
+        description="What agents recorded when they resolved a conversation. 'Not recorded' covers chats closed before an outcome was required."
+      >
+        {(q.data?.outcomes ?? []).length === 0 ? (
+          <p className="text-sm text-muted-foreground">No completed conversations in this range.</p>
+        ) : (
+          <BarList
+            rows={(q.data?.outcomes ?? []).map((o) => ({
+              label: o.label,
+              value: Number(o.conversations ?? 0),
+            }))}
+          />
+        )}
+      </Panel>
+
     </div>
   );
 }
