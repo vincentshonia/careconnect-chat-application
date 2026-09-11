@@ -16,13 +16,13 @@ function apply(theme: Theme) {
 
 /** Persisted light/dark/system theme, applied to <html class="dark">. */
 export function useTheme() {
-  const [preference, setPreference] = useState<ThemePreference>("system");
+  const [preference, setPreference] = useState<ThemePreference>("light");
   const [theme, setTheme] = useState<Theme>("light");
 
   // Read after mount so SSR markup and hydration stay in sync.
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY) as ThemePreference | null;
-    const pref: ThemePreference = stored ?? "system";
+    const pref: ThemePreference = stored ?? "light";
     const resolved = pref === "system" ? systemTheme() : pref;
     setPreference(pref);
     setTheme(resolved);
