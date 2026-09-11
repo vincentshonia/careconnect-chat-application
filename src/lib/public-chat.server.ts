@@ -469,39 +469,28 @@ export async function insertMessage(
       last_message_at: now,
       unread_agent_count:
         senderType === "visitor" ? (conversation.unread_agent_count ?? 0) + 1 : conversation.unread_agent_count,
-      // The original resolution and closing times are history — they stay put,
-      // and the return visit is recorded as its own moment instead.
-      ...(decision.reopens
-        ? decision.toHuman
-          ? {
-              status: "follow_up",
-              escalation_requested: true,
-              requested_agent_at: now,
-              reopened_at: now,
-              reopened_count: (conversation.reopened_count ?? 0) + 1,
-              ...(decision.keepAssignee ? {} : { assigned_to: null }),
-            }
-          : {
-              // Nobody was ever involved: the assistant simply carries on.
-              status: "new",
-              escalation_requested: false,
-              reopened_at: now,
-              reopened_count: (conversation.reopened_count ?? 0) + 1,
-            }
-        : {}),
     })
     .eq("id", conversation.id);
-  if (decision.reopens && decision.toHuman) {
-    await db.from("conversation_events").insert({
-      conversation_id: conversation.id,
-      organization_id: conversation.organization_id,
-      event_type: "reopened",
-      detail: decision.keepAssignee
-        ? "Visitor replied after the conversation was closed"
-        : "Visitor replied after the conversation was closed — returned to the queue",
-      previous_value: String(conversation.status),
-      new_value: "follow_up",
+
+  if (decision.reopens) {
+    // The original resolution and closing times are history — the lifecycle
+    // routine leaves them alone and records the return visit separately.
+    const { transitionConversation } = await import("@/lib/lifecycle.server");
+    await transitionConversation({
+      conversationId: conversation.id,
+      event: "reopen",
+      db,
+      payload: {
+        to_human: decision.toHuman,
+        keep_assignee: decision.keepAssignee,
+        detail: decision.keepAssignee
+          ? "Visitor replied after the conversation was closed"
+          : "Visitor replied after the conversation was closed — returned to the queue",
+      },
     });
+  }
+  if (decision.reopens && decision.toHuman) {
+
     const { notifyStaff } = await import("@/lib/notifications.server");
     await notifyStaff({
       organizationId: conversation.organization_id,

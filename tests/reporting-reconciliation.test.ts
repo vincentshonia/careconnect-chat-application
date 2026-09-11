@@ -151,8 +151,37 @@ async function makeDepartment(org: string, name: string) {
   return data.id as string;
 }
 
+/**
+ * An owner for the rows that are being worked on. The database now insists a
+ * live conversation has somebody's name on it, so the fixtures say who.
+ */
+async function makeOwner(org: string, key: string) {
+  const email = syntheticEmail(`owner_${key}`, suffix);
+  const fullName = syntheticName(`owner_${key}`, suffix);
+  const { data, error } = await db.auth.admin.createUser({
+    email,
+    password: `Cc!${suffix}Aa1${key}`,
+    email_confirm: true,
+    user_metadata: { full_name: fullName },
+  });
+  if (error || !data.user) throw new Error(`owner ${key}: ${error?.message}`);
+  const id = data.user.id;
+  await db.from("profiles").upsert({
+    id,
+    organization_id: org,
+    full_name: fullName,
+    email,
+    presence: "available",
+  } as never);
+  await db
+    .from("organization_memberships")
+    .insert({ organization_id: org, user_id: id, role: "agent", status: "active" } as never);
+  return id;
+}
+
 /** Deterministic shape for the bulk rows so every expectation is exact. */
 const STATUS_CYCLE = ["new", "waiting", "active", "resolved", "closed"] as const;
+
 
 function baseFilters() {
   return {
@@ -191,6 +220,7 @@ describe("reporting at volume", () => {
       siteB = await makeWebsite(orgB, "scaleb");
       deptOne = await makeDepartment(orgA, "Enrollment");
       deptTwo = await makeDepartment(orgA, "Referrals");
+      const owner = await makeOwner(orgA, "bulk");
 
       // Everything is seeded inside a fixed, closed window so the reporting
       // range can never drift while the suite runs.
@@ -211,6 +241,10 @@ describe("reporting at volume", () => {
           department_id: i % 2 === 0 ? deptOne : deptTwo,
           reference: `SC-${suffix}-${String(i).padStart(5, "0")}`,
           status,
+          // A conversation being worked on must name its owner.
+          assigned_to: status === "active" ? owner : null,
+          claimed_at: status === "active" ? created : null,
+
           // Every bulk row shares one timestamp per minute; ties are what expose
           // an unstable sort, so they are deliberately present.
           created_at: created,
@@ -424,9 +458,11 @@ describe("AI-only completion", () => {
       aiTo = new Date(Date.UTC(2025, 6, 1)).toISOString();
 
       const done = new Date(Date.UTC(2025, 5, 10, 12, 30, 0)).toISOString();
+      
 
       await conversation("completed", { status: "resolved", resolved_at: done });
-      await conversation("unresolved", { status: "active" });
+      await conversation("unresolved", { status: "waiting" });
+
       await conversation("abandoned", { status: "waiting" });
       await conversation("spam", { status: "spam" });
       await conversation("agentmsg", { status: "resolved", resolved_at: done });

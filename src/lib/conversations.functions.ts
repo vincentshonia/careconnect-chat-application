@@ -129,15 +129,8 @@ export const claimConversationFn = createServerFn({ method: "POST" })
 
     const name = outcome.assigned_name || actor.fullName || "A team member";
 
-    await db.from("conversation_events").insert({
-      conversation_id: conversation.id,
-      organization_id: conversation.organization_id,
-      actor_id: actor.userId,
-      event_type: "claimed",
-      detail: `${name} claimed this conversation`,
-      previous_value: null,
-      new_value: actor.userId,
-    });
+    // The "claimed" history entry is written inside the lifecycle routine.
+
 
     await db.from("messages").insert({
       conversation_id: conversation.id,
@@ -214,33 +207,17 @@ export const replyToConversationFn = createServerFn({ method: "POST" })
     });
     if (error) throw new Error("Could not send that reply");
 
-    const patch: Record<string, unknown> = {
-      status: "active",
-      last_message_at: now,
-      unread_agent_count: 0,
-    };
-    const { data: existing } = await db
-      .from("conversations")
-      .select("first_response_at, first_agent_response_at")
-      .eq("id", conversation.id)
-      .maybeSingle();
-    const isFirstAgentReply = !existing?.first_agent_response_at;
-    if (isFirstAgentReply) patch.first_agent_response_at = now;
-    if (!existing?.first_response_at) patch.first_response_at = now;
+    // Status, first-response timing and the "agent_reply" credit are written
+    // together by the lifecycle routine, so reporting can never disagree.
+    const { transitionConversation } = await import("@/lib/lifecycle.server");
+    await transitionConversation({
+      conversationId: conversation.id,
+      event: "reply",
+      actorId: actor.userId,
+      db,
+      payload: { detail: `First reply by ${name}` },
+    });
 
-    await db.from("conversations").update(patch).eq("id", conversation.id);
-
-    // Reporting credits the first responder from the event log, so the first
-    // agent reply is recorded explicitly rather than inferred from messages.
-    if (isFirstAgentReply) {
-      await db.from("conversation_events").insert({
-        conversation_id: conversation.id,
-        organization_id: conversation.organization_id,
-        actor_id: actor.userId,
-        event_type: "agent_reply",
-        detail: `First reply by ${name}`,
-      });
-    }
 
     await writeAudit(db as never, {
       actor,
@@ -356,41 +333,24 @@ export const reassignConversationFn = createServerFn({ method: "POST" })
       overrideReason = decision.overrideReason;
     }
 
-    // Only write if the owner is still who we read a moment ago, so two
-    // supervisors acting at once can't silently overwrite each other.
     const previousAssignee = conversation.assigned_to ?? null;
-    let update = db
-      .from("conversations")
-      .update({
-        assigned_to: data.userId,
-        status: data.userId ? "assigned" : "waiting",
-        claimed_at: data.userId ? new Date().toISOString() : null,
-        ...(data.userId ? {} : { escalation_requested: true }),
-      })
-      .eq("id", conversation.id);
-    update = previousAssignee
-      ? update.eq("assigned_to", previousAssignee)
-      : update.is("assigned_to", null);
-    const { data: updatedRows, error: updateError } = await update.select("id");
-    if (updateError) throw new Error(updateError.message);
-    if (!updatedRows || updatedRows.length === 0) {
-      throw new Error(
-        "This conversation was reassigned by someone else — reload and try again",
-      );
-    }
-
-
     const newName = data.userId ? await agentName(data.userId) : null;
 
-    await db.from("conversation_events").insert({
-      conversation_id: conversation.id,
-      organization_id: conversation.organization_id,
-      actor_id: actor.userId,
-      event_type: data.userId ? "reassigned" : "released",
-      detail: newName ? `Reassigned to ${newName}` : "Returned to the department queue",
-      previous_value: conversation.assigned_to,
-      new_value: data.userId,
+    // The lifecycle routine refuses the write if the owner changed since we
+    // read it, so two supervisors acting at once can't overwrite each other.
+    const { transitionConversation } = await import("@/lib/lifecycle.server");
+    await transitionConversation({
+      conversationId: conversation.id,
+      event: data.userId ? "reassign" : "release",
+      actorId: actor.userId,
+      db,
+      payload: {
+        user_id: data.userId,
+        expected_assignee: previousAssignee,
+        detail: newName ? `Reassigned to ${newName}` : "Returned to the department queue",
+      },
     });
+
 
     const { notifyStaff } = await import("@/lib/notifications.server");
     await notifyStaff({
@@ -454,20 +414,15 @@ export const closeConversationFn = createServerFn({ method: "POST" })
     const { admin } = await import("@/lib/public-chat.server");
     const db = admin();
     const now = new Date().toISOString();
-    await db
-      .from("conversations")
-      .update({ status: "closed", closed_at: now, closed_by: actor.userId })
-      .eq("id", conversation.id);
-
-    await db.from("conversation_events").insert({
-      conversation_id: conversation.id,
-      organization_id: conversation.organization_id,
-      actor_id: actor.userId,
-      event_type: "closed",
-      detail: `Closed by ${actor.fullName ?? "an agent"}`,
-      previous_value: conversation.status,
-      new_value: "closed",
+    const { transitionConversation } = await import("@/lib/lifecycle.server");
+    await transitionConversation({
+      conversationId: conversation.id,
+      event: "close",
+      actorId: actor.userId,
+      db,
+      payload: { detail: `Closed by ${actor.fullName ?? "an agent"}` },
     });
+
 
     await writeAudit(db as never, {
       actor,
@@ -517,25 +472,18 @@ export const resolveConversationFn = createServerFn({ method: "POST" })
     if (!disposition) throw new ForbiddenError("Choose a valid outcome before resolving");
 
     const now = new Date().toISOString();
-    await db
-      .from("conversations")
-      .update({
-        status: "resolved",
-        resolved_at: now,
-        resolved_by: actor.userId,
+    const { transitionConversation } = await import("@/lib/lifecycle.server");
+    await transitionConversation({
+      conversationId: conversation.id,
+      event: "resolve",
+      actorId: actor.userId,
+      db,
+      payload: {
         disposition_id: disposition.id,
-      })
-      .eq("id", conversation.id);
-
-    await db.from("conversation_events").insert({
-      conversation_id: conversation.id,
-      organization_id: conversation.organization_id,
-      actor_id: actor.userId,
-      event_type: "resolved",
-      detail: `Resolved by ${actor.fullName ?? "an agent"} — ${disposition.label}`,
-      previous_value: conversation.status,
-      new_value: "resolved",
+        detail: `Resolved by ${actor.fullName ?? "an agent"} — ${disposition.label}`,
+      },
     });
+
 
     await writeAudit(db as never, {
       actor,

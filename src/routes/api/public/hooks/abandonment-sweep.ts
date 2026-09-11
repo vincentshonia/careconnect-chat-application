@@ -52,38 +52,25 @@ export const Route = createFileRoute("/api/public/hooks/abandonment-sweep")({
         let abandoned = 0;
 
         if (rows.length > 0) {
-          const now = new Date().toISOString();
-          // One guarded update for the whole batch instead of a query per row.
-          const { data: updated, error: updateError } = await db
-            .from("conversations")
-            .update({ status: "abandoned", closed_at: now, updated_at: now })
-            .in(
-              "id",
-              rows.map((row) => row.id),
-            )
-            .eq("status", "new")
-            .eq("escalation_requested", false)
-            .select("id, organization_id");
-          if (updateError) return Response.json({ error: updateError.message }, { status: 500 });
-
-          const changed = (updated ?? []) as { id: string; organization_id: string }[];
-          abandoned = changed.length;
-
-          if (changed.length > 0) {
-            const { error: eventError } = await db.from("conversation_events").insert(
-              changed.map((row) => ({
-                conversation_id: row.id,
-                organization_id: row.organization_id,
-                event_type: "auto_abandoned",
-                detail:
-                  "Closed automatically after 24 hours with no activity and no request for a person.",
-                previous_value: "new",
-                new_value: "abandoned",
-              })),
-            );
-            if (eventError) console.warn("[abandonment-sweep] event insert failed", eventError);
+          const { transitionConversation } = await import("@/lib/lifecycle.server");
+          // Every status change goes through the one lifecycle routine, which
+          // also writes the history entry and refuses anything illegal.
+          const results = await Promise.allSettled(
+            rows.map((row) =>
+              transitionConversation({
+                conversationId: row.id,
+                event: "abandon",
+                db,
+              }),
+            ),
+          );
+          abandoned = results.filter((r) => r.status === "fulfilled").length;
+          const failed = results.length - abandoned;
+          if (failed > 0) {
+            console.warn(`[abandonment-sweep] ${failed} conversation(s) could not be swept`);
           }
         }
+
 
         const durationMs = Date.now() - startedAt;
         if (durationMs > SLOW_RUN_MS) {

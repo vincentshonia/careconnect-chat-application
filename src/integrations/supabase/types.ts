@@ -2992,6 +2992,10 @@ export type Database = {
         }
         Returns: Json
       }
+      transition_conversation: {
+        Args: { _actor?: string; _event: string; _id: string; _payload?: Json }
+        Returns: Json
+      }
     }
     Enums: {
       app_role:
