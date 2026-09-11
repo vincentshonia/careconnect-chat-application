@@ -743,10 +743,18 @@ function InboxPage() {
     >
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)_260px]">
         <aside className="max-h-[70vh] overflow-y-auto rounded-xl border border-border">
-          {conversationsQuery.isLoading ? (
+          {conversationsQuery.error ? (
+            <QueryError
+              className="m-3"
+              error={conversationsQuery.error}
+              onRetry={() => conversationsQuery.refetch()}
+              busy={conversationsQuery.isFetching}
+            />
+          ) : conversationsQuery.isLoading ? (
             <p className="p-4 text-sm text-muted-foreground">Loading conversations…</p>
           ) : conversations.length === 0 ? (
             <p className="p-4 text-sm text-muted-foreground">Nothing in this queue right now.</p>
+
           ) : (
             <ul className="divide-y divide-border">
               {conversations.map((c) => (
