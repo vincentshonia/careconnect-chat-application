@@ -19,7 +19,7 @@ export const Route = createFileRoute("/api/public/chat/feedback")({
           if (!parsed.success) return Response.json({ error: "Invalid request" }, { status: 400 });
           await mod.enforceRateLimit(`fb:ip:${mod.clientIp(request)}`, 30, 60);
 
-          const ctx = await mod.sessionContext(parsed.data.session, parsed.data.host ?? null);
+          const ctx = await mod.sessionContext(parsed.data.session, mod.verifiedOrigin(request));
           const conversation = await mod.conversationForSession(ctx, parsed.data.conversationId);
 
           // The rated response must belong to this visitor's own conversation.

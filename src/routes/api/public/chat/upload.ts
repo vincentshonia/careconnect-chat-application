@@ -58,7 +58,7 @@ export const Route = createFileRoute("/api/public/chat/upload")({
             );
           }
 
-          const ctx = await mod.sessionContext(session, host);
+          const ctx = await mod.sessionContext(session, mod.verifiedOrigin(request));
           const limits = await mod.orgLimits(ctx.claims.org);
           await mod.enforceRateLimit(`upload:s:${ctx.claims.sid}`, 10, 60);
           await mod.enforceRateLimit(

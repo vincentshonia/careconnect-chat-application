@@ -19,7 +19,7 @@ export const Route = createFileRoute("/api/public/chat/rate")({
           if (!parsed.success) return Response.json({ error: "Invalid request" }, { status: 400 });
           await mod.enforceRateLimit(`rate:ip:${mod.clientIp(request)}`, 20, 60);
 
-          const ctx = await mod.sessionContext(parsed.data.session, parsed.data.host ?? null);
+          const ctx = await mod.sessionContext(parsed.data.session, mod.verifiedOrigin(request));
           const conversation = await mod.conversationForSession(ctx, parsed.data.conversationId);
           const db = mod.admin();
 

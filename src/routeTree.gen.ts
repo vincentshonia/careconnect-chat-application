@@ -46,6 +46,7 @@ import { Route as ApiPublicChatUploadRouteImport } from './routes/api/public/cha
 import { Route as ApiPublicChatSessionRouteImport } from './routes/api/public/chat/session'
 import { Route as ApiPublicChatRateRouteImport } from './routes/api/public/chat/rate'
 import { Route as ApiPublicChatPollRouteImport } from './routes/api/public/chat/poll'
+import { Route as ApiPublicChatOriginRouteImport } from './routes/api/public/chat/origin'
 import { Route as ApiPublicChatMessageRouteImport } from './routes/api/public/chat/message'
 import { Route as ApiPublicChatFeedbackRouteImport } from './routes/api/public/chat/feedback'
 import { Route as ApiPublicChatEscalateRouteImport } from './routes/api/public/chat/escalate'
@@ -242,6 +243,11 @@ const ApiPublicChatPollRoute = ApiPublicChatPollRouteImport.update({
   path: '/api/public/chat/poll',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicChatOriginRoute = ApiPublicChatOriginRouteImport.update({
+  id: '/api/public/chat/origin',
+  path: '/api/public/chat/origin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicChatMessageRoute = ApiPublicChatMessageRouteImport.update({
   id: '/api/public/chat/message',
   path: '/api/public/chat/message',
@@ -302,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
   '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
+  '/api/public/chat/origin': typeof ApiPublicChatOriginRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
@@ -345,6 +352,7 @@ export interface FileRoutesByTo {
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
   '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
+  '/api/public/chat/origin': typeof ApiPublicChatOriginRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
@@ -390,6 +398,7 @@ export interface FileRoutesById {
   '/api/public/chat/escalate': typeof ApiPublicChatEscalateRoute
   '/api/public/chat/feedback': typeof ApiPublicChatFeedbackRoute
   '/api/public/chat/message': typeof ApiPublicChatMessageRoute
+  '/api/public/chat/origin': typeof ApiPublicChatOriginRoute
   '/api/public/chat/poll': typeof ApiPublicChatPollRoute
   '/api/public/chat/rate': typeof ApiPublicChatRateRoute
   '/api/public/chat/session': typeof ApiPublicChatSessionRoute
@@ -435,6 +444,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/escalate'
     | '/api/public/chat/feedback'
     | '/api/public/chat/message'
+    | '/api/public/chat/origin'
     | '/api/public/chat/poll'
     | '/api/public/chat/rate'
     | '/api/public/chat/session'
@@ -478,6 +488,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/escalate'
     | '/api/public/chat/feedback'
     | '/api/public/chat/message'
+    | '/api/public/chat/origin'
     | '/api/public/chat/poll'
     | '/api/public/chat/rate'
     | '/api/public/chat/session'
@@ -522,6 +533,7 @@ export interface FileRouteTypes {
     | '/api/public/chat/escalate'
     | '/api/public/chat/feedback'
     | '/api/public/chat/message'
+    | '/api/public/chat/origin'
     | '/api/public/chat/poll'
     | '/api/public/chat/rate'
     | '/api/public/chat/session'
@@ -547,6 +559,7 @@ export interface RootRouteChildren {
   ApiPublicChatEscalateRoute: typeof ApiPublicChatEscalateRoute
   ApiPublicChatFeedbackRoute: typeof ApiPublicChatFeedbackRoute
   ApiPublicChatMessageRoute: typeof ApiPublicChatMessageRoute
+  ApiPublicChatOriginRoute: typeof ApiPublicChatOriginRoute
   ApiPublicChatPollRoute: typeof ApiPublicChatPollRoute
   ApiPublicChatRateRoute: typeof ApiPublicChatRateRoute
   ApiPublicChatSessionRoute: typeof ApiPublicChatSessionRoute
@@ -818,6 +831,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicChatPollRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/chat/origin': {
+      id: '/api/public/chat/origin'
+      path: '/api/public/chat/origin'
+      fullPath: '/api/public/chat/origin'
+      preLoaderRoute: typeof ApiPublicChatOriginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/chat/message': {
       id: '/api/public/chat/message'
       path: '/api/public/chat/message'
@@ -920,6 +940,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicChatEscalateRoute: ApiPublicChatEscalateRoute,
   ApiPublicChatFeedbackRoute: ApiPublicChatFeedbackRoute,
   ApiPublicChatMessageRoute: ApiPublicChatMessageRoute,
+  ApiPublicChatOriginRoute: ApiPublicChatOriginRoute,
   ApiPublicChatPollRoute: ApiPublicChatPollRoute,
   ApiPublicChatRateRoute: ApiPublicChatRateRoute,
   ApiPublicChatSessionRoute: ApiPublicChatSessionRoute,

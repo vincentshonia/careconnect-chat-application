@@ -25,7 +25,7 @@ export const Route = createFileRoute("/api/public/chat/message")({
 
           // Session is verified first: website + visitor come from the token,
           // never from client-supplied ids.
-          const ctx = await mod.sessionContext(input.session, input.host ?? null);
+          const ctx = await mod.sessionContext(input.session, mod.verifiedOrigin(request));
           const limits = await mod.orgLimits(ctx.claims.org);
 
           await mod.enforceRateLimit(`msg:ip:${ip}`, limits.ip_requests_per_minute, 60);
