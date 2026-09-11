@@ -138,6 +138,10 @@ function InboxPage() {
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
+  const [noteDraft, setNoteDraft] = useState("");
+  const [resolveOpen, setResolveOpen] = useState(false);
+  const [dispositionId, setDispositionId] = useState("");
+
   const debouncedQuery = useDebounced(query, 300);
   const bottomRef = useRef<HTMLDivElement>(null);
   const replyRef = useRef<HTMLTextAreaElement>(null);
