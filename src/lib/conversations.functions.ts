@@ -129,15 +129,8 @@ export const claimConversationFn = createServerFn({ method: "POST" })
 
     const name = outcome.assigned_name || actor.fullName || "A team member";
 
-    await db.from("conversation_events").insert({
-      conversation_id: conversation.id,
-      organization_id: conversation.organization_id,
-      actor_id: actor.userId,
-      event_type: "claimed",
-      detail: `${name} claimed this conversation`,
-      previous_value: null,
-      new_value: actor.userId,
-    });
+    // The "claimed" history entry is written inside the lifecycle routine.
+
 
     await db.from("messages").insert({
       conversation_id: conversation.id,
