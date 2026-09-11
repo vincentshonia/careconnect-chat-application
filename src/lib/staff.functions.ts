@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createStaffInput, staffAccessInput } from "@/lib/staff-helpers";
 import { issueInvitation } from "@/lib/invitations.functions";
@@ -6,6 +7,7 @@ import {
   resolveActor,
   requirePermission,
   requireOrganization,
+  writeAudit,
   ForbiddenError,
 } from "@/lib/authz.server";
 import { ROLE_RANK, roleTransitionError, type OrgRole } from "@/lib/permissions";
@@ -213,4 +215,56 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
     });
 
     return { ok: true, status: data.action };
+  });
+
+
+const staffProfileInput = z.object({
+  userId: z.string().uuid(),
+  presence: z.enum(["online", "away", "busy", "offline"]).optional(),
+  maxConcurrentChats: z.number().int().min(1).max(20).optional(),
+});
+
+/**
+ * Administrator-only: adjust another teammate's availability or chat capacity.
+ * A person changing their own settings uses the profile page instead.
+ */
+export const updateStaffProfileFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => staffProfileInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const actor = await resolveActor(context.supabase, context.userId);
+    requirePermission(actor, "staff.edit", "Only administrators can change staff settings");
+    const organizationId = requireOrganization(actor);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: target } = await supabaseAdmin
+      .from("profiles")
+      .select("id, organization_id, presence, max_concurrent_chats")
+      .eq("id", data.userId)
+      .maybeSingle();
+    if (!target || (target.organization_id !== organizationId && !actor.isPlatformAdmin)) {
+      throw new ForbiddenError("Staff member not found in your organization");
+    }
+
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (data.presence !== undefined) patch['presence'] = data.presence;
+    if (data.maxConcurrentChats !== undefined) patch['max_concurrent_chats'] = data.maxConcurrentChats;
+
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update(patch as never)
+      .eq("id", target.id);
+    if (error) throw new Error(error.message);
+
+    await writeAudit(supabaseAdmin, {
+      actor,
+      organizationId,
+      action: "staff_profile.updated",
+      recordType: "profiles",
+      recordId: target.id,
+      previousValue: { presence: target.presence, max_concurrent_chats: target.max_concurrent_chats },
+      newValue: patch,
+    });
+
+    return { ok: true };
   });

@@ -3,7 +3,7 @@ import { RequirePermission } from "@/components/admin/RequirePermission";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
+import { createQaReviewFn } from "@/lib/quality.functions";
 import { saveCsv } from "@/lib/csv";
 import { exportCsvFn } from "@/lib/exports.functions";
 import { useServerFn } from "@tanstack/react-start";
@@ -174,6 +174,7 @@ function QualityPage() {
     },
   });
 
+  const saveQaReview = useServerFn(createQaReviewFn);
   const saveReview = useMutation({
     mutationFn: async () => {
       const orgId = session.data?.organizationId;
@@ -183,25 +184,18 @@ function QualityPage() {
       if (CRITERIA.some((c) => scores[c.key] == null)) {
         throw new Error("Score all four criteria before saving.");
       }
-      const { error } = await supabase.from("qa_reviews").insert({
-        organization_id: conversation.organization_id ?? orgId,
-        conversation_id: selected,
-        reviewer_id: session.data?.userId ?? null,
-        reviewer_name: session.data?.profile?.full_name ?? session.data?.email ?? null,
-        agent_id: conversation.assigned_to ?? null,
-        accuracy_score: scores.accuracy_score!,
-        tone_score: scores.tone_score!,
-        compliance_score: scores.compliance_score!,
-        resolution_score: scores.resolution_score!,
-        coaching_notes: notes || null,
-        flagged,
-      });
-      if (error) throw error;
-      await logAudit({
-        action: "qa_review.created",
-        recordType: "conversations",
-        recordId: selected,
-        newValue: { ...scores, flagged },
+      // The reviewer and the agent are stamped server-side from the session
+      // and the conversation record.
+      await saveQaReview({
+        data: {
+          conversationId: selected,
+          accuracy: scores.accuracy_score!,
+          tone: scores.tone_score!,
+          compliance: scores.compliance_score!,
+          resolution: scores.resolution_score!,
+          notes: notes || null,
+          flagged,
+        },
       });
     },
     onSuccess: () => {

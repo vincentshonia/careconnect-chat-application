@@ -75,12 +75,6 @@ export const setUserRoleFn = createServerFn({ method: "POST" })
       .eq("id", target.id);
     if (updateError) throw new Error("Could not update the role");
 
-    // Keep the legacy role table in step for anything still reading it.
-    await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId);
-    await supabaseAdmin
-      .from("user_roles")
-      .insert({ user_id: data.userId, role: data.role, organization_id: organizationId });
-
     await writeAudit(supabaseAdmin, {
       actor,
       organizationId,

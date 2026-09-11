@@ -8,7 +8,7 @@ import { Pager } from "@/components/admin/Pager";
 import { QueryError } from "@/components/admin/QueryError";
 import { exportCsvFn } from "@/lib/exports.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
+import { updateIntakeFn, addIntakeNoteFn } from "@/lib/intake.functions";
 import { saveCsv } from "@/lib/csv";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -175,37 +175,28 @@ function IntakePage() {
     queryClient.invalidateQueries({ queryKey: ["intake-events"] });
   };
 
+  // Stage, assignment and due-date changes are written server-side so the
+  // permission check, the timeline entry and the audit row can't be skipped.
+  const saveIntake = useServerFn(updateIntakeFn);
+  const saveIntakeNote = useServerFn(addIntakeNoteFn);
+
   const update = useMutation({
     mutationFn: async ({
       id,
       patch,
-      event,
     }: {
       id: string;
       patch: Database["public"]["Tables"]["intake_requests"]["Update"];
       event?: { type: string; detail?: string; previous?: string; next?: string };
     }) => {
-      const target = active?.id === id ? active : items.find((i) => i.id === id) ?? null;
-      const { error } = await supabase.from("intake_requests").update(patch).eq("id", id);
-      if (error) throw error;
-      await logAudit({
-        action: "intake_request.updated",
-        recordType: "intake_requests",
-        recordId: id,
-        previousValue: target ? { stage: target.stage, assigned_to: target.assigned_to } : null,
-        newValue: patch as Record<string, unknown>,
+      await saveIntake({
+        data: {
+          id,
+          ...(patch.stage !== undefined ? { stage: patch.stage as Stage } : {}),
+          ...(patch.assigned_to !== undefined ? { assignedTo: patch.assigned_to ?? null } : {}),
+          ...(patch.due_date !== undefined ? { dueDate: patch.due_date ?? null } : {}),
+        },
       });
-      if (event && target) {
-        await supabase.from("intake_events").insert({
-          intake_id: id,
-          organization_id: target.organization_id,
-          actor_id: session.data?.userId ?? null,
-          event_type: event.type,
-          detail: event.detail ?? null,
-          previous_value: event.previous ?? null,
-          new_value: event.next ?? null,
-        });
-      }
     },
     onSuccess: invalidateLists,
     onError: (error) =>
@@ -215,14 +206,7 @@ function IntakePage() {
   const addNote = useMutation({
     mutationFn: async () => {
       if (!active || !note.trim()) return;
-      const { error } = await supabase.from("intake_events").insert({
-        intake_id: active.id,
-        organization_id: active.organization_id,
-        actor_id: session.data?.userId ?? null,
-        event_type: "note",
-        detail: note.trim(),
-      });
-      if (error) throw error;
+      await saveIntakeNote({ data: { id: active.id, note: note.trim() } });
     },
     onSuccess: () => {
       setNote("");

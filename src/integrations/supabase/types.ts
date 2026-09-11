@@ -2638,6 +2638,7 @@ export type Database = {
         }
         Returns: Json
       }
+      effective_user: { Args: { _user: string }; Returns: string }
       eligible_notification_recipients: {
         Args: { _department: string; _org: string; _pref: string }
         Returns: {

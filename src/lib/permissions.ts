@@ -73,6 +73,8 @@ export type Permission =
   | "contact.view_department"
   | "contact.view_all"
   | "contact.edit"
+  // quality
+  | "quality.review"
   // knowledge
   | "knowledge.read"
   | "knowledge.create"
@@ -139,6 +141,7 @@ const TEAM_LEAD: Permission[] = [
   "contact.view_department",
   "reports.team",
   "staff.view",
+  "quality.review",
 ];
 
 const MANAGER: Permission[] = [

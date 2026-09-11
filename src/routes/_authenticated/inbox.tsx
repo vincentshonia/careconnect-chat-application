@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { addInternalNoteFn } from "@/lib/notes.functions";
 import {
   applyQueueFilter,
   CLOSED_STATUSES,
@@ -562,15 +563,11 @@ function InboxPage() {
     },
   });
 
+  const saveInternalNote = useServerFn(addInternalNoteFn);
   const addNote = useMutation({
     mutationFn: async (body: string) => {
-      const { error } = await supabase.from("internal_notes").insert({
-        conversation_id: active!.id,
-        organization_id: active!.organization_id,
-        author_id: userId!,
-        body,
-      });
-      if (error) throw error;
+      // The author is stamped server-side from the session.
+      await saveInternalNote({ data: { conversationId: active!.id, body } });
     },
     onSuccess: () => {
       setNoteDraft("");

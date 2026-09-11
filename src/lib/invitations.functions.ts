@@ -201,13 +201,6 @@ export const acceptInvitationFn = createServerFn({ method: "POST" })
       );
     if (membershipError) throw new Error(membershipError.message);
 
-    await supabaseAdmin
-      .from("user_roles")
-      .upsert(
-        { user_id: context.userId, role: invite.role, organization_id: organizationId },
-        { onConflict: "user_id,role" },
-      );
-
     const departmentIds: string[] = invite.department_ids ?? [];
     if (departmentIds.length) {
       await supabaseAdmin.from("department_members").upsert(
