@@ -73,26 +73,26 @@ const navGroups = [
     ],
   },
   {
-    label: "Configuration",
+    // Every setup screen lives in the Admin hub as a tab: "Admin → Websites",
+    // "Admin → Staff", and so on.
+    label: "Admin",
     items: [
-      { to: "/websites", label: "Websites", icon: Globe, perms: ["website.manage"] },
-      { to: "/departments", label: "Departments", icon: Users2, perms: ["department.manage"] },
-      { to: "/routing", label: "Routing", icon: Shuffle, perms: ["routing.manage"] },
-      { to: "/staff", label: "Staff", icon: Users, perms: ["staff.view"] },
       {
-        to: "/organizations",
-        label: "Organizations",
-        icon: Building2,
-        perms: ["organization.manage", "platform.tenant_admin"],
+        to: "/admin",
+        label: "Admin",
+        icon: Settings2,
+        perms: [
+          "website.manage",
+          "department.manage",
+          "routing.manage",
+          "staff.view",
+          "organization.manage",
+          "platform.tenant_admin",
+          "settings.manage",
+          "security.manage",
+          "audit.view",
+        ],
       },
-      {
-        to: "/settings",
-        label: "Organization settings",
-        icon: Settings,
-        perms: ["settings.manage"],
-      },
-      { to: "/security", label: "Security", icon: ShieldCheck, perms: ["security.manage"] },
-      { to: "/audit", label: "Audit log", icon: Activity, perms: ["audit.view"] },
     ],
   },
 ] as const satisfies readonly {
