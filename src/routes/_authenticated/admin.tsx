@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { RequirePermission } from "@/components/admin/RequirePermission";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { adminStatusFn } from "@/lib/admin.functions";
@@ -49,6 +48,7 @@ const TABS = [
 export type AdminTab = (typeof TABS)[number]["id"];
 const TAB_IDS = TABS.map((t) => t.id) as readonly string[];
 
+/** Anyone holding one of these sees the Admin item in the sidebar. */
 export const ADMIN_PERMISSIONS = [
   "website.manage",
   "department.manage",
@@ -76,19 +76,8 @@ export const Route = createFileRoute("/_authenticated/admin")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: AdminHubRoute,
+  component: AdminHub,
 });
-
-function AdminHubRoute() {
-  return (
-    <RequirePermission
-      anyOf={[...ADMIN_PERMISSIONS] as never}
-      title="Admin"
-    >
-      <AdminHub />
-    </RequirePermission>
-  );
-}
 
 function AdminHub() {
   const search = Route.useSearch();
@@ -103,7 +92,10 @@ function AdminHub() {
   if (!active) {
     return (
       <AdminShell title="Admin">
-        <p className="text-sm text-muted-foreground">Nothing here is available to your role.</p>
+        <p className="text-sm text-muted-foreground">
+          Your current role doesn't include access to any admin area. Ask an administrator in your
+          organization if you need it.
+        </p>
       </AdminShell>
     );
   }
