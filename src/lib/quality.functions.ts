@@ -32,7 +32,7 @@ export const createQaReviewFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const actor = await resolveActor(context.supabase, context.userId);
     // Reviews are a supervisory activity; team leads and above hold this.
-    requirePermission(actor, "quality.review" as never, "Only supervisors can record quality reviews");
+    requirePermission(actor, "quality.review", "Only supervisors can record quality reviews");
     const organizationId = requireOrganization(actor);
 
     const { data: conversation, error: readError } = await context.supabase
