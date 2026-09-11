@@ -149,7 +149,9 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
           await mod.insertMessage(
             conversation,
             "system",
-            `${input.fullName} requested ${input.kind.replace("_", " ")}. Phone: ${input.phone} · Email: ${input.email}${input.reason ? ` · Reason: ${input.reason}` : ""}`,
+            // The transcript is visitor-visible, so contact details stay in the
+            // contact and intake records rather than in the chat itself.
+            `${input.fullName} requested ${input.kind.replace("_", " ")}. Contact details captured.${input.reason ? ` Reason: ${input.reason}` : ""}`,
             "System",
           );
           await mod.logEvent(
@@ -210,7 +212,8 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               type: "new_intake",
               severity: "info",
               title: `New ${input.kind.replace("_", " ")} from ${input.fullName}`,
-              body: input.reason ?? `${input.email} · ${input.phone}`,
+              // No contact details in the alert body — staff open the record.
+              body: input.reason ?? "Contact details captured. Open the request to view them.",
               link: "/intake",
               recordType: "conversations",
               recordId: conversation.id,
