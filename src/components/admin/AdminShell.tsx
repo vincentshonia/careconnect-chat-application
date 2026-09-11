@@ -358,6 +358,8 @@ export function AdminShell({
           </div>
         </header>
 
+        <DesktopAlertBar />
+
         <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 print:px-0 print:py-0">{children}</main>
       </div>
     </div>
