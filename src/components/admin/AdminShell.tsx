@@ -2,16 +2,13 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import {
-  Activity,
   Bell,
   Bot,
-  Building2,
   ChevronsLeft,
   ChevronsRight,
   ClipboardList,
   Contact,
   BarChart3,
-  Globe,
   Inbox,
   LayoutDashboard,
   LibraryBig,
@@ -19,14 +16,10 @@ import {
   Menu,
   Moon,
   Sun,
-  Settings,
-  ShieldCheck,
-  Shuffle,
+  Settings2,
   Star,
   UserCog,
   GraduationCap,
-  Users,
-  Users2,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
