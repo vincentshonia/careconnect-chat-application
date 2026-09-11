@@ -1019,6 +1019,35 @@ export function mergeOrgLimits(row: Partial<Record<keyof OrgLimits, unknown>> | 
   return merged;
 }
 
+/* --------------------------- embedding permissions ------------------------ */
+
+const frameAncestorsCache = new Map<string, { at: number; value: string[] }>();
+
+/**
+ * Domains permitted to embed the widget page, used to build its
+ * `frame-ancestors` policy. Empty when the website cannot be resolved.
+ */
+export async function widgetFrameAncestors(websiteId: string): Promise<string[]> {
+  if (!/^[0-9a-f-]{36}$/i.test(websiteId)) return [];
+  const cached = frameAncestorsCache.get(websiteId);
+  if (cached && Date.now() - cached.at < WIDGET_CONFIG_TTL_MS) return cached.value;
+  const { data } = await admin()
+    .from("websites")
+    .select("allowed_domains, dev_mode")
+    .eq("id", websiteId)
+    .maybeSingle();
+  if (!data) return [];
+  const domains: string[] = (data.allowed_domains ?? [])
+    .map((d: string) => String(d).toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, ""))
+    .filter(Boolean)
+    .flatMap((d: string) => [`https://${d}`, `https://*.${d}`]);
+  if (data.dev_mode !== false) domains.push("https://*.lovable.app", "https://*.lovable.dev", "http://localhost:*");
+  frameAncestorsCache.set(websiteId, { at: Date.now(), value: domains });
+  return domains;
+}
+
+
+
 export async function orgLimits(organizationId: string): Promise<OrgLimits> {
   const { data } = await admin()
     .from("organization_limits")
