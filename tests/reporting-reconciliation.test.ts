@@ -151,8 +151,37 @@ async function makeDepartment(org: string, name: string) {
   return data.id as string;
 }
 
+/**
+ * An owner for the rows that are being worked on. The database now insists a
+ * live conversation has somebody's name on it, so the fixtures say who.
+ */
+async function makeOwner(org: string, key: string) {
+  const email = syntheticEmail(`owner_${key}`, suffix);
+  const fullName = syntheticName(`owner_${key}`, suffix);
+  const { data, error } = await db.auth.admin.createUser({
+    email,
+    password: `Cc!${suffix}Aa1${key}`,
+    email_confirm: true,
+    user_metadata: { full_name: fullName },
+  });
+  if (error || !data.user) throw new Error(`owner ${key}: ${error?.message}`);
+  const id = data.user.id;
+  await db.from("profiles").upsert({
+    id,
+    organization_id: org,
+    full_name: fullName,
+    email,
+    presence: "available",
+  } as never);
+  await db
+    .from("organization_memberships")
+    .insert({ organization_id: org, user_id: id, role: "agent", status: "active" } as never);
+  return id;
+}
+
 /** Deterministic shape for the bulk rows so every expectation is exact. */
 const STATUS_CYCLE = ["new", "waiting", "active", "resolved", "closed"] as const;
+
 
 function baseFilters() {
   return {
