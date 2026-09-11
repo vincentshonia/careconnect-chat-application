@@ -820,7 +820,7 @@ describe("authenticated RBAC boundaries", () => {
   describe("two-step verification policy", () => {
     it("blocks tenant access for an aal1 session once the org requires MFA", async () => {
       const client = clients['adminA']!;
-      const before = await client.from("conversations").select("id").eq("id", ctx.convA1);
+      const before = await client.from("organizations").select("id").eq("id", ctx.orgA);
       expect((before.data ?? []).length).toBeGreaterThan(0);
 
       const { error: policyError } = await admin
@@ -830,7 +830,7 @@ describe("authenticated RBAC boundaries", () => {
       expect(policyError).toBeNull();
 
       try {
-        const { data } = await client.from("conversations").select("id").eq("id", ctx.convA1);
+        const { data } = await client.from("organizations").select("id").eq("id", ctx.orgA);
         expect(data ?? []).toHaveLength(0);
       } finally {
         await admin
@@ -839,7 +839,7 @@ describe("authenticated RBAC boundaries", () => {
           .eq("id", ctx.orgA);
       }
 
-      const after = await client.from("conversations").select("id").eq("id", ctx.convA1);
+      const after = await client.from("organizations").select("id").eq("id", ctx.orgA);
       expect((after.data ?? []).length).toBeGreaterThan(0);
     });
   });
