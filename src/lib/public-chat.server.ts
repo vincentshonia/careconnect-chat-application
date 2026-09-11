@@ -913,7 +913,9 @@ export async function startWidgetSession(opts: {
     sid,
     wid: website.id,
     org: website.organization_id,
-    host: opts.host,
+    // Store the *proven* host so later endpoints authorize against a value the
+    // browser proved, not one the page claimed.
+    host: provenHost ?? opts.clientHost ?? opts.host,
   });
   return { token, expiresAt, websiteId: website.id as string };
 }
