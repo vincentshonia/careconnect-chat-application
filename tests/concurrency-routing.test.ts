@@ -256,22 +256,14 @@ describe("claim & routing concurrency", () => {
         const counts = await Promise.all(users.map((u) => activeCount(u)));
         expect(counts.filter((c) => c > 0)).toEqual([1]);
 
-        // Losing callers must not produce claim events. Production writes the
-        // event only on the winning branch, mirrored here.
-        for (const winner of winners) {
-          await db.from("conversation_events").insert({
-            conversation_id: conversation,
-            organization_id: orgId,
-            actor_id: winner.assigned_to!,
-            event_type: "claimed",
-            detail: "claimed",
-          });
-        }
+        // Losing callers must not produce claim events. The lifecycle routine
+        // writes the event on the winning branch only.
         const { count } = await db
           .from("conversation_events")
           .select("id", { count: "exact", head: true })
           .eq("conversation_id", conversation)
           .eq("event_type", "claimed");
+
         expect(count).toBe(1);
       }, 180_000);
     }
