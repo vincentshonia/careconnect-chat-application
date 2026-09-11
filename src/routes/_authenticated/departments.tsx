@@ -375,10 +375,12 @@ function HolidaysTab() {
     },
   });
 
+  const saveHolidayFnCall = useServerFn(manageHolidayFn);
+
   const create = useMutation({
     mutationFn: async () => {
       if (!orgId || !form.name.trim() || !form.date) return;
-      await saveHoliday({ data: { action: "create", name: form.name.trim(), date: form.date } });
+      await saveHolidayFnCall({ data: { action: "create", name: form.name.trim(), date: form.date } });
     },
     onSuccess: () => {
       setForm({ name: "", date: "" });
@@ -388,7 +390,7 @@ function HolidaysTab() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      await saveHoliday({ data: { action: "delete", id } });
+      await saveHolidayFnCall({ data: { action: "delete", id } });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["holidays"] }),
   });
