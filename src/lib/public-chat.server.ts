@@ -912,7 +912,11 @@ export type SessionContext = {
   visitor: Record<string, any>;
 };
 
-/** Verify a session token and load the bound website + visitor. */
+/**
+ * Verify a session token and load the bound website + visitor. `host` is the
+ * browser-reported origin; the session's stored host is only a fallback hint
+ * for sites still in dev mode.
+ */
 export async function sessionContext(token: unknown, host: string | null): Promise<SessionContext> {
   const { verifySession } = await import("./widget-session.server");
   const claims = await verifySession(token);
@@ -921,7 +925,7 @@ export async function sessionContext(token: unknown, host: string | null): Promi
   const { data: website } = await db.from("websites").select("*").eq("id", claims.wid).maybeSingle();
   if (!website || website.status !== "active") throw new PublicChatError(404, "Website not found");
   if (website.organization_id !== claims.org) throw new PublicChatError(401, "Chat session is invalid");
-  assertHostAllowed(website, host ?? claims.host);
+  assertHostAllowed(website, host, claims.host ?? null);
 
   const { data: visitor } = await db
     .from("visitors")
