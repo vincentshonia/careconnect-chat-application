@@ -414,20 +414,15 @@ export const closeConversationFn = createServerFn({ method: "POST" })
     const { admin } = await import("@/lib/public-chat.server");
     const db = admin();
     const now = new Date().toISOString();
-    await db
-      .from("conversations")
-      .update({ status: "closed", closed_at: now, closed_by: actor.userId })
-      .eq("id", conversation.id);
-
-    await db.from("conversation_events").insert({
-      conversation_id: conversation.id,
-      organization_id: conversation.organization_id,
-      actor_id: actor.userId,
-      event_type: "closed",
-      detail: `Closed by ${actor.fullName ?? "an agent"}`,
-      previous_value: conversation.status,
-      new_value: "closed",
+    const { transitionConversation } = await import("@/lib/lifecycle.server");
+    await transitionConversation({
+      conversationId: conversation.id,
+      event: "close",
+      actorId: actor.userId,
+      db,
+      payload: { detail: `Closed by ${actor.fullName ?? "an agent"}` },
     });
+
 
     await writeAudit(db as never, {
       actor,
@@ -477,25 +472,18 @@ export const resolveConversationFn = createServerFn({ method: "POST" })
     if (!disposition) throw new ForbiddenError("Choose a valid outcome before resolving");
 
     const now = new Date().toISOString();
-    await db
-      .from("conversations")
-      .update({
-        status: "resolved",
-        resolved_at: now,
-        resolved_by: actor.userId,
+    const { transitionConversation } = await import("@/lib/lifecycle.server");
+    await transitionConversation({
+      conversationId: conversation.id,
+      event: "resolve",
+      actorId: actor.userId,
+      db,
+      payload: {
         disposition_id: disposition.id,
-      })
-      .eq("id", conversation.id);
-
-    await db.from("conversation_events").insert({
-      conversation_id: conversation.id,
-      organization_id: conversation.organization_id,
-      actor_id: actor.userId,
-      event_type: "resolved",
-      detail: `Resolved by ${actor.fullName ?? "an agent"} — ${disposition.label}`,
-      previous_value: conversation.status,
-      new_value: "resolved",
+        detail: `Resolved by ${actor.fullName ?? "an agent"} — ${disposition.label}`,
+      },
     });
+
 
     await writeAudit(db as never, {
       actor,
