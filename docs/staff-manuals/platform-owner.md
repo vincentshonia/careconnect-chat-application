@@ -192,7 +192,7 @@ _Name every part of the screen you are looking at._
 > Console layout showing the branded sidebar with grouped navigation, a page header with title and description, an alert bell and the main content area.
 >
 > 1. Your organization's logo or name. Selecting it returns you to the console home.
-> 2. Navigation groups: Workspace, Content & AI, and Configuration. You only see items your role allows.
+> 2. Navigation groups: Workspace, Content & AI, and Admin. You only see items your role allows.
 > 3. Red count badges: Inbox shows conversations waiting for a response, Notifications shows your unread alerts.
 > 4. Page title and one-line description of the screen you are on.
 > 5. Alert bell — opens Notifications from anywhere.
@@ -216,7 +216,7 @@ _Name every part of the screen you are looking at._
 
 _Know where to go before you start clicking._
 
-Navigation is grouped into Workspace (day-to-day work), Content & AI (what the assistant knows and how well the team performs) and Configuration (how the platform behaves). You only see items your role allows — the list below marks who sees what.
+Navigation is grouped into Workspace (day-to-day work), Content & AI (what the assistant knows and how well the team performs) and Admin (one page of tabs that controls how the platform behaves). You only see items your role allows — the list below marks who sees what.
 
 *Every navigation item in CareConnect*
 
@@ -232,14 +232,14 @@ Navigation is grouped into Workspace (day-to-day work), Content & AI (what the a
 | AI console | Test the assistant's answer to a question before visitors see it | Manager and above |
 | Quality & QA | Satisfaction scores, transcript review and agent scorecards | Team Lead and above |
 | Reports | Operational reporting and CSV exports | Team Lead and above |
-| Websites | Widget branding, copy, tabs and the embed snippet | Administrator and above |
-| Departments | Departments, business hours and holiday closures | Administrator and above |
-| Routing | Rules that send escalations to a department, plus reply templates | Administrator and above |
-| Staff | Add teammates, set roles, departments and capacity | Team Lead can view; Administrator can change |
-| Organizations | Tenants, brands and their websites | Super Admin and platform administrators |
-| Organization settings | Contact details, chatbot guardrails, compliance notices | Administrator and above |
-| Security | Organization MFA policy and your authenticator | Super Admin and platform administrators |
-| Audit log | Append-only history of who changed what | Administrator and above |
+| Admin → Websites | Widget branding, copy, tabs and the embed snippet | Administrator and above |
+| Admin → Departments | Departments, business hours and holiday closures | Administrator and above |
+| Admin → Routing | Rules that send escalations to a department, plus reply templates | Administrator and above |
+| Admin → Staff | Add teammates, set roles, departments and capacity | Team Lead can view; Administrator can change |
+| Admin → Organizations | Tenants, brands and their websites | Super Admin and platform administrators |
+| Admin → Organization settings | Contact details, chatbot guardrails, compliance notices | Administrator and above |
+| Admin → Security | Organization MFA policy and your authenticator | Super Admin and platform administrators |
+| Admin → Audit log | Append-only history of who changed what | Administrator and above |
 | Help & Training | This training center: guides, checklists and knowledge checks | Everyone |
 
 > **Note — Missing an item you were told about?**
@@ -515,7 +515,7 @@ _Understand what a website record controls._
 
 Each website record represents one public site running the widget. It owns that site's branding, welcome copy, tabs, assistant instructions and embed snippet — so two brands can behave completely differently.
 
-1. Open Websites from the sidebar.
+1. Open Admin from the sidebar, then the Websites tab.
 2. Select a website to edit it, or create a new one for a new brand or domain.
 3. Work through the setting groups: Basics, Home, Chat and Navigation.
 4. Watch the live preview beside the settings — it renders exactly what a visitor will see.
@@ -579,7 +579,7 @@ _Set up a team that can actually receive conversations._
 > 4. Controls: Make default, switch routing method, Deactivate and Delete.
 > 5. Business hours per weekday, and holiday closures.
 
-1. Open Departments from the sidebar.
+1. Open Admin from the sidebar, then the Departments & hours tab.
 2. Create a department with a name staff will recognise on a transfer menu.
 3. Set its business hours per weekday, in the organization's timezone.
 4. Add holiday closures for dates the team is unavailable.
@@ -621,7 +621,7 @@ _Send each escalation to the team that can resolve it._
 > 4. Disable keeps a rule for later; Delete removes it immediately.
 > 5. Templates: name, shortcut, category and message, with Approve for the ones agents may send.
 
-1. Open Routing from the sidebar.
+1. Open Admin from the sidebar, then the Routing & templates tab.
 2. Create a rule that matches on the website and the conversation's topic or intent.
 3. Choose the destination department.
 4. Set the order — rules are evaluated in order, and the first match wins.
@@ -791,7 +791,7 @@ _Decide who must use an authenticator._
 > 3. Account hygiene reminders.
 > 4. Sign out other devices ends every other session on your account.
 
-1. Open Security from the sidebar.
+1. Open Admin from the sidebar, then the Security tab.
 2. Choose the policy: optional, required for administrators, or required for everyone.
 3. Save. Affected staff are asked to enrol the next time they sign in.
 4. Manage your own enrolled authenticator from the same screen.
@@ -818,7 +818,7 @@ _Answer “who did this, and when?”._
 > 2. Export CSV of the entries matching your search.
 > 3. Columns: When, Actor, Action, Record. Entries can never be edited or deleted.
 
-1. Open Audit log from the sidebar.
+1. Open Admin from the sidebar, then the Audit log tab.
 2. Filter by action, actor or date range.
 3. Read the entry: who acted, what changed, and the values before and after.
 4. Page through results with Prev and Next.
