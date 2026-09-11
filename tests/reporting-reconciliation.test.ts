@@ -458,7 +458,7 @@ describe("AI-only completion", () => {
       aiTo = new Date(Date.UTC(2025, 6, 1)).toISOString();
 
       const done = new Date(Date.UTC(2025, 5, 10, 12, 30, 0)).toISOString();
-      const aiOwner = await makeOwner(aiOrg, "ai");
+      
 
       await conversation("completed", { status: "resolved", resolved_at: done });
       await conversation("unresolved", { status: "waiting" });
