@@ -221,6 +221,8 @@ function Articles() {
   const articles = listQuery.data ?? [];
   const active = articles.find((a) => a.id === activeId) ?? null;
 
+  // Keyed on the record id, not the query object: a background refetch must
+  // not wipe out edits the author has not saved yet.
   useEffect(() => {
     if (active) {
       setForm({
@@ -230,7 +232,9 @@ function Articles() {
         status: active.status,
       });
     }
-  }, [active]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.id]);
+
 
   const save = useMutation({
     mutationFn: async () => {
