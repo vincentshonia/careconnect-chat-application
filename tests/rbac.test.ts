@@ -819,7 +819,7 @@ describe("authenticated RBAC boundaries", () => {
 
   describe("two-step verification policy", () => {
     it("blocks tenant access for an aal1 session once the org requires MFA", async () => {
-      const client = clients['admin']!;
+      const client = clients['adminA']!;
       const before = await client.from("conversations").select("id").eq("id", ctx.convA1);
       expect((before.data ?? []).length).toBeGreaterThan(0);
 
