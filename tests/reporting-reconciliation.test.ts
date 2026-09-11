@@ -461,7 +461,7 @@ describe("AI-only completion", () => {
       const aiOwner = await makeOwner(aiOrg, "ai");
 
       await conversation("completed", { status: "resolved", resolved_at: done });
-      await conversation("unresolved", { status: "active", assigned_to: aiOwner, claimed_at: done });
+      await conversation("unresolved", { status: "waiting" });
 
       await conversation("abandoned", { status: "waiting" });
       await conversation("spam", { status: "spam" });
