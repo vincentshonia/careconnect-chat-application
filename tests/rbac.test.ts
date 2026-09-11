@@ -72,7 +72,9 @@ async function createOrg(label: string) {
   const name = syntheticName(label, suffix);
   const { data, error } = await admin
     .from("organizations")
-    .insert({ name, slug: name.toLowerCase() })
+    // Two-step verification is enforced in the database, so synthetic tenants
+    // start with the policy off; the MFA suite turns it on deliberately.
+    .insert({ name, slug: name.toLowerCase(), require_mfa_for_admins: false })
     .select("id")
     .single();
   if (error) throw new Error(`org: ${error.message}`);
@@ -814,4 +816,32 @@ describe("authenticated RBAC boundaries", () => {
       expect(orgs ?? []).toHaveLength(0);
     });
   });
+
+  describe("two-step verification policy", () => {
+    it("blocks tenant access for an aal1 session once the org requires MFA", async () => {
+      const client = clients['adminA']!;
+      const before = await client.from("organizations").select("id").eq("id", ctx.orgA);
+      expect((before.data ?? []).length).toBeGreaterThan(0);
+
+      const { error: policyError } = await admin
+        .from("organizations")
+        .update({ require_mfa_for_admins: true })
+        .eq("id", ctx.orgA);
+      expect(policyError).toBeNull();
+
+      try {
+        const { data } = await client.from("organizations").select("id").eq("id", ctx.orgA);
+        expect(data ?? []).toHaveLength(0);
+      } finally {
+        await admin
+          .from("organizations")
+          .update({ require_mfa_for_admins: false })
+          .eq("id", ctx.orgA);
+      }
+
+      const after = await client.from("organizations").select("id").eq("id", ctx.orgA);
+      expect((after.data ?? []).length).toBeGreaterThan(0);
+    });
+  });
 });
+

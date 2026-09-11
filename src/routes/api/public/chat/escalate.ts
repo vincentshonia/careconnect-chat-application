@@ -35,7 +35,7 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
           const input = parsed.data;
           const ip = mod.clientIp(request);
           await mod.enforceRateLimit(`esc:ip:${ip}`, 10, 300);
-          const ctx = await mod.sessionContext(input.session, input.host ?? null);
+          const ctx = await mod.sessionContext(input.session, mod.verifiedOrigin(request));
           await mod.enforceRateLimit(`esc:s:${ctx.claims.sid}`, 5, 300);
           const website = ctx.website;
           const conversation = input.conversationId

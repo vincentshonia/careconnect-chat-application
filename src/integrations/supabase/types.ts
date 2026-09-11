@@ -2707,6 +2707,7 @@ export type Database = {
           vector_rank: number
         }[]
       }
+      mfa_satisfied: { Args: { _org?: string }; Returns: boolean }
       my_department_ids: {
         Args: { _org: string; _user?: string }
         Returns: string[]

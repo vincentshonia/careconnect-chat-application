@@ -19,10 +19,12 @@ export const Route = createFileRoute("/api/public/widget.js")({
 
   var host = encodeURIComponent(window.location.origin);
   var page = encodeURIComponent(window.location.pathname);
+  var originProof = '';
   function mount() {
   var frame = document.createElement('iframe');
   frame.title = 'Customer support chat';
   frame.src = widgetOrigin + '/widget?w=' + encodeURIComponent(id) + '&h=' + host + '&p=' + page +
+    '&op=' + encodeURIComponent(originProof) +
     '&r=' + encodeURIComponent(document.referrer || '') + '&q=' + encodeURIComponent(window.location.search || '');
   frame.setAttribute('allowtransparency', 'true');
   frame.style.cssText = 'position:fixed;bottom:16px;right:16px;width:88px;height:88px;border:0;z-index:2147483000;background:transparent;color-scheme:normal;transition:width .18s ease,height .18s ease;';
@@ -48,8 +50,20 @@ export const Route = createFileRoute("/api/public/widget.js")({
     if (d.type === 'hide') { frame.style.display = 'none'; }
   });
   }
-  if (document.body) { mount(); }
-  else { document.addEventListener('DOMContentLoaded', mount); }
+  // This request is cross-origin, so the browser attaches a trustworthy Origin
+  // header. The signed proof it returns is what authorizes the chat session.
+  function start() {
+    fetch(widgetOrigin + '/api/public/chat/origin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ websiteId: id })
+    }).then(function (r) { return r.json(); })
+      .then(function (j) { if (j && j.proof) originProof = j.proof; })
+      .catch(function () {})
+      .then(function () { mount(); });
+  }
+  if (document.body) { start(); }
+  else { document.addEventListener('DOMContentLoaded', start); }
 })();`;
         return new Response(js, {
           headers: {

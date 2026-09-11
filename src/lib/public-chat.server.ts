@@ -56,7 +56,44 @@ function isTrustedHost(host: string) {
   );
 }
 
-export async function resolveWebsite(websiteId: string, hostOrigin: string | null) {
+/**
+ * The only origin worth trusting: the one the browser itself reported. API
+ * routes carry `Origin`; document/script requests (the /widget page and
+ * widget.js) carry `Referer`. Anything the page hands us in a `h` parameter is
+ * attacker-controlled and used for analytics only.
+ */
+export function verifiedOrigin(request: Request): string | null {
+  return request.headers.get("origin") ?? request.headers.get("referer") ?? null;
+}
+
+/** Host proven by a signed origin proof, or null when there is no valid proof. */
+export async function provenHost(proofToken: unknown, websiteId?: string): Promise<string | null> {
+  if (!proofToken) return null;
+  const { verifyOriginProof } = await import("./widget-session.server");
+  const claims = await verifyOriginProof(proofToken);
+  if (!claims) return null;
+  if (websiteId && claims.wid !== websiteId) return null;
+  return claims.host;
+}
+
+
+
+export function matchesAllowedDomains(website: Record<string, any>, host: string | null) {
+  const allowed: string[] = website.allowed_domains ?? [];
+  return (
+    !!host &&
+    allowed.some((d) => {
+      const clean = String(d).toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
+      return !!clean && (host === clean || host.endsWith(`.${clean}`));
+    })
+  );
+}
+
+export async function resolveWebsite(
+  websiteId: string,
+  hostOrigin: string | null,
+  clientHint: string | null = null,
+) {
   if (!/^[0-9a-f-]{36}$/i.test(websiteId)) throw new PublicChatError(400, "Invalid website id");
   const { data: website, error } = await admin()
     .from("websites")
@@ -66,12 +103,16 @@ export async function resolveWebsite(websiteId: string, hostOrigin: string | nul
   if (error) throw new PublicChatError(500, "Could not load website configuration");
   if (!website || website.status !== "active") throw new PublicChatError(404, "Website not found");
 
-  assertHostAllowed(website, hostOrigin);
+  assertHostAllowed(website, hostOrigin, clientHint);
   return website;
 }
 
 /** Resolve a website by its public widget key (preferred over raw ids). */
-export async function resolveWebsiteByKey(publicKey: string, hostOrigin: string | null) {
+export async function resolveWebsiteByKey(
+  publicKey: string,
+  hostOrigin: string | null,
+  clientHint: string | null = null,
+) {
   if (!/^cc_pk_[a-f0-9]{16,64}$/i.test(publicKey)) {
     throw new PublicChatError(400, "Invalid widget key");
   }
@@ -82,34 +123,34 @@ export async function resolveWebsiteByKey(publicKey: string, hostOrigin: string 
     .maybeSingle();
   if (error) throw new PublicChatError(500, "Could not load website configuration");
   if (!website || website.status !== "active") throw new PublicChatError(404, "Website not found");
-  assertHostAllowed(website, hostOrigin);
+  assertHostAllowed(website, hostOrigin, clientHint);
   return website;
 }
 
 /**
- * Enforce the embedding allow-list. In dev mode Lovable preview hosts and a
- * missing origin are tolerated; once a site is taken out of dev mode the
- * request must come from an explicitly allowed domain.
+ * Enforce the embedding allow-list.
+ *
+ * Live sites (dev_mode false) are authorized purely from the browser-reported
+ * origin: it must match `allowed_domains`. Lovable preview hosts are not
+ * accepted there, and the client-supplied hint is ignored. Sites still in dev
+ * mode keep the tolerant behaviour so the widget can be tried from previews.
  */
-export function assertHostAllowed(website: Record<string, any>, hostOrigin: string | null) {
-  const host = hostOf(hostOrigin);
-  const allowed: string[] = website.allowed_domains ?? [];
-  const matchesAllowList =
-    !!host &&
-    allowed.some((d) => {
-      const clean = d.toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
-      return !!clean && (host === clean || host.endsWith(`.${clean}`));
-    });
-
+export function assertHostAllowed(
+  website: Record<string, any>,
+  hostOrigin: string | null,
+  clientHint: string | null = null,
+) {
   if (website.dev_mode === false) {
+    const host = hostOf(hostOrigin);
     if (!host) throw new PublicChatError(403, "This chat widget requires a known origin");
-    if (!matchesAllowList && !isTrustedHost(host)) {
+    if (!matchesAllowedDomains(website, host)) {
       throw new PublicChatError(403, "This chat widget is not authorized on this domain");
     }
     return;
   }
 
-  const permitted = !host || isTrustedHost(host) || matchesAllowList;
+  const host = hostOf(hostOrigin ?? clientHint);
+  const permitted = !host || isTrustedHost(host) || matchesAllowedDomains(website, host);
   if (!permitted) throw new PublicChatError(403, "This chat widget is not authorized on this domain");
 }
 
@@ -121,20 +162,28 @@ export function assertHostAllowed(website: Record<string, any>, hostOrigin: stri
 const WIDGET_CONFIG_TTL_MS = 60_000;
 const widgetConfigCache = new Map<string, { at: number; value: Awaited<ReturnType<typeof buildWidgetConfig>> }>();
 
-export async function loadWidgetConfig(websiteId: string, hostOrigin: string | null) {
+export async function loadWidgetConfig(
+  websiteId: string,
+  hostOrigin: string | null,
+  clientHint: string | null = null,
+) {
   // The host check must run on every request, so it stays outside the cache.
   const cached = widgetConfigCache.get(websiteId);
   if (cached && Date.now() - cached.at < WIDGET_CONFIG_TTL_MS) {
-    await resolveWebsite(websiteId, hostOrigin);
+    await resolveWebsite(websiteId, hostOrigin, clientHint);
     return cached.value;
   }
-  const value = await buildWidgetConfig(websiteId, hostOrigin);
+  const value = await buildWidgetConfig(websiteId, hostOrigin, clientHint);
   widgetConfigCache.set(websiteId, { at: Date.now(), value });
   return value;
 }
 
-async function buildWidgetConfig(websiteId: string, hostOrigin: string | null) {
-  const website = await resolveWebsite(websiteId, hostOrigin);
+async function buildWidgetConfig(
+  websiteId: string,
+  hostOrigin: string | null,
+  clientHint: string | null = null,
+) {
+  const website = await resolveWebsite(websiteId, hostOrigin, clientHint);
   const db = admin();
   const [
     { data: org },
@@ -829,17 +878,34 @@ export async function recordAiResponse(params: {
 export async function startWidgetSession(opts: {
   websiteId?: string | null;
   publicKey?: string | null;
+  /** Browser-reported origin of this request (same-origin for the iframe). */
   host: string | null;
+  /** Page-supplied origin: analytics only, never trusted for authorization. */
+  clientHost?: string | null;
+  /** Signed proof of the embedding page's origin, issued by /chat/origin. */
+  originProof?: string | null;
   meta: Record<string, any>;
   /** The token being replaced, so a renewal keeps the same visitor. */
   priorSession?: string | null;
 }) {
-  const { newSessionId, signSession, verifySessionForRenewal } = await import(
+  const { newSessionId, signSession, verifySessionForRenewal, verifyOriginProof } = await import(
     "./widget-session.server"
   );
+  const clientHint = opts.clientHost ?? null;
+  const proof = opts.originProof ? await verifyOriginProof(opts.originProof) : null;
+  // The proof was issued after a cross-origin check of the embedding page, so
+  // it is the trustworthy host. The request's own origin is only a hint.
+  const provenHost = proof?.host ?? null;
   const website = opts.publicKey
-    ? await resolveWebsiteByKey(opts.publicKey, opts.host)
-    : await resolveWebsite(String(opts.websiteId ?? ""), opts.host);
+    ? await resolveWebsiteByKey(opts.publicKey, provenHost, clientHint ?? opts.host)
+    : await resolveWebsite(String(opts.websiteId ?? ""), provenHost, clientHint ?? opts.host);
+
+  if (website.dev_mode === false && proof?.wid !== website.id) {
+    throw new PublicChatError(403, "This chat widget is not authorized on this domain");
+  }
+
+
+
 
   // A renewal presents its previous token. When that token is genuine (even if
   // it expired in the last week) and belongs to this website, the visitor is
@@ -859,7 +925,9 @@ export async function startWidgetSession(opts: {
     sid,
     wid: website.id,
     org: website.organization_id,
-    host: opts.host,
+    // Store the *proven* host so later endpoints authorize against a value the
+    // browser proved, not one the page claimed.
+    host: provenHost ?? opts.clientHost ?? opts.host,
   });
   return { token, expiresAt, websiteId: website.id as string };
 }
@@ -870,7 +938,11 @@ export type SessionContext = {
   visitor: Record<string, any>;
 };
 
-/** Verify a session token and load the bound website + visitor. */
+/**
+ * Verify a session token and load the bound website + visitor. `host` is the
+ * browser-reported origin; the session's stored host is only a fallback hint
+ * for sites still in dev mode.
+ */
 export async function sessionContext(token: unknown, host: string | null): Promise<SessionContext> {
   const { verifySession } = await import("./widget-session.server");
   const claims = await verifySession(token);
@@ -879,7 +951,7 @@ export async function sessionContext(token: unknown, host: string | null): Promi
   const { data: website } = await db.from("websites").select("*").eq("id", claims.wid).maybeSingle();
   if (!website || website.status !== "active") throw new PublicChatError(404, "Website not found");
   if (website.organization_id !== claims.org) throw new PublicChatError(401, "Chat session is invalid");
-  assertHostAllowed(website, host ?? claims.host);
+  assertHostAllowed(website, host, claims.host ?? null);
 
   const { data: visitor } = await db
     .from("visitors")
@@ -946,6 +1018,35 @@ export function mergeOrgLimits(row: Partial<Record<keyof OrgLimits, unknown>> | 
   }
   return merged;
 }
+
+/* --------------------------- embedding permissions ------------------------ */
+
+const frameAncestorsCache = new Map<string, { at: number; value: string[] }>();
+
+/**
+ * Domains permitted to embed the widget page, used to build its
+ * `frame-ancestors` policy. Empty when the website cannot be resolved.
+ */
+export async function widgetFrameAncestors(websiteId: string): Promise<string[]> {
+  if (!/^[0-9a-f-]{36}$/i.test(websiteId)) return [];
+  const cached = frameAncestorsCache.get(websiteId);
+  if (cached && Date.now() - cached.at < WIDGET_CONFIG_TTL_MS) return cached.value;
+  const { data } = await admin()
+    .from("websites")
+    .select("allowed_domains, dev_mode")
+    .eq("id", websiteId)
+    .maybeSingle();
+  if (!data) return [];
+  const domains: string[] = (data.allowed_domains ?? [])
+    .map((d: string) => String(d).toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, ""))
+    .filter(Boolean)
+    .flatMap((d: string) => [`https://${d}`, `https://*.${d}`]);
+  if (data.dev_mode !== false) domains.push("https://*.lovable.app", "https://*.lovable.dev", "http://localhost:*");
+  frameAncestorsCache.set(websiteId, { at: Date.now(), value: domains });
+  return domains;
+}
+
+
 
 export async function orgLimits(organizationId: string): Promise<OrgLimits> {
   const { data } = await admin()

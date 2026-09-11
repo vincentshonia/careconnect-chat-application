@@ -120,6 +120,55 @@ export async function verifySession(token: unknown): Promise<WidgetSessionClaims
   return verifySigned(token, 0);
 }
 
+/* ------------------------------ origin proofs ----------------------------- */
+
+/**
+ * The widget runs in an iframe served from *our* origin, so requests it makes
+ * carry our own origin, not the page it is embedded in. The embedding page is
+ * proven once, cross-origin, by the loader script: the server checks the
+ * browser-sent `Origin` header against the allow-list and hands back this
+ * short-lived signed proof. The widget then presents the proof when minting a
+ * session, and the verified host is stored in the session claims.
+ */
+export type OriginProofClaims = { wid: string; host: string; exp: number };
+
+const ORIGIN_PROOF_TTL_SECONDS = 15 * 60;
+
+export async function signOriginProof(wid: string, host: string): Promise<string> {
+  const payload: OriginProofClaims = {
+    wid,
+    host,
+    exp: Math.floor(Date.now() / 1000) + ORIGIN_PROOF_TTL_SECONDS,
+  };
+  const body = b64url(new TextEncoder().encode(JSON.stringify(payload)));
+  const sig = new Uint8Array(
+    await crypto.subtle.sign("HMAC", await key(), new TextEncoder().encode(`op.${body}`)),
+  );
+  return `${body}.${b64url(sig)}`;
+}
+
+/** Returns the proven host, or null when the proof is missing/invalid/expired. */
+export async function verifyOriginProof(token: unknown): Promise<OriginProofClaims | null> {
+  if (typeof token !== "string" || token.length < 10 || token.length > 2000) return null;
+  const [body, sig] = token.split(".");
+  if (!body || !sig) return null;
+  try {
+    const ok = await crypto.subtle.verify(
+      "HMAC",
+      await key(),
+      fromB64url(sig) as unknown as BufferSource,
+      new TextEncoder().encode(`op.${body}`),
+    );
+    if (!ok) return null;
+    const claims = JSON.parse(new TextDecoder().decode(fromB64url(body))) as OriginProofClaims;
+    if (!claims?.wid || !claims.host || typeof claims.exp !== "number") return null;
+    if (claims.exp * 1000 < Date.now()) return null;
+    return claims;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Same signature check, but a token that expired recently is still accepted.
  *

@@ -44,12 +44,53 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+/**
+ * Baseline browser protections. The app itself must never be framed; the
+ * widget page is the one exception and is framed only by the domains the
+ * website owner approved.
+ */
+async function withSecurityHeaders(request: Request, response: Response): Promise<Response> {
+  const path = new URL(request.url).pathname;
+  if (path.startsWith("/api/public")) return response;
+
+  const headers = new Headers(response.headers);
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  if (path === "/widget") {
+    const websiteId = new URL(request.url).searchParams.get("w") ?? "";
+    let ancestors: string[] = [];
+    try {
+      const mod = await import("./lib/public-chat.server");
+      ancestors = await mod.widgetFrameAncestors(websiteId);
+    } catch {
+      ancestors = [];
+    }
+    headers.set(
+      "Content-Security-Policy",
+      `frame-ancestors ${ancestors.length ? ancestors.join(" ") : "'none'"}`,
+    );
+  } else {
+    // Nothing may frame the staff app except the Lovable editor preview.
+    headers.set(
+      "Content-Security-Policy",
+      "frame-ancestors 'self' https://lovable.dev https://*.lovable.dev https://*.lovable.app",
+    );
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      return await withSecurityHeaders(request, await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {
