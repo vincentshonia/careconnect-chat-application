@@ -662,7 +662,11 @@ function InboxPage() {
     Boolean(active) &&
     !isClosed &&
     (isOwner || (isSupervisor && Boolean(active!.assigned_to)));
+  // Supervisors can finish an unclaimed conversation without taking it over —
+  // otherwise stray tickets can only be tidied up by claiming them first.
+  const canFinish = Boolean(active) && !isClosed && (isOwner || isSupervisor);
   const readOnly = Boolean(active) && !canReply && !canClaim;
+
 
   const tabs: Array<{ key: Tab; label: string }> = [
     { key: "waiting", label: "Waiting" },
