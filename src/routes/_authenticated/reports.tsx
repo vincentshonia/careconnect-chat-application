@@ -869,6 +869,8 @@ function TicketsTab({ filters, search, update }: TabProps) {
               { key: "contact_name", label: "Visitor", render: (r) => String(r['contact_name'] ?? "Anonymous") },
               { key: "department", label: "Department", sortable: true, render: (r) => String(r['department_name'] ?? "—") },
               { key: "assigned", label: "Agent", sortable: true, render: (r) => String(r['assigned_name'] ?? "Unassigned") },
+              { key: "disposition", label: "Outcome", sortable: true, render: (r) => String(r['disposition'] ?? "—") },
+
               {
                 key: "status",
                 label: "Status",
