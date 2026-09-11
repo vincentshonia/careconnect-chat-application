@@ -814,4 +814,32 @@ describe("authenticated RBAC boundaries", () => {
       expect(orgs ?? []).toHaveLength(0);
     });
   });
+
+  describe("two-step verification policy", () => {
+    it("blocks tenant access for an aal1 session once the org requires MFA", async () => {
+      const client = clients['admin']!;
+      const before = await client.from("conversations").select("id").eq("id", ctx.convA1);
+      expect((before.data ?? []).length).toBeGreaterThan(0);
+
+      const { error: policyError } = await admin
+        .from("organizations")
+        .update({ require_mfa_for_admins: true })
+        .eq("id", ctx.orgA);
+      expect(policyError).toBeNull();
+
+      try {
+        const { data } = await client.from("conversations").select("id").eq("id", ctx.convA1);
+        expect(data ?? []).toHaveLength(0);
+      } finally {
+        await admin
+          .from("organizations")
+          .update({ require_mfa_for_admins: false })
+          .eq("id", ctx.orgA);
+      }
+
+      const after = await client.from("conversations").select("id").eq("id", ctx.convA1);
+      expect((after.data ?? []).length).toBeGreaterThan(0);
+    });
+  });
 });
+
