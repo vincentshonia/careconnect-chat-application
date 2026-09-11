@@ -333,41 +333,24 @@ export const reassignConversationFn = createServerFn({ method: "POST" })
       overrideReason = decision.overrideReason;
     }
 
-    // Only write if the owner is still who we read a moment ago, so two
-    // supervisors acting at once can't silently overwrite each other.
     const previousAssignee = conversation.assigned_to ?? null;
-    let update = db
-      .from("conversations")
-      .update({
-        assigned_to: data.userId,
-        status: data.userId ? "assigned" : "waiting",
-        claimed_at: data.userId ? new Date().toISOString() : null,
-        ...(data.userId ? {} : { escalation_requested: true }),
-      })
-      .eq("id", conversation.id);
-    update = previousAssignee
-      ? update.eq("assigned_to", previousAssignee)
-      : update.is("assigned_to", null);
-    const { data: updatedRows, error: updateError } = await update.select("id");
-    if (updateError) throw new Error(updateError.message);
-    if (!updatedRows || updatedRows.length === 0) {
-      throw new Error(
-        "This conversation was reassigned by someone else — reload and try again",
-      );
-    }
-
-
     const newName = data.userId ? await agentName(data.userId) : null;
 
-    await db.from("conversation_events").insert({
-      conversation_id: conversation.id,
-      organization_id: conversation.organization_id,
-      actor_id: actor.userId,
-      event_type: data.userId ? "reassigned" : "released",
-      detail: newName ? `Reassigned to ${newName}` : "Returned to the department queue",
-      previous_value: conversation.assigned_to,
-      new_value: data.userId,
+    // The lifecycle routine refuses the write if the owner changed since we
+    // read it, so two supervisors acting at once can't overwrite each other.
+    const { transitionConversation } = await import("@/lib/lifecycle.server");
+    await transitionConversation({
+      conversationId: conversation.id,
+      event: data.userId ? "reassign" : "release",
+      actorId: actor.userId,
+      db,
+      payload: {
+        user_id: data.userId,
+        expected_assignee: previousAssignee,
+        detail: newName ? `Reassigned to ${newName}` : "Returned to the department queue",
+      },
     });
+
 
     const { notifyStaff } = await import("@/lib/notifications.server");
     await notifyStaff({
