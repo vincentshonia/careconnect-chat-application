@@ -866,7 +866,10 @@ export async function recordAiResponse(params: {
 export async function startWidgetSession(opts: {
   websiteId?: string | null;
   publicKey?: string | null;
+  /** Browser-reported origin — the value authorization is based on. */
   host: string | null;
+  /** Page-supplied origin: analytics only, never trusted for authorization. */
+  clientHost?: string | null;
   meta: Record<string, any>;
   /** The token being replaced, so a renewal keeps the same visitor. */
   priorSession?: string | null;
@@ -874,9 +877,11 @@ export async function startWidgetSession(opts: {
   const { newSessionId, signSession, verifySessionForRenewal } = await import(
     "./widget-session.server"
   );
+  const clientHint = opts.clientHost ?? null;
   const website = opts.publicKey
-    ? await resolveWebsiteByKey(opts.publicKey, opts.host)
-    : await resolveWebsite(String(opts.websiteId ?? ""), opts.host);
+    ? await resolveWebsiteByKey(opts.publicKey, opts.host, clientHint)
+    : await resolveWebsite(String(opts.websiteId ?? ""), opts.host, clientHint);
+
 
   // A renewal presents its previous token. When that token is genuine (even if
   // it expired in the last week) and belongs to this website, the visitor is
