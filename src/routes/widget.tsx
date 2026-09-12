@@ -182,6 +182,8 @@ function WidgetPage() {
   const hostOrigin = params.get("h");
   const originProof = params.get("op");
   const page = params.get("p") ?? "";
+  /** Admin console preview: accepts live config edits from the parent frame. */
+  const isPreview = params.get("preview") === "1";
 
   const [config, setConfig] = useState<Config | null>(null);
   const [error, setError] = useState<string | null>(null);
