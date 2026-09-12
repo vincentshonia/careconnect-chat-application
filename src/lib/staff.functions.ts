@@ -185,6 +185,10 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
       await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: "none" });
       await supabaseAdmin.from("profiles").update({ status: "active" }).eq("id", data.userId);
     } else {
+      // Hand their open chats back to the queue first, through the lifecycle
+      // routine, so the history entry is written and the team is alerted.
+      await releaseOpenConversations(data.userId, organizationId, context.userId);
+
       // Indefinite ban revokes sign-in without touching any historical records.
       await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: "876000h" });
       await supabaseAdmin
