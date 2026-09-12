@@ -142,7 +142,7 @@ export function AdminShell({
     .filter((group) => group.items.length > 0);
 
   const orgName = branding.data?.name ?? "Pacific Health";
-  const logoUrl = branding.data?.logo_url ?? null;
+  
   const initials = orgName
     .split(/\s+/)
     .filter(Boolean)
@@ -164,35 +164,18 @@ export function AdminShell({
       }`}
     >
       <div className="px-4 py-5">
-        {/* The uploaded brand logo stands in for the organization name. Without
-            one, the name is rendered as text instead. "Support Console" always
-            sits underneath. */}
+        {/* The organization name is always shown as text here — never the
+            uploaded logo image. "Support Console" sits underneath. */}
         <Link to="/" className="flex min-w-0 flex-col gap-1.5">
           {collapsed ? (
-            logoUrl ? (
-              <img
-                src={logoUrl}
-                alt={`${orgName} logo`}
-                className="h-9 w-9 shrink-0 rounded-xl bg-sidebar-accent/40 object-contain p-0.5"
-              />
-            ) : (
-              <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
-                {initials || "PH"}
-              </span>
-            )
+            <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
+              {initials || "PH"}
+            </span>
           ) : (
             <>
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt={orgName}
-                  className="h-9 w-auto max-w-[184px] self-start object-contain object-left"
-                />
-              ) : (
-                <span className="block truncate text-base font-semibold tracking-tight">
-                  {orgName}
-                </span>
-              )}
+              <span className="block truncate text-base font-semibold tracking-tight">
+                {orgName}
+              </span>
               <span className="block truncate text-[11px] text-sidebar-foreground/60">
                 Support Console
               </span>
@@ -200,6 +183,7 @@ export function AdminShell({
           )}
         </Link>
       </div>
+
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
         {visibleGroups.map((group) => (
