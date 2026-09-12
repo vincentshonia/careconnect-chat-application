@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.release_on_assignee_removed() FROM PUBLIC, anon, authenticated;

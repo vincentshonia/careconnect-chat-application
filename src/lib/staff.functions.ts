@@ -16,6 +16,62 @@ import { ROLE_RANK, roleTransitionError, type OrgRole } from "@/lib/permissions"
 const APP_ORIGIN = "https://chat.mypacifichealth.com";
 
 /**
+ * Hand a departing staff member's open chats back to the queue.
+ *
+ * Offboarding must never leave a visitor owned by an account that can no
+ * longer sign in, and deleting the account later must not have to rewrite
+ * lifecycle columns behind the workflow's back. Every chat goes through the
+ * lifecycle routine, so the history entry and timing columns stay consistent,
+ * and the department is alerted that the chat is waiting again.
+ */
+async function releaseOpenConversations(
+  userId: string,
+  organizationId: string,
+  actorId: string,
+): Promise<void> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: open } = await supabaseAdmin
+    .from("conversations")
+    .select("id, department_id")
+    .eq("organization_id", organizationId)
+    .eq("assigned_to", userId)
+    .in("status", ["active", "assigned"]);
+
+  if (!open?.length) return;
+
+  const { transitionConversation } = await import("@/lib/lifecycle.server");
+  const { notifyStaff } = await import("@/lib/notifications.server");
+
+  for (const conversation of open) {
+    try {
+      await transitionConversation({
+        conversationId: conversation.id,
+        event: "release",
+        actorId,
+        payload: {
+          expected_assignee: userId,
+          detail: "Returned to the queue — staff member offboarded",
+        },
+      });
+      await notifyStaff({
+        organizationId,
+        departmentId: conversation.department_id,
+        type: "escalation",
+        severity: "warning",
+        title: "Chat returned to the queue",
+        body: "The assigned staff member was removed or disabled",
+        link: `/inbox?c=${conversation.id}`,
+        recordType: "conversations",
+        recordId: conversation.id,
+      });
+    } catch (error) {
+      // A chat that moved on in the meantime must not block offboarding.
+      console.warn("[staff] release on offboard failed", conversation.id, error);
+    }
+  }
+}
+
+/**
  * Administrator-only: invite a staff member.
  *
  * No account and no password are ever created here. The person receives a
@@ -185,6 +241,10 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
       await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: "none" });
       await supabaseAdmin.from("profiles").update({ status: "active" }).eq("id", data.userId);
     } else {
+      // Hand their open chats back to the queue first, through the lifecycle
+      // routine, so the history entry is written and the team is alerted.
+      await releaseOpenConversations(data.userId, organizationId, context.userId);
+
       // Indefinite ban revokes sign-in without touching any historical records.
       await supabaseAdmin.auth.admin.updateUserById(data.userId, { ban_duration: "876000h" });
       await supabaseAdmin

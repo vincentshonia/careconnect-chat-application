@@ -202,7 +202,8 @@ const ORG_SCOPED_TABLES = [
 export async function purgeSyntheticOrganizations(
   db: AnyClient,
   organizationIds: (string | null | undefined)[],
-): Promise<void> {
+): Promise<number> {
+  let removed = 0;
   for (const organizationId of organizationIds.filter(Boolean) as string[]) {
     const { data: org } = await db
       .from("organizations")
@@ -213,23 +214,41 @@ export async function purgeSyntheticOrganizations(
     assertSynthetic((org as { name: string }).name, "organization");
 
     for (const table of ORG_SCOPED_TABLES) {
-      await db.from(table).delete().eq("organization_id", organizationId);
+      const { error } = await db.from(table).delete().eq("organization_id", organizationId);
+      // A residual row is a silent leak into the live project, so it fails loudly.
+      if (error) throw new Error(`purge ${table} for ${organizationId}: ${error.message}`);
     }
-    await db.from("organizations").delete().eq("id", organizationId);
+    const { error } = await db.from("organizations").delete().eq("id", organizationId);
+    if (error) throw new Error(`purge organization ${organizationId}: ${error.message}`);
+    removed += 1;
   }
+  if (removed > 0) console.log(`[cleanup] removed ${removed} synthetic organization(s)`);
+  return removed;
 }
 
-/** Deletes synthetic auth accounts, refusing any address without the prefix. */
+/**
+ * Deletes synthetic auth accounts, refusing any address without the prefix.
+ *
+ * Always call this AFTER `purgeSyntheticOrganizations`: deleting an account
+ * that still owns a live conversation makes the database hand that
+ * conversation back to the queue first, which is correct but wasteful here.
+ */
 export async function purgeSyntheticUsers(
   db: AnyClient,
   users: { id: string; email: string }[],
-): Promise<void> {
+): Promise<number> {
+  let removed = 0;
   for (const user of users) {
     if (!user?.id) continue;
     assertSynthetic(user.email, "account email");
-    await db.from("profiles").delete().eq("id", user.id);
-    await db.auth.admin.deleteUser(user.id);
+    const { error: profileError } = await db.from("profiles").delete().eq("id", user.id);
+    if (profileError) throw new Error(`purge profile ${user.email}: ${profileError.message}`);
+    const { error } = await db.auth.admin.deleteUser(user.id);
+    if (error) throw new Error(`purge account ${user.email}: ${error.message}`);
+    removed += 1;
   }
+  if (removed > 0) console.log(`[cleanup] removed ${removed} synthetic account(s)`);
+  return removed;
 }
 
 /**

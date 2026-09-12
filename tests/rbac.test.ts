@@ -58,14 +58,15 @@ let baseline: ProtectedBaseline | null = null;
 
 /** Deletes every fixture; safe to call twice and safe to call mid-setup. */
 async function teardown() {
+  // Organizations first: their rows reference the accounts.
+  await purgeSyntheticOrganizations(admin, [ctx.orgA, ctx.orgB]);
+  ctx.orgA = "";
+  ctx.orgB = "";
   await purgeSyntheticUsers(
     admin,
     Object.values(ctx.users ?? {}).map((user) => ({ id: user.id, email: user.email })),
   );
   ctx.users = {};
-  await purgeSyntheticOrganizations(admin, [ctx.orgA, ctx.orgB]);
-  ctx.orgA = "";
-  ctx.orgB = "";
 }
 
 async function createOrg(label: string) {
