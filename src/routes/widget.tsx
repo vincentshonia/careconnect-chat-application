@@ -180,9 +180,8 @@ function ContactCard({ config, brand }: { config: Config; brand: string }) {
       className="rounded-xl border border-border bg-card p-4"
       style={{ fontFamily: config.website.fontFamily, lineHeight: 1.5 }}
     >
-      <h2 className="mb-3 text-base font-semibold tracking-tight text-card-foreground">
-        {org.name}
-      </h2>
+      {/* The company name is shown in the panel header on this view. */}
+
 
       <div className="space-y-3">
         {rows.map((row) => (
