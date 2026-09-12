@@ -3,12 +3,12 @@
 > Generated automatically by `bun run release:gate`. PASS/FAIL is derived
 > from process exit codes only. No credentials or secrets are recorded.
 
-**Executed (UTC):** 2026-09-12T05:16:11.366Z
-**Completed (UTC):** 2026-09-12T05:30:53.639Z
-**Build identification:** 170f05487698ac8cceef0a711d5e8f67d6277c96
+**Executed (UTC):** 2026-09-12T05:32:38.162Z
+**Completed (UTC):** 2026-09-12T05:46:10.135Z
+**Build identification:** 27259ea3f587d1b1b4279e46b3b7639be28abef1
 **Node:** v22.22.0
 
-## Overall: FAIL
+## Overall: PASS
 
 ## Stages
 
@@ -19,8 +19,8 @@
 | Typecheck | `bunx tsgo --noEmit` | 0 | PASS |
 | Production build | `bun run build` | 0 | PASS |
 | Vitest | `bunx vitest run --reporter=json --reporter=default --outputFile.json=/dev-server/.release/vitest.json` | 0 | PASS |
-| Playwright E2E | `bunx playwright test --reporter=json` | 1 | FAIL |
-| E2E cleanup verification | `node scripts/e2e-cleanup-verify.mjs` | — | NOT RUN |
+| Playwright E2E | `bunx playwright test --reporter=json` | 0 | PASS |
+| E2E cleanup verification | `node scripts/e2e-cleanup-verify.mjs` | 0 | PASS |
 
 ## Vitest
 
@@ -33,8 +33,8 @@
 ## Playwright (browser E2E)
 
 - Tests: 17
-- Passed: 16
-- Failed: 1
+- Passed: 17
+- Failed: 0
 - Skipped: 0
 
 ## Required suites
@@ -48,10 +48,5 @@
 | Concurrency/routing suite (tests/concurrency-routing.test.ts) | PASS |
 | Scale/data-volume suite (tests/reporting-reconciliation.test.ts) | PASS |
 | Widget regression suite (tests/widget-session.test.ts) | PASS |
-| Browser E2E suite (Playwright) | FAIL |
-| E2E cleanup verification | NOT RUN |
-
-## Blocking failures
-
-- Stage **Playwright E2E** — FAIL
-- Stage **E2E cleanup verification** — NOT RUN
+| Browser E2E suite (Playwright) | PASS |
+| E2E cleanup verification | PASS |
