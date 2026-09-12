@@ -833,11 +833,13 @@ export async function answerQuestion(opts: {
       answer: `${outOfScopeReply(orgName, language)} ${scopeLimitedNotice(orgName, language)}`,
       sources: [],
       confidence: 0,
-      escalate: false,
+      // Still offer a person: the visitor must never be left without a way out.
+      escalate: true,
       crisis: false,
       diagnostics: { retrieval: [], floor: MIN_SIMILARITY, language },
     };
   }
+
 
   // Hybrid retrieval: meaning-similarity and word/fuzzy matching, blended by
   // reciprocal rank fusion so an exact plan name or phone number is found even
