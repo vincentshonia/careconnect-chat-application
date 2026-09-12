@@ -64,3 +64,26 @@ describe("session renewal grace", () => {
     await expect(verifySessionForRenewal(`${forged}.${sig}`)).rejects.toThrow();
   });
 });
+
+describe("session-bound authorization", () => {
+  const site = { id: crypto.randomUUID(), dev_mode: false, allowed_domains: ["example.com"] };
+
+  it("allows a valid session whose proven host is on the allow-list, with no Origin header", async () => {
+    const { assertSessionHostAllowed } = await import("@/lib/public-chat.server");
+    expect(() => assertSessionHostAllowed(site, "https://example.com", null)).not.toThrow();
+  });
+
+  it("refuses when the request carries a disallowed Origin", async () => {
+    const { assertSessionHostAllowed } = await import("@/lib/public-chat.server");
+    expect(() => assertSessionHostAllowed(site, "https://example.com", "https://evil.test")).toThrow(
+      /not authorized/i,
+    );
+  });
+
+  it("refuses a session that was minted without a proven host", async () => {
+    const { assertSessionHostAllowed } = await import("@/lib/public-chat.server");
+    expect(() => assertSessionHostAllowed(site, null, "https://example.com")).toThrow(
+      /not authorized/i,
+    );
+  });
+});

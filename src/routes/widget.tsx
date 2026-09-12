@@ -107,7 +107,16 @@ type Bubble = {
   attachment?: { name: string; url: string | null; type: string };
 };
 
-type View = "menu" | "chat" | "services" | "faq" | "contact" | "form" | "waiting" | "requests";
+type View =
+  | "menu"
+  | "chat"
+  | "services"
+  | "service"
+  | "faq"
+  | "contact"
+  | "form"
+  | "waiting"
+  | "requests";
 
 type Tab = "home" | "chat" | "help" | "services" | "requests";
 
@@ -142,7 +151,7 @@ const TABS: { key: Tab; label: string; view: View; icon: string }[] = [
 function tabForView(view: View): Tab {
   if (view === "chat" || view === "waiting") return "chat";
   if (view === "faq") return "help";
-  if (view === "services") return "services";
+  if (view === "services" || view === "service") return "services";
   if (view === "requests" || view === "form" || view === "contact") return "requests";
   return "home";
 }
@@ -183,6 +192,9 @@ function WidgetPage() {
   const [agentName, setAgentName] = useState<string | null>(null);
   const [agentAvatar, setAgentAvatar] = useState<string | null>(null);
   const [faqQuery, setFaqQuery] = useState("");
+  /** Service shown in the detail view, and prefilled into intake forms. */
+  const [activeServiceId, setActiveServiceId] = useState<string | null>(null);
+  const [serviceInterest, setServiceInterest] = useState("");
   /** Latest conversation status reported by the server. */
   const [convStatus, setConvStatus] = useState<string | null>(null);
   /** True once a human (not the assistant) has replied in this conversation. */
@@ -300,6 +312,17 @@ function WidgetPage() {
     return [...services, ...faqs];
   }, [config]);
 
+  const activeService = useMemo(
+    () => (config?.services ?? []).find((s) => s.id === activeServiceId) ?? null,
+    [config, activeServiceId],
+  );
+
+  /** Open the service detail card. Never calls the assistant. */
+  const openService = useCallback((id: string) => {
+    setActiveServiceId(id);
+    setView("service");
+  }, []);
+
   /* ------------------------- signed chat session ------------------------ */
   // The server mints and signs the session; the browser only stores it.
   const sessionRef = useRef<{ token: string; expiresAt: string } | null>(null);
@@ -370,7 +393,11 @@ function WidgetPage() {
     )
       .then(async (r) => {
         const json = await r.json();
-        if (!r.ok) throw new Error(json.error ?? "Unable to load chat");
+        if (!r.ok) {
+          // Visitors see something actionable; the technical reason is for us.
+          if (json.code) console.warn("[chat widget]", json.code);
+          throw new Error(json.error ?? "This chat isn't available on this page yet.");
+        }
         setConfig(json as Config);
       })
       .catch((e: Error) => setError(e.message));
@@ -760,6 +787,7 @@ function WidgetPage() {
             <button
               onClick={() => {
                 setFormKind(config.businessOpen ? "live_agent" : "message");
+                setServiceInterest("");
                 setView("form");
               }}
               className="relative shrink-0 whitespace-nowrap rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white ring-1 ring-white/25 transition hover:bg-white/25"
@@ -797,7 +825,7 @@ function WidgetPage() {
                 setFaqQuery(topic.label);
                 setView("faq");
               } else {
-                void sendQuestion(`Tell me more about ${topic.label}`);
+                openService(topic.id.replace(/^svc-/, ""));
               }
             }}
           />
@@ -807,50 +835,98 @@ function WidgetPage() {
           <div className="space-y-3">
             <h2 className="text-sm font-semibold text-foreground">Our services</h2>
             {config.services.map((s) => (
-              <div key={s.id} className="rounded-xl border border-border bg-card p-3">
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => openService(s.id)}
+                className="w-full rounded-xl border border-border bg-card p-3 text-left transition hover:border-foreground/20 hover:bg-muted/40"
+              >
                 <p className="text-sm font-semibold text-card-foreground">{s.name}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{s.short_description}</p>
-                {s.eligibility_overview && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">Eligibility: </span>
-                    {s.eligibility_overview}
-                  </p>
-                )}
-                {s.counties?.length > 0 && (
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    Counties: {s.counties.join(", ")}
-                  </p>
-                )}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    className="rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white"
-                    style={{ background: brand }}
-                    onClick={() => sendQuestion(`Tell me more about ${s.name}`)}
-                  >
-                    Ask a question
-                  </button>
-                  <button
-                    className="rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-semibold text-foreground"
-                    onClick={() => {
-                      setFormKind("enrollment");
-                      setView("form");
-                    }}
-                  >
-                    Request assistance
-                  </button>
-                  {s.learn_more_url && (
-                    <a
-                      href={s.learn_more_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-semibold text-foreground"
-                    >
-                      Learn more
-                    </a>
-                  )}
-                </div>
-              </div>
+                <span className="mt-2 inline-block text-[11px] font-semibold" style={{ color: brand }}>
+                  View details →
+                </span>
+              </button>
             ))}
+          </div>
+        )}
+
+        {view === "service" && activeService && (
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setView("services")}
+              className="text-[11px] font-semibold text-muted-foreground hover:text-foreground"
+            >
+              ← All services
+            </button>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <h2 className="text-sm font-semibold text-card-foreground">{activeService.name}</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {activeService.short_description}
+              </p>
+              {activeService.eligibility_overview && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Eligibility: </span>
+                  {activeService.eligibility_overview}
+                </p>
+              )}
+              {activeService.counties?.length > 0 && (
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  <span className="font-medium text-foreground">Counties: </span>
+                  {activeService.counties.join(", ")}
+                </p>
+              )}
+              {activeService.health_plans?.length > 0 && (
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  <span className="font-medium text-foreground">Health plans: </span>
+                  {activeService.health_plans.join(", ")}
+                </p>
+              )}
+              {activeService.learn_more_url && (
+                <a
+                  href={activeService.learn_more_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-block text-[11px] font-semibold underline"
+                  style={{ color: brand }}
+                >
+                  Learn more
+                </a>
+              )}
+              <div className="mt-4 flex flex-col gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg px-3 py-2 text-xs font-semibold text-white"
+                  style={{ background: brand }}
+                  onClick={() => void sendQuestion(`Tell me more about ${activeService.name}`)}
+                >
+                  Ask a question about this
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground"
+                  onClick={() => {
+                    setServiceInterest(activeService.name);
+                    setFormKind("enrollment");
+                    setView("form");
+                  }}
+                >
+                  Request assistance
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground"
+                  onClick={() => {
+                    setServiceInterest(activeService.name);
+                    setFormKind("live_agent");
+                    setView("form");
+                  }}
+                >
+                  Talk to a representative
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -920,6 +996,7 @@ function WidgetPage() {
                       ? "message"
                       : (option.key as typeof formKind),
                   );
+                  setServiceInterest("");
                   setView("form");
                 }}
                 className="flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-panel"
@@ -968,6 +1045,7 @@ function WidgetPage() {
               style={{ background: brand }}
               onClick={() => {
                 setFormKind("contact");
+                setServiceInterest("");
                 setView("form");
               }}
             >
@@ -978,7 +1056,9 @@ function WidgetPage() {
 
         {view === "form" && (
           <IntakeForm
+            key={`${formKind}-${serviceInterest}`}
             kind={formKind}
+            initialServiceInterest={serviceInterest}
             config={config}
             brand={brand}
             onCancel={() => setView("menu")}
@@ -1095,10 +1175,12 @@ function WidgetPage() {
                 onAction={(action) => {
                   if (action === "connect") {
                     setFormKind(config.agentsAvailable ? "live_agent" : "message");
+                    setServiceInterest("");
                     setView("form");
                   }
                   if (action === "message") {
                     setFormKind("message");
+                    setServiceInterest("");
                     setView("form");
                   }
                 }}
@@ -1611,12 +1693,14 @@ function IntakeForm({
   brand,
   onSubmit,
   onCancel,
+  initialServiceInterest = "",
 }: {
   kind: string;
   config: Config;
   brand: string;
   onSubmit: (payload: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
+  initialServiceInterest?: string;
 }) {
   const [values, setValues] = useState({
     fullName: "",
@@ -1625,7 +1709,7 @@ function IntakeForm({
     reason: "",
     county: "",
     healthPlan: "",
-    serviceInterest: "",
+    serviceInterest: initialServiceInterest,
     preferredLanguage: "English",
     departmentId: "",
 
