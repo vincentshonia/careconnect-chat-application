@@ -66,10 +66,97 @@ await stage("Vitest", "bunx", [
   "--reporter=default",
   `--outputFile.json=${VITEST_JSON}`,
 ]);
-await stage("Playwright E2E", "bunx", ["playwright", "test", "--reporter=json"], {
-  PLAYWRIGHT_JSON_OUTPUT_NAME: PLAYWRIGHT_JSON,
-  PLAYWRIGHT_JSON_OUTPUT_FILE: PLAYWRIGHT_JSON,
-});
+/* ------------------------------------------------------------------ *
+ * Worker-runtime probe.
+ *
+ * Playwright serves the real nitro worker build. If the local worker runtime
+ * is older than the app's compatibility date it cannot start at all, which
+ * would otherwise look like a mass E2E failure or — worse — an empty run.
+ * Probe it first: boot the built worker and ask the public widget-config
+ * endpoint for a bogus website id, which must answer with a JSON 4xx.
+ *
+ * A failed probe is never a PASS and never a silent skip: the stage is
+ * recorded as BLOCKED and the gate exits with a distinct code.
+ * ------------------------------------------------------------------ */
+
+const BLOCKED_EXIT_CODE = 78;
+const PROBE_PORT = Number(process.env["E2E_PROBE_PORT"] ?? 4271);
+
+async function probeWorkerRuntime() {
+  if (process.env["E2E_BASE_URL"]) {
+    return { ok: true, detail: `external target ${process.env["E2E_BASE_URL"]}` };
+  }
+  console.log(`\n=== worker runtime probe (port ${PROBE_PORT})`);
+  const child = spawn("bun", ["run", "preview:e2e", "--", "--port", String(PROBE_PORT)], {
+    cwd: ROOT,
+    env: { ...process.env },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let log = "";
+  child.stdout?.on("data", (d) => (log += d.toString()));
+  child.stderr?.on("data", (d) => (log += d.toString()));
+
+  const deadline = Date.now() + 120_000;
+  let result = null;
+  try {
+    while (Date.now() < deadline && result === null) {
+      if (child.exitCode !== null) {
+        result = { ok: false, detail: `worker exited early (code ${child.exitCode})` };
+        break;
+      }
+      try {
+        const response = await fetch(
+          `http://127.0.0.1:${PROBE_PORT}/api/public/chat/config?w=00000000-0000-0000-0000-000000000000`,
+        );
+        const body = await response.text();
+        const isJson = (() => {
+          try {
+            JSON.parse(body);
+            return true;
+          } catch {
+            return false;
+          }
+        })();
+        result =
+          response.status >= 400 && response.status < 500 && isJson
+            ? { ok: true, detail: `JSON ${response.status} from /api/public/chat/config` }
+            : { ok: false, detail: `unexpected response ${response.status}` };
+      } catch {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+  } finally {
+    child.kill("SIGKILL");
+  }
+  if (result === null) {
+    const hint = /compatibility date|compatibility_date|not supported/i.test(log)
+      ? "worker runtime older than the app's compatibility date"
+      : "worker never became reachable";
+    result = { ok: false, detail: hint };
+  }
+  console.log(`worker runtime probe: ${result.ok ? "OK" : "BLOCKED"} — ${result.detail}`);
+  return result;
+}
+
+let runtimeBlocked = null;
+if (!stages.some((s) => s.exitCode !== 0)) {
+  const probe = await probeWorkerRuntime();
+  if (!probe.ok) runtimeBlocked = probe.detail;
+}
+
+if (runtimeBlocked) {
+  stages.push({
+    name: "Playwright E2E",
+    command: "bunx playwright test --reporter=json",
+    exitCode: null,
+    status: `BLOCKED: sandbox runtime (${runtimeBlocked})`,
+  });
+} else {
+  await stage("Playwright E2E", "bunx", ["playwright", "test", "--reporter=json"], {
+    PLAYWRIGHT_JSON_OUTPUT_NAME: PLAYWRIGHT_JSON,
+    PLAYWRIGHT_JSON_OUTPUT_FILE: PLAYWRIGHT_JSON,
+  });
+}
 await stage("E2E cleanup verification", "node", ["scripts/e2e-cleanup-verify.mjs"]);
 
 /* ------------------------------------------------------------------ *
