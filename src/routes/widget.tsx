@@ -87,8 +87,20 @@ type Config = {
   faqs: Array<{ id: string; category: string; question: string; answer: string }>;
   team?: Array<{ id: string; name: string; avatarUrl: string }>;
   businessOpen: boolean;
+  /** "Monday, September 14 at 9:00 AM" in the org's timezone, or null. */
+  nextOpenAt?: string | null;
   agentsAvailable: boolean;
 };
+
+/**
+ * One sentence, used identically on the home card, in the request form and on
+ * the confirmation screen, so an after-hours visitor is told the same thing
+ * everywhere.
+ */
+function afterHoursNotice(config: Config): string {
+  const when = config.nextOpenAt ? `on ${config.nextOpenAt}` : "on our next business day";
+  return `We're currently outside our operating hours. Leave your details and one of our member engagement specialists will contact you ${when}.`;
+}
 
 type Bubble = {
   id: string;
@@ -805,7 +817,9 @@ function WidgetPage() {
             // becomes a message instead of a promise of a live person.
             <button
               onClick={() => {
-                setFormKind(config.businessOpen ? "live_agent" : "message");
+                // Always the live-agent request form; after hours it simply
+                // carries the next-open notice.
+                setFormKind("live_agent");
                 setServiceInterest("");
                 setView("form");
               }}
@@ -837,7 +851,12 @@ function WidgetPage() {
             visitorName={visitorName}
             topics={homeTopics}
             onClose={closeWidget}
-            onStartChat={() => setView("chat")}
+            onStartChat={() => {
+              // The home call to action asks for a person, not the assistant.
+              setFormKind("live_agent");
+              setServiceInterest("");
+              setView("form");
+            }}
             onOpenHelp={() => setView("faq")}
             onTopic={(topic) => {
               if (topic.kind === "faq") {
@@ -1086,7 +1105,7 @@ function WidgetPage() {
                 setView("form");
               }}
             >
-              Send us a message
+              Speak to a live agent
             </button>
           </div>
         )}
@@ -1103,6 +1122,7 @@ function WidgetPage() {
               const res = await chatPost("/api/public/chat/escalate", {
                 conversationId,
                 kind: formKind,
+                after_hours: !config.businessOpen,
                 ...payload,
                 departmentId: (payload.departmentId as string) || null,
               });
@@ -1158,10 +1178,23 @@ function WidgetPage() {
                     You are chatting with {agentName}.
                   </p>
                 )}
-                {!agentName && (
+                {!agentName && config.businessOpen && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     You can keep typing below — a representative will see everything you send.
                   </p>
+                )}
+                {!agentName && !config.businessOpen && (
+                  <>
+                    <p className="mt-1 text-xs text-muted-foreground">{afterHoursNotice(config)}</p>
+                    <button
+                      type="button"
+                      onClick={() => setView("chat")}
+                      className="mt-3 rounded-lg px-3 py-2 text-xs font-semibold text-white"
+                      style={{ background: brand }}
+                    >
+                      Continue with the assistant
+                    </button>
+                  </>
                 )}
               </div>
             )}
@@ -1511,13 +1544,15 @@ function HomeView({
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-semibold text-card-foreground">
-              {config.website.homeCtaTitle || "Send us a message"}
+              {config.website.homeCtaTitle || "Speak to a live agent"}
             </span>
             <span className="block truncate text-xs text-muted-foreground">
-              {config.agentsAvailable
-                ? "Typical reply time is a few minutes"
-                : config.website.homeCtaSubtitle ||
-                  "CareConnect AI can help now, or leave a message"}
+              {!config.businessOpen
+                ? afterHoursNotice(config)
+                : config.agentsAvailable
+                  ? "Typical reply time is a few minutes"
+                  : config.website.homeCtaSubtitle ||
+                    "Talk with a member engagement specialist"}
             </span>
           </span>
           <svg
@@ -1789,6 +1824,11 @@ function IntakeForm({
       <h2 className="text-sm font-semibold text-foreground">
         {titles[kind] ?? "Request assistance"}
       </h2>
+      {!config.businessOpen && (
+        <p className="rounded-lg border border-border bg-muted p-2 text-[11px] leading-relaxed text-muted-foreground">
+          {afterHoursNotice(config)}
+        </p>
+      )}
       {(kind === "referral" || kind === "enrollment") && (
         <p className="rounded-lg bg-muted p-2 text-[11px] text-muted-foreground">
           {config.organization.privacyNotice}

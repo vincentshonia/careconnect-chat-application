@@ -14,6 +14,8 @@ const bodySchema = z.object({
   serviceInterest: z.string().trim().max(160).optional().nullable(),
   preferredLanguage: z.string().trim().max(60).optional().nullable(),
   consent: z.literal(true),
+  /** Submitted outside the organization's operating hours. */
+  after_hours: z.boolean().optional().default(false),
   departmentId: z.string().uuid().nullable().optional(),
   kind: z
     .enum(["live_agent", "contact", "referral", "enrollment", "message"])
@@ -192,6 +194,7 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             service_interest: input.serviceInterest ?? null,
             preferred_language: input.preferredLanguage ?? "English",
             source: "widget",
+            after_hours: input.after_hours,
             notes: intakeNotes,
           });
 
@@ -211,6 +214,7 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               currentDepartmentId: conversation.department_id ?? null,
               reason: input.reason ?? `${input.fullName} requested a live representative`,
               visitorLabel: input.fullName,
+              afterHours: input.after_hours,
             });
             assigned = handoff.assigned;
           } else {

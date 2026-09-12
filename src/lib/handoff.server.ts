@@ -83,6 +83,11 @@ export async function handoffToHumans(input: {
   actorId?: string | null;
   /** Force the shared queue even if the department round-robins. */
   forceSharedQueue?: boolean;
+  /**
+   * Request left outside operating hours: nobody is on shift, so it waits in
+   * the shared queue and the alert is informational rather than critical.
+   */
+  afterHours?: boolean;
 }): Promise<HandoffResult> {
   const db = admin();
 
@@ -151,7 +156,7 @@ export async function handoffToHumans(input: {
     },
   });
 
-  const routingMode = input.forceSharedQueue
+  const routingMode = input.forceSharedQueue || input.afterHours
     ? ("shared_queue" as const)
     : await departmentRoutingMode(departmentId);
 
@@ -184,7 +189,7 @@ export async function handoffToHumans(input: {
       organizationId: input.organizationId,
       departmentId,
       type: "escalation",
-      severity: "critical",
+      severity: input.afterHours ? "info" : "critical",
       title: assigned
         ? `Chat claimed by ${assigned.fullName}${where}`
         : `New visitor waiting${where}`,

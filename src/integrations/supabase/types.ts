@@ -889,6 +889,7 @@ export type Database = {
       }
       intake_requests: {
         Row: {
+          after_hours: boolean
           assigned_to: string | null
           closed_at: string | null
           contact_id: string | null
@@ -919,6 +920,7 @@ export type Database = {
           zip_code: string | null
         }
         Insert: {
+          after_hours?: boolean
           assigned_to?: string | null
           closed_at?: string | null
           contact_id?: string | null
@@ -949,6 +951,7 @@ export type Database = {
           zip_code?: string | null
         }
         Update: {
+          after_hours?: boolean
           assigned_to?: string | null
           closed_at?: string | null
           contact_id?: string | null

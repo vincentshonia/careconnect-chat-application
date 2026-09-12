@@ -341,6 +341,24 @@ function InboxPage() {
 
   const active = activeQuery.data ?? null;
 
+  // Was the request behind this chat left outside operating hours? Agents see
+  // it in the header so a delayed first reply reads as expected, not missed.
+  const afterHoursQuery = useQuery({
+    queryKey: ["conversation-after-hours", activeId],
+    enabled: Boolean(activeId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("intake_requests")
+        .select("id")
+        .eq("conversation_id", activeId!)
+        .eq("after_hours", true)
+        .limit(1);
+      if (error) throw error;
+      return (data ?? []).length > 0;
+    },
+  });
+  const afterHours = afterHoursQuery.data === true;
+
   useEffect(() => {
     if (conversations.length && !activeId) setActiveId(conversations[0].id);
   }, [conversations, activeId]);
@@ -828,6 +846,7 @@ function InboxPage() {
                   <Badge variant="secondary">Assigned to {ownerName}</Badge>
                 ) : null}
 
+                {afterHours ? <Badge variant="secondary">After hours</Badge> : null}
                 {readOnly ? <Badge variant="outline">View only</Badge> : null}
 
                 <div className="ml-auto flex flex-wrap items-center gap-2">
