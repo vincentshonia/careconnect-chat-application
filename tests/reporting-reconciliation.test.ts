@@ -170,6 +170,7 @@ async function makeOwner(org: string, key: string) {
   });
   if (error || !data.user) throw new Error(`owner ${key}: ${error?.message}`);
   const id = data.user.id;
+  createdOwners.push({ id, email });
   await db.from("profiles").upsert({
     id,
     organization_id: org,
