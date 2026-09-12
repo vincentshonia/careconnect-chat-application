@@ -41,11 +41,12 @@ let baseline: ProtectedBaseline | null = null;
 
 /** Deletes every fixture; safe mid-setup and safe to call twice. */
 async function teardown() {
-  await purgeSyntheticUsers(db, createdUsers.splice(0, createdUsers.length));
+  // Organizations first: their rows reference the accounts.
   if (orgId) {
     await purgeSyntheticOrganizations(db, [orgId]);
     orgId = "";
   }
+  await purgeSyntheticUsers(db, createdUsers.splice(0, createdUsers.length));
 }
 
 type ClaimResult = { ok?: boolean; code?: string; message?: string; assigned_to?: string };
