@@ -107,6 +107,8 @@ export function applyQueueFilter<
   },
 >(query: T): T {
   return query
+    // Console preview chats are staff testing the widget, never real traffic.
+    .eq("is_preview", false as never)
     .eq("escalation_requested", true as never)
     .is("assigned_to", null)
     .in("status", QUEUE_STATUSES as never as never[]);

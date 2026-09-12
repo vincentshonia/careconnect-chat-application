@@ -41,6 +41,7 @@ export const Route = createFileRoute("/api/public/hooks/abandonment-sweep")({
           .from("conversations")
           .select("id, organization_id")
           .eq("escalation_requested", false)
+          .eq("is_preview", false)
           .eq("status", "new")
           // Idle for 24h, or never had a message and was created over 24h ago.
           .or(`last_message_at.lt.${cutoff},and(last_message_at.is.null,created_at.lt.${cutoff})`)

@@ -71,6 +71,7 @@ export const Route = createFileRoute("/api/public/hooks/sla-check")({
             "id, organization_id, department_id, assigned_to, reference, requested_agent_at, first_human_requested_at, status",
           )
           .eq("escalation_requested", true)
+          .eq("is_preview", false)
           .in("status", ["waiting", "escalated", "assigned", "follow_up"])
           .or("assigned_to.is.null,first_agent_response_at.is.null")
           .order("requested_agent_at", { ascending: true, nullsFirst: true })
