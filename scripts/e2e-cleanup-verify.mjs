@@ -103,21 +103,82 @@ async function sweep(backend) {
   }
 }
 
-for (const backend of backends) {
-  await sweep(backend);
-}
-
 /**
- * `--purge` removes leaked synthetic accounts. Every address is re-checked
- * against the synthetic prefixes immediately before the delete, so a real
- * account can never be caught by this sweep.
+ * `--purge` removes leaked synthetic tenants and accounts. Every name and
+ * address is re-checked against the synthetic prefixes immediately before the
+ * delete, so real data can never be caught by this sweep.
  */
 const purge = process.argv.includes("--purge");
 
-function assertSynthetic(email) {
-  if (!email || !PREFIXES.some((prefix) => email.startsWith(prefix))) {
-    throw new Error(`refusing to delete "${email}" — it is not a synthetic account.`);
+/** Org-scoped tables, children before parents. */
+const ORG_SCOPED_TABLES = [
+  "qa_reviews",
+  "conversation_ratings",
+  "ai_responses",
+  "internal_notes",
+  "conversation_events",
+  "messages",
+  "intake_events",
+  "intake_requests",
+  "conversations",
+  "visitors",
+  "contacts",
+  "notifications",
+  "notification_preferences",
+  "audit_logs",
+  "knowledge_chunks",
+  "knowledge_articles",
+  "knowledge_categories",
+  "faqs",
+  "services",
+  "response_templates",
+  "routing_rules",
+  "performance_targets",
+  "business_hours",
+  "holidays",
+  "usage_counters",
+  "organization_limits",
+  "organization_invitations",
+  "conversation_dispositions",
+  "department_members",
+  "departments",
+  "websites",
+  "user_roles",
+  "organization_memberships",
+  "profiles",
+  "workspaces",
+];
+
+function assertSynthetic(name, what) {
+  if (!name || !PREFIXES.some((prefix) => name.startsWith(prefix))) {
+    throw new Error(`refusing to delete ${what} "${name}" — it is not synthetic.`);
   }
+}
+
+async function purgeLeakedOrganizations(backend) {
+  const db = createClient(backend.url, backend.serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  let removed = 0;
+  for (const prefix of PREFIXES) {
+    const { data, error } = await db
+      .from("organizations")
+      .select("id, name")
+      .like("name", `${prefix}%`);
+    if (error) throw new Error(`[${backend.label}] org listing failed: ${error.message}`);
+    for (const org of data ?? []) {
+      assertSynthetic(org.name, "organization");
+      for (const table of ORG_SCOPED_TABLES) {
+        const { error: delError } = await db.from(table).delete().eq("organization_id", org.id);
+        if (delError) throw new Error(`[${backend.label}] purge ${table}: ${delError.message}`);
+      }
+      const { error: orgError } = await db.from("organizations").delete().eq("id", org.id);
+      if (orgError) throw new Error(`[${backend.label}] purge organization: ${orgError.message}`);
+      removed += 1;
+    }
+  }
+  console.log(`[${backend.label}] purged ${removed} synthetic organization(s).`);
 }
 
 async function purgeLeakedAccounts(backend) {
