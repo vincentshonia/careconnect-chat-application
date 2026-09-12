@@ -917,8 +917,7 @@ function WidgetPage() {
             className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-white/10 blur-2xl"
             aria-hidden="true"
           />
-          {/* On the contact details view we show the company name instead of
-              the assistant avatar. */}
+          {/* Contact details use the full organization name as the header identity. */}
           {view !== "contact" && (
             <div className="relative shrink-0">
               {agentAvatar ? (
@@ -953,9 +952,15 @@ function WidgetPage() {
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold tracking-tight">
+            <p
+              className={
+                view === "contact"
+                  ? "text-base font-semibold tracking-normal"
+                  : "truncate text-sm font-semibold tracking-tight"
+              }
+            >
               {view === "contact"
-                ? config.organization.name
+                ? (config.organization.name || "Pacific Health Group")
                 : (agentName ?? "PHG CareConnect Assistant")}
             </p>
             <p className="truncate text-[11px] text-white/80">
@@ -970,7 +975,7 @@ function WidgetPage() {
           </div>
 
 
-          {!agentName && (
+          {!agentName && view !== "contact" && (
             // Outside business hours nobody can pick the chat up, so the offer
             // becomes a message instead of a promise of a live person.
             <button
