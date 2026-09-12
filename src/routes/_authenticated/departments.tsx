@@ -98,6 +98,8 @@ function DepartmentsTab() {
       setName("");
       queryClient.invalidateQueries({ queryKey: ["departments"] });
     },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not create that department"),
   });
 
   const update = useMutation({
@@ -325,6 +327,8 @@ function HoursTab() {
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["business-hours"] }),
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not save those hours"),
   });
 
   return (
@@ -415,6 +419,8 @@ function HolidaysTab() {
       setForm({ name: "", date: "" });
       queryClient.invalidateQueries({ queryKey: ["holidays"] });
     },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not add that holiday"),
   });
 
   const remove = useMutation({
@@ -422,6 +428,8 @@ function HolidaysTab() {
       await saveHolidayFnCall({ data: { action: "delete", id } });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["holidays"] }),
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not remove that holiday"),
   });
 
   return (
