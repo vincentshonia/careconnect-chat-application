@@ -69,7 +69,14 @@ export function LiveWidgetPreview({
         ) : src ? (
           <iframe
             key={src}
-            title="Chat widget test"
+            ref={frame}
+            onLoad={() =>
+              frame.current?.contentWindow?.postMessage(
+                { type: "cc-preview-config", config: JSON.parse(serialized) },
+                origin,
+              )
+            }
+            title="Live widget preview"
             src={src}
             className="h-full w-full border-0"
             allow="clipboard-write"
