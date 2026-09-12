@@ -222,7 +222,7 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
 
 const staffProfileInput = z.object({
   userId: z.string().uuid(),
-  presence: z.enum(["online", "away", "busy", "offline"]).optional(),
+  presence: z.enum(["available", "online", "away", "busy", "offline"]).optional(),
   maxConcurrentChats: z.number().int().min(1).max(20).optional(),
 });
 
