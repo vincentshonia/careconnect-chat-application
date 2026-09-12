@@ -12,8 +12,14 @@ export const Route = createFileRoute("/api/public/chat/config")({
         const mod = await import("@/lib/public-chat.server");
         try {
           await mod.enforceRateLimit(`cfg:ip:${mod.clientIp(request)}`, 60, 60);
-          const proven = await mod.provenHost(url.searchParams.get("op"), websiteId);
-          const config = await mod.loadWidgetConfig(websiteId, proven, clientHint);
+          const op = url.searchParams.get("op");
+          const proof = await mod.originProofClaims(op, websiteId);
+          const config = await mod.loadWidgetConfig(
+            websiteId,
+            proof?.host ?? null,
+            clientHint,
+            proof?.preview === true,
+          );
           return Response.json(config, {
             headers: { "Cache-Control": "public, max-age=60" },
           });

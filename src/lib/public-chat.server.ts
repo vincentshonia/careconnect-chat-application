@@ -71,6 +71,16 @@ export function verifiedOrigin(request: Request): string | null {
   return request.headers.get("origin") ?? request.headers.get("referer") ?? null;
 }
 
+/** Full claims of a signed origin proof, or null when missing/invalid. */
+export async function originProofClaims(proofToken: unknown, websiteId?: string) {
+  if (!proofToken) return null;
+  const { verifyOriginProof } = await import("./widget-session.server");
+  const claims = await verifyOriginProof(proofToken);
+  if (!claims) return null;
+  if (websiteId && claims.wid !== websiteId) return null;
+  return claims;
+}
+
 /** Host proven by a signed origin proof, or null when there is no valid proof. */
 export async function provenHost(proofToken: unknown, websiteId?: string): Promise<string | null> {
   if (!proofToken) return null;
@@ -984,12 +994,18 @@ export async function startWidgetSession(opts: {
   // The proof was issued after a cross-origin check of the embedding page, so
   // it is the trustworthy host. The request's own origin is only a hint.
   const provenHost = proof?.host ?? null;
-  const website = opts.publicKey
-    ? await resolveWebsiteByKey(opts.publicKey, provenHost, clientHint ?? opts.host)
-    : await resolveWebsite(String(opts.websiteId ?? ""), provenHost, clientHint ?? opts.host);
-
   // A staff-issued preview proof authorises the console preview on any host.
-  const isPreview = proof?.preview === true && proof.wid === website.id;
+  const previewProof = proof?.preview === true;
+  const website = opts.publicKey
+    ? await resolveWebsiteByKey(opts.publicKey, provenHost, clientHint ?? opts.host, previewProof)
+    : await resolveWebsite(
+        String(opts.websiteId ?? ""),
+        provenHost,
+        clientHint ?? opts.host,
+        previewProof,
+      );
+
+  const isPreview = previewProof && proof?.wid === website.id;
 
   if (!isPreview && website.dev_mode === false && proof?.wid !== website.id) {
     throw new PublicChatError(403, "This chat widget is not authorized on this domain");
