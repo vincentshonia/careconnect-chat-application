@@ -11,7 +11,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit-client";
 import type { Database } from "@/integrations/supabase/types";
 import { PanelShell } from "@/components/admin/PanelShell";
-import { WidgetPreview } from "@/components/admin/WidgetPreview";
 import { LiveWidgetPreview } from "@/components/admin/LiveWidgetPreview";
 import {
   DEFAULT_WIDGET_TABS,
@@ -45,7 +44,7 @@ export function WebsitesPanel() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Website>>({});
   const [notice, setNotice] = useState<string | null>(null);
-  const [livePreview, setLivePreview] = useState(false);
+  const [livePreview, setLivePreview] = useState(true);
   const [origin, setOrigin] = useState("");
   const [domainsText, setDomainsText] = useState("");
   const [creating, setCreating] = useState(false);
