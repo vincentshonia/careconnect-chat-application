@@ -500,7 +500,12 @@ function Faqs({ prefill }: { prefill?: FaqPrefill }) {
   const remove = useMutation({
     mutationFn: async (id: string) => {
       await deleteFaq({ data: { id } });
-      await logAudit({ scope: "knowledge", action: "faq.deleted", recordType: "faqs", recordId: id });
+      await logAudit({
+        scope: "knowledge",
+        action: "faq.deleted",
+        recordType: "faqs",
+        recordId: id,
+      });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["kb-faqs"] }),
   });

@@ -502,7 +502,8 @@ function Outcomes() {
               className="w-64"
               onBlur={(e) => {
                 const next = e.target.value.trim();
-                if (next && next !== d.label) mutate.mutate({ action: "rename", id: d.id, label: next });
+                if (next && next !== d.label)
+                  mutate.mutate({ action: "rename", id: d.id, label: next });
               }}
             />
             <Badge variant={d.is_active ? "default" : "outline"}>

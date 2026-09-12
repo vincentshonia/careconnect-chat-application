@@ -56,6 +56,9 @@ test("visitor name and chat session persist across a reload", async ({ browser }
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Open chat" }).click();
 
+  // A live chat reopens on the conversation itself, so the personalised
+  // greeting is checked where it lives: the Home section.
+  await page.getByRole("button", { name: "Home", exact: true }).click();
   await expect(
     page.getByText("Hi, Riley."),
     "the returning visitor must be greeted by name",
@@ -70,6 +73,7 @@ test("visitor name and chat session persist across a reload", async ({ browser }
   /* Navigating away and back keeps the same identity and session. */
   await page.goto(`/widget?w=${tenant.websiteId}&p=%2Fservices`, { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Open chat" }).click();
+  await page.getByRole("button", { name: "Home", exact: true }).click();
   await expect(page.getByText("Hi, Riley.")).toBeVisible({ timeout: 30_000 });
 
   const { count: visitorsAfter } = await db

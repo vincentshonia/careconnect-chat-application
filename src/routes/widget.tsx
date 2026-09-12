@@ -260,7 +260,6 @@ function WidgetPage() {
     agentAvatar,
   ]);
 
-
   /* Rating dismissal is remembered per conversation, not per page view. */
   const ratingKey = conversationId ? `${storageKey}-rated-${conversationId}` : null;
   const [ratingDismissed, setRatingDismissed] = useState(false);
