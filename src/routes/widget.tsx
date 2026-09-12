@@ -92,6 +92,16 @@ type Config = {
   agentsAvailable: boolean;
 };
 
+/**
+ * One sentence, used identically on the home card, in the request form and on
+ * the confirmation screen, so an after-hours visitor is told the same thing
+ * everywhere.
+ */
+function afterHoursNotice(config: Config): string {
+  const when = config.nextOpenAt ? `on ${config.nextOpenAt}` : "on our next business day";
+  return `We're currently outside our operating hours. Leave your details and one of our member engagement specialists will contact you ${when}.`;
+}
+
 type Bubble = {
   id: string;
   role: "visitor" | "bot" | "system";
@@ -1168,10 +1178,23 @@ function WidgetPage() {
                     You are chatting with {agentName}.
                   </p>
                 )}
-                {!agentName && (
+                {!agentName && config.businessOpen && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     You can keep typing below — a representative will see everything you send.
                   </p>
+                )}
+                {!agentName && !config.businessOpen && (
+                  <>
+                    <p className="mt-1 text-xs text-muted-foreground">{afterHoursNotice(config)}</p>
+                    <button
+                      type="button"
+                      onClick={() => setView("chat")}
+                      className="mt-3 rounded-lg px-3 py-2 text-xs font-semibold text-white"
+                      style={{ background: brand }}
+                    >
+                      Continue with the assistant
+                    </button>
+                  </>
                 )}
               </div>
             )}
