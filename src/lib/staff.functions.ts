@@ -222,20 +222,33 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
 
 const staffProfileInput = z.object({
   userId: z.string().uuid(),
-  presence: z.enum(["available", "online", "away", "busy", "offline"]).optional(),
+  presence: z.enum(["available", "busy", "away", "offline"]).optional(),
   maxConcurrentChats: z.number().int().min(1).max(20).optional(),
 });
 
 /**
- * Administrator-only: adjust another teammate's availability or chat capacity.
- * A person changing their own settings uses the profile page instead.
+ * Adjust availability or chat capacity.
+ *
+ * Anyone may change their OWN availability (that is how an agent goes on or
+ * off the live rotation). Changing someone else's settings, or anyone's chat
+ * capacity, stays an administrator action behind `staff.edit`.
  */
 export const updateStaffProfileFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => staffProfileInput.parse(input))
   .handler(async ({ data, context }) => {
     const actor = await resolveActor(context.supabase, context.userId);
-    requirePermission(actor, "staff.edit", "Only administrators can change staff settings");
+    const isSelf = data.userId === context.userId;
+    const selfPresenceOnly = isSelf && data.maxConcurrentChats === undefined;
+    if (!selfPresenceOnly) {
+      requirePermission(
+        actor,
+        "staff.edit",
+        isSelf
+          ? "Only administrators can change chat capacity"
+          : "Only administrators can change staff settings",
+      );
+    }
     const organizationId = requireOrganization(actor);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

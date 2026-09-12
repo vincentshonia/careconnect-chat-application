@@ -158,7 +158,7 @@ export function StaffPanel() {
         data: {
           userId: id,
           ...(patch.presence !== undefined
-            ? { presence: patch.presence as "available" | "online" | "away" | "busy" | "offline" }
+            ? { presence: patch.presence as "available" | "away" | "busy" | "offline" }
             : {}),
           ...(patch.max_concurrent_chats !== undefined
             ? { maxConcurrentChats: Number(patch.max_concurrent_chats) }
@@ -493,7 +493,7 @@ export function StaffPanel() {
                         type="number"
                         min={1}
                         max={20}
-                        disabled={!isAdmin && session.data?.userId !== p.id}
+                        disabled={!isAdmin}
                         defaultValue={p.max_concurrent_chats}
                         onBlur={(e) =>
                           updateProfile.mutate({

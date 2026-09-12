@@ -3,7 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { manageRoutingRuleFn, manageResponseTemplateFn } from "@/lib/routing-admin.functions";
+import {
+  manageRoutingRuleFn,
+  manageResponseTemplateFn,
+  manageDispositionFn,
+} from "@/lib/routing-admin.functions";
 import type { Database } from "@/integrations/supabase/types";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { PanelShell } from "@/components/admin/PanelShell";
@@ -37,12 +41,16 @@ export function RoutingPanel() {
         <TabsList>
           <TabsTrigger value="rules">Routing rules</TabsTrigger>
           <TabsTrigger value="templates">Response templates</TabsTrigger>
+          <TabsTrigger value="outcomes">Outcomes</TabsTrigger>
         </TabsList>
         <TabsContent value="rules" className="mt-4">
           <Rules />
         </TabsContent>
         <TabsContent value="templates" className="mt-4">
           <Templates />
+        </TabsContent>
+        <TabsContent value="outcomes" className="mt-4">
+          <Outcomes />
         </TabsContent>
       </Tabs>
     </PanelShell>
@@ -393,6 +401,115 @@ function Templates() {
           <li className="px-4 py-3 text-sm text-muted-foreground">No templates yet.</li>
         ) : null}
       </ul>
+    </div>
+  );
+}
+
+/**
+ * Resolution outcomes agents pick when they close a chat. Keeping at least one
+ * active outcome is what makes the Resolve dialog usable.
+ */
+function Outcomes() {
+  const queryClient = useQueryClient();
+  const session = useSessionContext();
+  const canManage = session.data?.permissions.has("workflow.manage") ?? false;
+  const [label, setLabel] = useState("");
+  const save = useServerFn(manageDispositionFn);
+
+  const list = useQuery({
+    queryKey: ["conversation-dispositions-admin"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("conversation_dispositions")
+        .select("id, label, is_active")
+        .order("label");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const mutate = useMutation({
+    mutationFn: async (input: {
+      action: "create" | "rename" | "activate" | "deactivate";
+      id?: string;
+      label?: string;
+    }) => {
+      await save({ data: input });
+    },
+    onSuccess: () => {
+      setLabel("");
+      queryClient.invalidateQueries({ queryKey: ["conversation-dispositions-admin"] });
+      queryClient.invalidateQueries({ queryKey: ["conversation-dispositions"] });
+    },
+  });
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        These are the outcomes an agent chooses when resolving a chat. Deactivated outcomes stay on
+        past chats but no longer appear in the Resolve dialog.
+      </p>
+      {canManage ? (
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1">
+            <Label className="text-xs">New outcome</Label>
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="Callback scheduled"
+              className="w-64"
+            />
+          </div>
+          <Button
+            type="button"
+            disabled={!label.trim() || mutate.isPending}
+            onClick={() => mutate.mutate({ action: "create", label: label.trim() })}
+          >
+            Add outcome
+          </Button>
+        </div>
+      ) : null}
+      {mutate.isError ? (
+        <p className="text-sm text-destructive">
+          {mutate.error instanceof Error ? mutate.error.message : "Could not save that outcome"}
+        </p>
+      ) : null}
+      <div className="space-y-2">
+        {(list.data ?? []).map((d) => (
+          <div
+            key={d.id}
+            className="flex flex-wrap items-center gap-2 rounded-md border border-border p-3"
+          >
+            <Input
+              defaultValue={d.label}
+              key={`${d.id}-${d.label}`}
+              disabled={!canManage}
+              className="w-64"
+              onBlur={(e) => {
+                const next = e.target.value.trim();
+                if (next && next !== d.label) mutate.mutate({ action: "rename", id: d.id, label: next });
+              }}
+            />
+            <Badge variant={d.is_active ? "default" : "outline"}>
+              {d.is_active ? "Active" : "Inactive"}
+            </Badge>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!canManage || mutate.isPending}
+              onClick={() =>
+                mutate.mutate({ action: d.is_active ? "deactivate" : "activate", id: d.id })
+              }
+            >
+              {d.is_active ? "Deactivate" : "Activate"}
+            </Button>
+          </div>
+        ))}
+        {list.data && list.data.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No outcomes yet — add one above.</p>
+        ) : null}
+      </div>
     </div>
   );
 }
