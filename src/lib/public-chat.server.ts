@@ -792,7 +792,10 @@ export async function answerQuestion(opts: {
   /** Browser or form language for this visitor, when the caller knows it. */
   language?: string | null;
 }): Promise<AnswerResult> {
-  const { website, question } = opts;
+  const { website } = opts;
+  // Anything posing as a system instruction is stripped before the model ever
+  // sees the visitor's words.
+  const question = sanitizeVisitorMessage(opts.question);
   const db = admin();
 
   const { data: org } = await db
