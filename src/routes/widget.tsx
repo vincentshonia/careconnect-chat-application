@@ -1032,8 +1032,9 @@ function WidgetPage() {
             ))}
             <button
               onClick={() => setView("contact")}
-              className="w-full rounded-2xl border border-border px-4 py-2.5 text-xs font-semibold text-foreground"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-2.5 text-xs font-semibold text-foreground"
             >
+              <Phone size={15} style={{ color: brand }} aria-hidden="true" />
               View contact details
             </button>
           </div>
