@@ -449,7 +449,7 @@ function WidgetPage() {
       label: s.name,
       kind: "service" as const,
     }));
-    const faqs = (config.faqs ?? []).slice(0, 4 - services.length).map((f) => ({
+    const faqs = (config.faqs ?? []).slice(0, 3 - services.length).map((f) => ({
       id: `faq-${f.id}`,
       label: f.question,
       kind: "faq" as const,
@@ -1569,7 +1569,7 @@ function HomeView({
     <div className="flex h-full flex-col">
       {/* ---------------------------- hero ---------------------------- */}
       <div
-        className="relative shrink-0 overflow-hidden px-5 pb-10 pt-5 text-white"
+        className="relative shrink-0 overflow-hidden px-5 pb-9 pt-4 text-white"
         style={{
           background: `linear-gradient(150deg, color-mix(in oklab, ${brand} 82%, black) 0%, ${brand} 52%, color-mix(in oklab, ${brand} 62%, white) 100%)`,
         }}
@@ -1611,14 +1611,14 @@ function HomeView({
           </div>
         </div>
 
-        <div className="relative mt-7">
-          <h1 className="text-[26px] font-semibold leading-tight tracking-tight text-white/95">
+        <div className="relative mt-5">
+          <h1 className="text-[22px] font-semibold leading-tight tracking-tight text-white/95">
             {visitorName ? `Hi, ${visitorName}.` : config.website.homeGreeting || "Hi there."}
           </h1>
-          <h2 className="text-[26px] font-semibold leading-tight tracking-tight text-white">
+          <h2 className="text-[22px] font-semibold leading-tight tracking-tight text-white">
             {config.website.homeHeadline || "How can we help?"}
           </h2>
-          <p className="mt-2.5 text-[13px] text-white/85">
+          <p className="mt-2 text-[13px] text-white/85">
             {config.agentsAvailable
               ? "Our team is here to help."
               : config.website.homeSubtitle || "CareConnect AI is available anytime."}
@@ -1627,7 +1627,7 @@ function HomeView({
       </div>
 
       {/* --------------------------- content --------------------------- */}
-      <div className="-mt-6 flex-1 space-y-3 rounded-t-3xl bg-background px-4 pb-5 pt-4">
+      <div className="-mt-5 flex-1 space-y-2.5 rounded-t-3xl bg-background px-4 pb-4 pt-3.5">
         {!config.businessOpen && config.website.offlineMessage && (
           <p className="rounded-2xl border border-border/60 bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
             {config.website.offlineMessage}
@@ -1635,7 +1635,7 @@ function HomeView({
         )}
         <button
           onClick={onStartChat}
-          className="group flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card p-4 text-left shadow-panel transition duration-200 hover:-translate-y-0.5"
+          className="group flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card p-3.5 text-left shadow-panel transition duration-200 hover:-translate-y-0.5"
         >
           <span
             className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white"
@@ -1684,7 +1684,7 @@ function HomeView({
           </svg>
         </button>
 
-        <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-card p-3.5 shadow-sm">
           <button
             onClick={onOpenHelp}
             className="flex w-full items-center gap-2.5 text-left"
@@ -1716,7 +1716,7 @@ function HomeView({
                 <button
                   key={t.id}
                   onClick={() => onTopic(t)}
-                  className="flex w-full items-center gap-2 py-2.5 text-left transition hover:opacity-80"
+                  className="flex w-full items-center gap-2 py-2 text-left transition hover:opacity-80"
                 >
                   <span className="min-w-0 flex-1 truncate text-[13px] text-card-foreground">
                     {t.label}
