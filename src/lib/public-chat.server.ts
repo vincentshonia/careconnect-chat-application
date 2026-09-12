@@ -99,6 +99,7 @@ export async function resolveWebsite(
   websiteId: string,
   hostOrigin: string | null,
   clientHint: string | null = null,
+  preview = false,
 ) {
   if (!/^[0-9a-f-]{36}$/i.test(websiteId)) throw new PublicChatError(400, "Invalid website id");
   const { data: website, error } = await admin()
@@ -109,7 +110,9 @@ export async function resolveWebsite(
   if (error) throw new PublicChatError(500, "Could not load website configuration");
   if (!website || website.status !== "active") throw new PublicChatError(404, "Website not found");
 
-  assertHostAllowed(website, hostOrigin, clientHint);
+  // A console preview is authorised by a staff-issued signed proof, not by the
+  // embedding domain, so the allow-list check does not apply to it.
+  if (!preview) assertHostAllowed(website, hostOrigin, clientHint);
   return website;
 }
 
@@ -118,6 +121,7 @@ export async function resolveWebsiteByKey(
   publicKey: string,
   hostOrigin: string | null,
   clientHint: string | null = null,
+  preview = false,
 ) {
   if (!/^cc_pk_[a-f0-9]{16,64}$/i.test(publicKey)) {
     throw new PublicChatError(400, "Invalid widget key");
@@ -129,7 +133,7 @@ export async function resolveWebsiteByKey(
     .maybeSingle();
   if (error) throw new PublicChatError(500, "Could not load website configuration");
   if (!website || website.status !== "active") throw new PublicChatError(404, "Website not found");
-  assertHostAllowed(website, hostOrigin, clientHint);
+  if (!preview) assertHostAllowed(website, hostOrigin, clientHint);
   return website;
 }
 
@@ -176,14 +180,15 @@ export async function loadWidgetConfig(
   websiteId: string,
   hostOrigin: string | null,
   clientHint: string | null = null,
+  preview = false,
 ) {
   // The host check must run on every request, so it stays outside the cache.
   const cached = widgetConfigCache.get(websiteId);
   if (cached && Date.now() - cached.at < WIDGET_CONFIG_TTL_MS) {
-    await resolveWebsite(websiteId, hostOrigin, clientHint);
+    await resolveWebsite(websiteId, hostOrigin, clientHint, preview);
     return cached.value;
   }
-  const value = await buildWidgetConfig(websiteId, hostOrigin, clientHint);
+  const value = await buildWidgetConfig(websiteId, hostOrigin, clientHint, preview);
   widgetConfigCache.set(websiteId, { at: Date.now(), value });
   return value;
 }
@@ -192,8 +197,9 @@ async function buildWidgetConfig(
   websiteId: string,
   hostOrigin: string | null,
   clientHint: string | null = null,
+  preview = false,
 ) {
-  const website = await resolveWebsite(websiteId, hostOrigin, clientHint);
+  const website = await resolveWebsite(websiteId, hostOrigin, clientHint, preview);
   const db = admin();
   const [
     { data: org },
@@ -346,6 +352,7 @@ export async function ensureVisitor(
   website: Record<string, any>,
   sessionToken: string,
   meta: Record<string, any>,
+  isPreview = false,
 ) {
   const db = admin();
   const { data: existing } = await db
@@ -378,6 +385,7 @@ export async function ensureVisitor(
       device_type: meta.deviceType ?? null,
       browser: meta.browser ?? null,
       preferred_language: meta.language ?? null,
+      is_preview: isPreview,
     })
     .select("*")
     .single();
@@ -417,6 +425,8 @@ export async function ensureConversation(
       department_id: dept?.id ?? null,
       subject: subject ?? "Website chat",
       status: "new",
+      // Console preview chats never enter the live queue or any report.
+      is_preview: visitor.is_preview === true,
     })
     .select("*")
     .single();
@@ -978,7 +988,10 @@ export async function startWidgetSession(opts: {
     ? await resolveWebsiteByKey(opts.publicKey, provenHost, clientHint ?? opts.host)
     : await resolveWebsite(String(opts.websiteId ?? ""), provenHost, clientHint ?? opts.host);
 
-  if (website.dev_mode === false && proof?.wid !== website.id) {
+  // A staff-issued preview proof authorises the console preview on any host.
+  const isPreview = proof?.preview === true && proof.wid === website.id;
+
+  if (!isPreview && website.dev_mode === false && proof?.wid !== website.id) {
     throw new PublicChatError(403, "This chat widget is not authorized on this domain");
   }
 
@@ -995,7 +1008,7 @@ export async function startWidgetSession(opts: {
     }
   }
   sid = sid ?? newSessionId();
-  await ensureVisitor(website, sid, opts.meta ?? {});
+  await ensureVisitor(website, sid, opts.meta ?? {}, isPreview);
   const { token, expiresAt } = await signSession({
     sid,
     wid: website.id,
@@ -1004,6 +1017,7 @@ export async function startWidgetSession(opts: {
     // browser proved, not one the page claimed.
     host:
       website.dev_mode === false ? provenHost : (provenHost ?? opts.clientHost ?? opts.host),
+    ...(isPreview ? { preview: true } : {}),
   });
   return { token, expiresAt, websiteId: website.id as string };
 }
@@ -1027,7 +1041,10 @@ export function assertSessionHostAllowed(
   website: Record<string, any>,
   claimsHost: string | null,
   requestHost: string | null,
+  preview = false,
 ) {
+  // Console previews are authorised by a staff-issued proof, not by domain.
+  if (preview) return;
   if (website.dev_mode === false) {
     const proven = hostOf(claimsHost);
     if (!proven || !matchesAllowedDomains(website, proven)) {
@@ -1060,7 +1077,7 @@ export async function sessionContext(token: unknown, host: string | null): Promi
   if (!website || website.status !== "active") throw new PublicChatError(404, "Website not found");
   if (website.organization_id !== claims.org)
     throw new PublicChatError(401, "Chat session is invalid");
-  assertSessionHostAllowed(website, claims.host ?? null, host);
+  assertSessionHostAllowed(website, claims.host ?? null, host, claims.preview === true);
 
   const { data: visitor } = await db
     .from("visitors")
