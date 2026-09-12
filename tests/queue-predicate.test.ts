@@ -126,3 +126,17 @@ describe("reopening a finished chat", () => {
     }
   });
 });
+
+describe("preview traffic", () => {
+  it("filters preview conversations out of the queue query", async () => {
+    const { applyQueueFilter } = await import("@/lib/conversation-status");
+    const calls: Array<[string, unknown]> = [];
+    const q: any = {
+      eq: (c: string, v: unknown) => (calls.push([c, v]), q),
+      is: (c: string, v: unknown) => (calls.push([c, v]), q),
+      in: (c: string, v: unknown) => (calls.push([c, v]), q),
+    };
+    applyQueueFilter(q);
+    expect(calls).toContainEqual(["is_preview", false]);
+  });
+});
