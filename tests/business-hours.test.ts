@@ -58,3 +58,42 @@ describe("isOpenNow", () => {
     expect(isOpenNow(closed, [], TZ, laInstant("2026-09-10T19:00:00Z"))).toBe(false);
   });
 });
+
+describe("nextOpenAt", () => {
+  const weekdays = [1, 2, 3, 4, 5].map((d) => ({
+    day_of_week: d,
+    open_time: "09:00:00",
+    close_time: "17:00:00",
+    is_closed: false,
+  }));
+  const tz = "America/Los_Angeles";
+
+  it("returns the same day's opening when asked before opening", () => {
+    // Tue 2026-09-15 07:00 PT
+    const now = new Date("2026-09-15T14:00:00Z");
+    const at = nextOpenAt(weekdays as any, [], tz, now);
+    expect(at?.toISOString()).toBe("2026-09-15T16:00:00.000Z");
+  });
+
+  it("skips to Monday from a Saturday evening", () => {
+    // Sat 2026-09-12 20:00 PT
+    const now = new Date("2026-09-13T03:00:00Z");
+    const at = nextOpenAt(weekdays as any, [], tz, now);
+    expect(at?.toISOString()).toBe("2026-09-14T16:00:00.000Z");
+  });
+
+  it("skips a holiday", () => {
+    const now = new Date("2026-09-15T14:00:00Z");
+    const at = nextOpenAt(weekdays as any, [{ holiday_date: "2026-09-15" }] as any, tz, now);
+    expect(at?.toISOString()).toBe("2026-09-16T16:00:00.000Z");
+  });
+
+  it("returns null with no configured hours", () => {
+    expect(nextOpenAt([], [], tz, new Date())).toBeNull();
+  });
+
+  it("formats the next opening in the organization timezone", () => {
+    const at = new Date("2026-09-14T16:00:00Z");
+    expect(formatNextOpen(at, tz)).toBe("Monday, September 14 at 9:00 AM");
+  });
+});
