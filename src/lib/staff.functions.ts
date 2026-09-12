@@ -146,7 +146,7 @@ export const createStaffFn = createServerFn({ method: "POST" })
     try {
       const { data: org } = await supabaseAdmin
         .from("organizations")
-        .select("name, logo_url, primary_color")
+        .select("name, logo_url, phone")
         .eq("id", organizationId)
         .maybeSingle();
 
