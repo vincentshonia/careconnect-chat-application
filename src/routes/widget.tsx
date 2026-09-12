@@ -21,7 +21,6 @@ import {
   shouldShowRating,
 } from "@/lib/widget-client";
 
-const BRAND_LOGO_URL = brandLogoAsset.url;
 
 export const Route = createFileRoute("/widget")({
   head: () => ({
