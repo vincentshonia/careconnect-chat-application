@@ -1,7 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
-import { ClipboardCheck, Headset, MessageSquare, Phone, UserPlus } from "lucide-react";
+import {
+  CheckCircle,
+  ClipboardCheck,
+  Clock,
+  Headset,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Phone,
+  UserPlus,
+} from "lucide-react";
 import { resolveWidgetTabs, tabIconPath } from "@/lib/widget-tabs";
 import {
   isConversationEnded,
@@ -68,6 +78,8 @@ type Config = {
   };
   organization: {
     name: string;
+    logoUrl?: string | null;
+    mapsUrl?: string | null;
     phone: string;
     email: string;
     address: string;
@@ -91,6 +103,133 @@ type Config = {
   nextOpenAt?: string | null;
   agentsAvailable: boolean;
 };
+
+/**
+ * The organization's contact details, rendered the same way everywhere the
+ * widget shows them so there is only one card to maintain.
+ */
+function ContactCard({ config, brand }: { config: Config; brand: string }) {
+  const org = config.organization;
+  const phoneDigits = (org.phone || "").replace(/[^\d+]/g, "");
+  const mapsHref = org.address
+    ? org.mapsUrl || `https://maps.google.com/?q=${encodeURIComponent(org.address)}`
+    : null;
+
+  const rows = [
+    org.phone && {
+      key: "phone",
+      Icon: Phone,
+      label: "Phone",
+      node: (
+        <a
+          href={`tel:${phoneDigits}`}
+          aria-label={`Call ${org.phone}`}
+          className="font-medium hover:underline"
+          style={{ color: brand }}
+        >
+          {org.phone}
+        </a>
+      ),
+    },
+    org.email && {
+      key: "email",
+      Icon: Mail,
+      label: "Email",
+      node: (
+        <a
+          href={`mailto:${org.email}`}
+          aria-label={`Email ${org.email}`}
+          className="font-medium break-all hover:underline"
+          style={{ color: brand }}
+        >
+          {org.email}
+        </a>
+      ),
+    },
+    org.address && {
+      key: "address",
+      Icon: MapPin,
+      label: "Address",
+      node: mapsHref ? (
+        <a
+          href={mapsHref}
+          target="_blank"
+          rel="noreferrer"
+          className="font-medium hover:underline"
+          style={{ color: brand }}
+        >
+          {org.address}
+        </a>
+      ) : (
+        <span className="text-card-foreground">{org.address}</span>
+      ),
+    },
+  ].filter(Boolean) as Array<{
+    key: string;
+    Icon: typeof Phone;
+    label: string;
+    node: React.ReactNode;
+  }>;
+
+  const NoticeIcon = config.businessOpen ? CheckCircle : Clock;
+  const notice = config.businessOpen
+    ? "Live representatives are available now."
+    : config.website.offlineMessage;
+
+  return (
+    <div
+      className="rounded-xl border border-border bg-card p-4"
+      style={{ fontFamily: config.website.fontFamily, lineHeight: 1.5 }}
+    >
+      {org.logoUrl ? (
+        <img
+          src={org.logoUrl}
+          alt={org.name}
+          className="mb-3 w-auto object-contain object-left"
+          style={{ maxHeight: 36 }}
+        />
+      ) : (
+        <p className="mb-3 font-semibold text-card-foreground">{org.name}</p>
+      )}
+
+      <div className="space-y-3">
+        {rows.map((row) => (
+          <div key={row.key} className="flex items-start gap-3">
+            <span
+              aria-hidden="true"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+              // 10% tint of the site's own primary colour.
+              style={{ background: `${brand}1a` }}
+            >
+              <row.Icon size={16} style={{ color: brand }} />
+            </span>
+            <span className="min-w-0">
+              <span
+                className="block font-semibold text-card-foreground"
+                style={{ fontSize: 13, lineHeight: 1.5 }}
+              >
+                {row.label}
+              </span>
+              <span className="block" style={{ fontSize: 15, lineHeight: 1.5 }}>
+                {row.node}
+              </span>
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {notice ? (
+        <div
+          className="mt-4 flex items-start gap-2 rounded-lg p-3 text-muted-foreground"
+          style={{ background: `${brand}0f`, fontSize: 13, lineHeight: 1.5 }}
+        >
+          <NoticeIcon size={15} style={{ color: brand }} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <span>{notice}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * One sentence, used identically on the home card, in the request form and on
@@ -1083,24 +1222,12 @@ function WidgetPage() {
 
         {view === "contact" && (
           <div className="space-y-3 text-sm">
-            <div className="rounded-xl border border-border bg-card p-3">
-              <p className="font-semibold text-card-foreground">{config.organization.name}</p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Phone: {config.organization.phone}
-              </p>
-              <p className="text-xs text-muted-foreground">Email: {config.organization.email}</p>
-              <p className="text-xs text-muted-foreground">{config.organization.address}</p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {config.businessOpen
-                  ? "Live representatives are available."
-                  : config.website.offlineMessage}
-              </p>
-            </div>
+            <ContactCard config={config} brand={brand} />
             <button
               className="w-full rounded-lg px-3 py-2 text-sm font-semibold text-white"
               style={{ background: brand }}
               onClick={() => {
-                setFormKind("contact");
+                setFormKind("live_agent");
                 setServiceInterest("");
                 setView("form");
               }}
