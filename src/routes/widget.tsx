@@ -1,6 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
+import {
+  ClipboardCheck,
+  Headset,
+  MessageSquare,
+  Phone,
+  UserPlus,
+} from "lucide-react";
 import { resolveWidgetTabs, tabIconPath } from "@/lib/widget-tabs";
 import {
   isConversationEnded,
