@@ -11,6 +11,7 @@ import {
   ForbiddenError,
 } from "@/lib/authz.server";
 import { ROLE_RANK, roleTransitionError, type OrgRole } from "@/lib/permissions";
+import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
 
 /** Public origin used for absolute links/images inside outgoing emails. */
 const APP_ORIGIN = "https://chat.mypacifichealth.com";
