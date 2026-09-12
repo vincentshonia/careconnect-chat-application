@@ -918,49 +918,58 @@ function WidgetPage() {
             className="pointer-events-none absolute -right-10 -top-16 h-32 w-32 rounded-full bg-white/10 blur-2xl"
             aria-hidden="true"
           />
-          <div className="relative shrink-0">
-            {agentAvatar ? (
-              <img
-                src={agentAvatar}
-                alt={agentName ?? "Representative"}
-                className="h-9 w-9 rounded-full object-cover ring-2 ring-white/30"
+          {/* On the contact details view we show the company name instead of
+              the assistant avatar. */}
+          {view !== "contact" && (
+            <div className="relative shrink-0">
+              {agentAvatar ? (
+                <img
+                  src={agentAvatar}
+                  alt={agentName ?? "Representative"}
+                  className="h-9 w-9 rounded-full object-cover ring-2 ring-white/30"
+                />
+              ) : (
+                <div className="grid h-9 w-9 place-items-center rounded-full bg-white/15 ring-2 ring-white/25">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" />
+                  </svg>
+                </div>
+              )}
+              <span
+                className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white/80 ${
+                  agentName || config.agentsAvailable ? "bg-emerald-400" : "bg-amber-300"
+                }`}
+                aria-hidden="true"
               />
-            ) : (
-              <div className="grid h-9 w-9 place-items-center rounded-full bg-white/15 ring-2 ring-white/25">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" />
-                </svg>
-              </div>
-            )}
-            <span
-              className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white/80 ${
-                agentName || config.agentsAvailable ? "bg-emerald-400" : "bg-amber-300"
-              }`}
-              aria-hidden="true"
-            />
-          </div>
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold tracking-tight">
-              {agentName ?? "PHG CareConnect Assistant"}
+              {view === "contact"
+                ? config.organization.name
+                : (agentName ?? "PHG CareConnect Assistant")}
             </p>
             <p className="truncate text-[11px] text-white/80">
-              {agentName
-                ? `${config.organization.name} · live representative`
-                : config.agentsAvailable
-                  ? "Live representatives are available"
-                  : "AI assistant · leave a message anytime"}
+              {view === "contact"
+                ? "Contact details"
+                : agentName
+                  ? `${config.organization.name} · live representative`
+                  : config.agentsAvailable
+                    ? "Live representatives are available"
+                    : "AI assistant · leave a message anytime"}
             </p>
           </div>
+
 
           {!agentName && (
             // Outside business hours nobody can pick the chat up, so the offer
