@@ -36,20 +36,27 @@ export function LiveWidgetPreview({
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const proof = proofQuery.data?.proof ?? null;
   const src = proof
-    ? `/widget?w=${encodeURIComponent(websiteId)}&h=${encodeURIComponent(origin)}&op=${encodeURIComponent(proof)}`
+    ? `/widget?w=${encodeURIComponent(websiteId)}&h=${encodeURIComponent(origin)}&op=${encodeURIComponent(proof)}&preview=1`
     : null;
 
+  // Push unsaved form values into the running widget so edits show instantly.
+  const serialized = JSON.stringify(config ?? {});
+  useEffect(() => {
+    if (!src) return;
+    const win = frame.current?.contentWindow;
+    if (!win) return;
+    win.postMessage({ type: "cc-preview-config", config: JSON.parse(serialized) }, origin);
+  }, [serialized, src, origin]);
+
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex w-[400px] flex-col gap-2">
+    <div className="fixed bottom-6 right-6 z-50 flex w-[380px] flex-col gap-2">
       <div className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2 shadow-lg">
-        <p className="text-xs text-muted-foreground">
-          Test chat — not counted in the queue or reports
-        </p>
+        <p className="text-xs text-muted-foreground">Live preview — real widget</p>
         <Button size="sm" variant="ghost" onClick={onClose}>
-          Close
+          Hide
         </Button>
       </div>
-      <div className="h-[620px] overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
+      <div className="h-[640px] overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
         {proofQuery.isError ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
             <p className="text-sm text-muted-foreground">
