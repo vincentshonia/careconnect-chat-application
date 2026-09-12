@@ -727,6 +727,63 @@ async function resolveLanguage(
   return stored ? normalizeLanguage(stored) : detectLanguage(question);
 }
 
+/** Read the conversation's running off-topic counters. */
+async function readScopeState(db: Admin, conversationId: string | null): Promise<ScopeState> {
+  if (!conversationId) return { streak: 0, limitedUntil: 0 };
+  const { data } = await db
+    .from("conversations")
+    .select("metadata")
+    .eq("id", conversationId)
+    .maybeSingle();
+  const meta = ((data as any)?.metadata ?? {}) as Record<string, any>;
+  return {
+    streak: Number(meta.ai_out_of_scope_streak ?? 0) || 0,
+    limitedUntil: Number(meta.ai_scope_limited_until ?? 0) || 0,
+  };
+}
+
+/**
+ * Record whether the latest question was off-topic. Three in a row put the
+ * conversation into a short cool-off where the assistant stops calling the
+ * model, and leave a trail staff can see in the conversation timeline.
+ */
+async function bumpScopeState(
+  db: Admin,
+  website: Record<string, any>,
+  conversationId: string | null,
+  prev: ScopeState,
+  outOfScope: boolean,
+) {
+  const next = nextScopeState(prev, outOfScope);
+  if (!conversationId) return next;
+  if (!outOfScope && !prev.streak && !prev.limitedUntil) return next;
+  const { data } = await db
+    .from("conversations")
+    .select("metadata")
+    .eq("id", conversationId)
+    .maybeSingle();
+  const meta = ((data as any)?.metadata ?? {}) as Record<string, any>;
+  await db
+    .from("conversations")
+    .update({
+      metadata: {
+        ...meta,
+        ai_out_of_scope_streak: next.streak,
+        ai_scope_limited_until: next.limitedUntil,
+      },
+    })
+    .eq("id", conversationId);
+  if (next.limitReached && !isScopeLimited(prev)) {
+    await logEvent(
+      conversationId,
+      website.organization_id,
+      "ai_scope_limited",
+      "Three consecutive off-topic questions — assistant paused for 10 minutes.",
+    );
+  }
+  return next;
+}
+
 export async function answerQuestion(opts: {
   website: Record<string, any>;
   question: string;
