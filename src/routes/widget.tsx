@@ -412,6 +412,23 @@ function WidgetPage() {
       .catch((e: Error) => setError(e.message));
   }, [websiteId, hostOrigin, originProof]);
 
+  /* ------- live config edits from the admin console (preview only) ------- */
+  useEffect(() => {
+    if (!isPreview || typeof window === "undefined") return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== window.parent) return;
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as { type?: string; config?: Record<string, unknown> } | null;
+      if (!data || data.type !== "cc-preview-config" || !data.config) return;
+      setConfig((prev) =>
+        prev ? { ...prev, website: { ...prev.website, ...data.config } } : prev,
+      );
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [isPreview]);
+
+
   /* ------------------- teaser / auto-open / hidden pages ---------------- */
   useEffect(() => {
     if (!config) return;
