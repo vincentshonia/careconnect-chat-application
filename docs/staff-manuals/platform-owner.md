@@ -504,7 +504,7 @@ _Understand what a website record controls._
 
 > **Interface illustration — Websites & widget settings**
 >
-> Website settings with a site list, grouped settings cards for basics, home screen, chat copy and bottom navigation, the embed snippet and a live widget preview.
+> Website settings with a site list, grouped settings cards for basics, home screen, chat copy and bottom navigation, the embed snippet and a live preview that is the real widget, fully clickable; preview chats are excluded from the queue and reports.
 >
 > 1. Website list, plus + Add website.
 > 2. Site basics: names, domains, allowed embed domains, colors, position and trigger delay.
