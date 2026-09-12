@@ -247,12 +247,6 @@ async function buildWidgetConfig(
       .select("holiday_date,website_id")
       .eq("organization_id", website.organization_id)
       .or(`website_id.is.null,website_id.eq.${website.id}`),
-    db
-      .from("departments")
-      .select("id,name,description,website_id")
-      .eq("organization_id", website.organization_id)
-      .eq("status", "active")
-      .order("name"),
     // Real staff photos only, and only for staff who explicitly opted in.
     // `show_in_widget_team` defaults to false, so no employee photo can ever
     // reach an anonymous visitor by accident.
