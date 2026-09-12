@@ -823,6 +823,22 @@ export async function answerQuestion(opts: {
     };
   }
 
+  const orgName = org?.name ?? "this organization";
+  const scope = await readScopeState(db, opts.conversationId ?? null);
+
+  // Repeated off-topic questions: answer from a canned line and stop paying
+  // for model calls on this conversation for a while.
+  if (isScopeLimited(scope)) {
+    return {
+      answer: `${outOfScopeReply(orgName, language)} ${scopeLimitedNotice(orgName, language)}`,
+      sources: [],
+      confidence: 0,
+      escalate: false,
+      crisis: false,
+      diagnostics: { retrieval: [], floor: MIN_SIMILARITY, language },
+    };
+  }
+
   // Hybrid retrieval: meaning-similarity and word/fuzzy matching, blended by
   // reciprocal rank fusion so an exact plan name or phone number is found even
   // when the embedding misses it.
