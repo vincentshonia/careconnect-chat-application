@@ -6,7 +6,7 @@
  * website and department timezones are deliberately ignored here so the widget
  * cannot disagree with the admin UI.
  */
-import { safeTimeZone, zonedParts } from "@/lib/org-time";
+import { safeTimeZone, zonedParts, zonedTimeToUtc } from "@/lib/org-time";
 
 export type BusinessHourRow = {
   day_of_week: number;
@@ -72,4 +72,71 @@ export function isOpenNow(
       true,
     )
   );
+}
+
+/**
+ * The next instant the organization opens, or `null` when no business hours
+ * are configured (the caller then says "our next business day").
+ *
+ * Holidays close the whole local day, and the search is bounded to two weeks
+ * so a fully-closed schedule cannot spin.
+ */
+export function nextOpenAt(
+  hours: BusinessHourRow[],
+  holidays: HolidayRow[],
+  timezone: string | null | undefined,
+  now: Date = new Date(),
+): Date | null {
+  if (!hours?.length) return null;
+  const zone = safeTimeZone(timezone);
+  const closedDates = new Set(
+    (holidays ?? []).map((h) => String(h.holiday_date).slice(0, 10)),
+  );
+  const base = zonedParts(now, zone);
+
+  for (let i = 0; i < 14; i++) {
+    const dayStart = zonedTimeToUtc(
+      { year: base.year, month: base.month, day: base.day + i },
+      zone,
+    );
+    const p = zonedParts(dayStart, zone);
+    const date = `${p.year}-${pad(p.month)}-${pad(p.day)}`;
+    if (closedDates.has(date)) continue;
+
+    const dow = new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay();
+    const row = hours.find((h) => h.day_of_week === dow);
+    if (!row || row.is_closed) continue;
+    const open = minutesOf(row.open_time);
+    if (open === null) continue;
+
+    const at = zonedTimeToUtc(
+      {
+        year: p.year,
+        month: p.month,
+        day: p.day,
+        hour: Math.floor(open / 60),
+        minute: open % 60,
+      },
+      zone,
+    );
+    if (at.getTime() > now.getTime()) return at;
+  }
+  return null;
+}
+
+/** "Monday, September 14 at 9:00 AM", read in the organization's timezone. */
+export function formatNextOpen(at: Date, timezone: string | null | undefined): string {
+  const zone = safeTimeZone(timezone);
+  const day = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone,
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }).format(at);
+  const time = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone,
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(at);
+  return `${day} at ${time}`;
 }
