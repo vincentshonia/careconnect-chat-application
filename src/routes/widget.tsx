@@ -871,7 +871,11 @@ function WidgetPage() {
                   f.answer.toLowerCase().includes(faqQuery.toLowerCase()),
               )
               .map((f) => (
-                <details key={f.id} className="rounded-xl border border-border bg-card p-3">
+                <details
+                  key={f.id}
+                  open={faqQuery.trim().toLowerCase() === f.question.trim().toLowerCase()}
+                  className="rounded-xl border border-border bg-card p-3"
+                >
                   <summary className="cursor-pointer text-sm font-medium text-card-foreground">
                     {f.question}
                   </summary>
