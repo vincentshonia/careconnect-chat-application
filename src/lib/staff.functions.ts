@@ -11,6 +11,7 @@ import {
   ForbiddenError,
 } from "@/lib/authz.server";
 import { ROLE_RANK, roleTransitionError, type OrgRole } from "@/lib/permissions";
+import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
 
 /** Public origin used for absolute links/images inside outgoing emails. */
 const APP_ORIGIN = "https://chat.mypacifichealth.com";
@@ -164,7 +165,7 @@ export const createStaffFn = createServerFn({ method: "POST" })
             ? org.logo_url.startsWith("http")
               ? org.logo_url
               : `${APP_ORIGIN}${org.logo_url}`
-            : undefined,
+            : `${APP_ORIGIN}${brandLogoAsset.url}`,
           supportPhone: org?.phone ?? undefined,
         },
       });
