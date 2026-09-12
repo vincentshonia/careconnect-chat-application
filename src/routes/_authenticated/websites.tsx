@@ -611,11 +611,12 @@ export function WebsitesPanel() {
             <ServicesCard organizationId={active.organization_id} />
 
             <div className="rounded-xl border border-border p-4">
-              <h2 className="text-sm font-semibold">Test the live chat</h2>
+              <h2 className="text-sm font-semibold">Live preview — real widget</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Opens the real widget here in the console so you can ask questions, request a
-                representative and submit forms exactly as a visitor would. Test chats are marked
-                as previews and never appear in the waiting queue, the dashboard or reports.
+                The panel in the corner is the real widget, fully clickable: ask questions, request
+                a representative and submit forms exactly as a visitor would. Unsaved changes above
+                appear instantly. Preview chats never appear in the waiting queue, the dashboard or
+                reports.
               </p>
               <Button
                 className="mt-3"
@@ -623,7 +624,7 @@ export function WebsitesPanel() {
                 size="sm"
                 onClick={() => setLivePreview((v) => !v)}
               >
-                {livePreview ? "Stop test chat" : "Start test chat"}
+                {livePreview ? "Hide preview" : "Show preview"}
               </Button>
             </div>
 
