@@ -201,7 +201,7 @@ async function purgeLeakedAccounts(backend) {
   );
 
   for (const user of leaked) {
-    assertSynthetic(user.email);
+    assertSynthetic(user.email, "account");
     await db.from("profiles").delete().eq("id", user.id);
     const { error } = await db.auth.admin.deleteUser(user.id);
     if (error) throw new Error(`[${backend.label}] delete ${user.email}: ${error.message}`);
