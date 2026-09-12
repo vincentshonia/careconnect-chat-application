@@ -171,6 +171,7 @@ function ContactCard({ config, brand }: { config: Config; brand: string }) {
     node: React.ReactNode;
   }>;
 
+  const [logoFailed, setLogoFailed] = useState(false);
   const NoticeIcon = config.businessOpen ? CheckCircle : Clock;
   const notice = config.businessOpen
     ? "Live representatives are available now."
@@ -181,10 +182,11 @@ function ContactCard({ config, brand }: { config: Config; brand: string }) {
       className="rounded-xl border border-border bg-card p-4"
       style={{ fontFamily: config.website.fontFamily, lineHeight: 1.5 }}
     >
-      {org.logoUrl ? (
+      {org.logoUrl && !logoFailed ? (
         <img
           src={org.logoUrl}
           alt={org.name}
+          onError={() => setLogoFailed(true)}
           className="mb-3 w-auto object-contain object-left"
           style={{ maxHeight: 36 }}
         />
