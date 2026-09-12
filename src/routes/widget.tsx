@@ -84,7 +84,7 @@ type Config = {
     privacyNotice: string;
     emergencyMessage: string;
   };
-  departments: Array<{ id: string; name: string; description: string | null }>;
+  
   services: Array<{
     id: string;
     name: string;
@@ -323,7 +323,9 @@ function WidgetPage() {
 
   const [config, setConfig] = useState<Config | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
+  // The admin console preview must show the widget already open on Home —
+  // never the launcher bubble or its "Start chat" teaser.
+  const [open, setOpen] = useState(isPreview);
   const [showTeaser, setShowTeaser] = useState(false);
   const [view, setView] = useState<View>("menu");
   const [messages, setMessages] = useState<Bubble[]>([]);
@@ -567,6 +569,8 @@ function WidgetPage() {
   /* ------------------- teaser / auto-open / hidden pages ---------------- */
   useEffect(() => {
     if (!config) return;
+    // The console preview is always open; teasers and auto-open do not apply.
+    if (isPreview) return;
     post("position", { value: config.website.position });
 
     const hidden = (config.website.hiddenPaths ?? []).some((p) => p && page.startsWith(p));
@@ -588,7 +592,7 @@ function WidgetPage() {
       const t = setTimeout(() => setShowTeaser(true), config.website.triggerDelaySeconds * 1000);
       return () => clearTimeout(t);
     }
-  }, [config, page, storageKey]);
+  }, [config, page, storageKey, isPreview]);
 
   useEffect(() => {
     post("resize", { open, bubble: showTeaser && !open });
@@ -1100,39 +1104,75 @@ function WidgetPage() {
           </div>
         )}
 
-        {view === "faq" && (
-          <div className="space-y-3">
-            <input
-              value={faqQuery}
-              onChange={(e) => setFaqQuery(e.target.value)}
-              placeholder="Search questions"
-              aria-label="Search frequently asked questions"
-              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm"
-            />
-            {config.faqs
-              .filter(
-                (f) =>
-                  !faqQuery ||
-                  f.question.toLowerCase().includes(faqQuery.toLowerCase()) ||
-                  f.answer.toLowerCase().includes(faqQuery.toLowerCase()),
-              )
-              .map((f) => (
-                <details
-                  key={f.id}
-                  open={faqQuery.trim().toLowerCase() === f.question.trim().toLowerCase()}
-                  className="rounded-xl border border-border bg-card p-3"
-                >
-                  <summary className="cursor-pointer text-sm font-medium text-card-foreground">
-                    {f.question}
-                  </summary>
-                  <p className="mt-2 text-xs text-muted-foreground">{f.answer}</p>
-                  <span className="mt-2 block text-[10px] uppercase tracking-wide text-muted-foreground">
-                    {f.category}
-                  </span>
-                </details>
-              ))}
-          </div>
-        )}
+        {view === "faq" &&
+          (() => {
+            const q = faqQuery.trim();
+            const matches = config.faqs.filter(
+              (f) =>
+                !q ||
+                f.question.toLowerCase().includes(q.toLowerCase()) ||
+                f.answer.toLowerCase().includes(q.toLowerCase()),
+            );
+            const askAssistant = () => {
+              if (!q) return;
+              setFaqQuery("");
+              void sendQuestion(q);
+            };
+            return (
+              <div className="space-y-3">
+                <input
+                  value={faqQuery}
+                  onChange={(e) => setFaqQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      askAssistant();
+                    }
+                  }}
+                  placeholder="Search questions"
+                  aria-label="Search frequently asked questions"
+                  className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm"
+                />
+                {q && !matches.length ? (
+                  <p className="text-xs text-muted-foreground">No matching questions</p>
+                ) : null}
+                {matches.map((f) => (
+                  <details
+                    key={f.id}
+                    open={q.toLowerCase() === f.question.trim().toLowerCase()}
+                    className="rounded-xl border border-border bg-card p-3"
+                  >
+                    <summary className="cursor-pointer text-sm font-medium text-card-foreground">
+                      {f.question}
+                    </summary>
+                    <p className="mt-2 text-xs text-muted-foreground">{f.answer}</p>
+                    <span className="mt-2 block text-[10px] uppercase tracking-wide text-muted-foreground">
+                      {f.category}
+                    </span>
+                  </details>
+                ))}
+                {q ? (
+                  <button
+                    type="button"
+                    onClick={askAssistant}
+                    className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 text-left transition hover:bg-muted"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-card-foreground">
+                        Can't find it? Ask the assistant:
+                      </span>
+                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                        “{q}”
+                      </span>
+                    </span>
+                    <span aria-hidden="true" className="shrink-0 text-lg" style={{ color: brand }}>
+                      →
+                    </span>
+                  </button>
+                ) : null}
+              </div>
+            );
+          })()}
 
         {view === "requests" && (
           <div className="space-y-3">
@@ -1241,7 +1281,6 @@ function WidgetPage() {
                 kind: formKind,
                 after_hours: !config.businessOpen,
                 ...payload,
-                departmentId: (payload.departmentId as string) || null,
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data.error ?? "Submission failed");
@@ -1896,7 +1935,7 @@ function IntakeForm({
     healthPlan: "",
     serviceInterest: initialServiceInterest,
     preferredLanguage: "English",
-    departmentId: "",
+
 
     // Pre-checked so visitors get follow-up by default; they can opt out.
     consent: true,
@@ -1947,23 +1986,6 @@ function IntakeForm({
           {config.organization.privacyNotice}
         </p>
       )}
-      {config.departments?.length ? (
-        <label className="block text-xs font-medium text-foreground">
-          Which team can help you?
-          <select
-            value={values.departmentId}
-            onChange={(e) => set("departmentId", e.target.value)}
-            className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm font-normal"
-          >
-            <option value="">Choose for me</option>
-            {config.departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
       <Field
         label="Full name"
         required

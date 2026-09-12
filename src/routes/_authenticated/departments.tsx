@@ -36,7 +36,7 @@ export function DepartmentsPanel() {
   return (
     <PanelShell
       title="Departments & hours"
-      description="Routing targets, coverage windows and closures used by the widget and escalation flow."
+      description="The default department receives all new visitor requests; staff can transfer. Coverage windows and closures are set here too."
     >
       <Tabs defaultValue="departments">
         <TabsList>

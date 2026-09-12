@@ -58,7 +58,8 @@ async function withSecurityHeaders(request: Request, response: Response): Promis
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 
   if (path === "/widget") {
-    const websiteId = new URL(request.url).searchParams.get("w") ?? "";
+    const params = new URL(request.url).searchParams;
+    const websiteId = params.get("w") ?? "";
     let ancestors: string[] = [];
     try {
       const mod = await import("./lib/public-chat.server");
@@ -66,6 +67,30 @@ async function withSecurityHeaders(request: Request, response: Response): Promis
     } catch {
       ancestors = [];
     }
+
+    // The admin console frames the real widget for its live preview. That is
+    // only permitted when the request carries a staff-issued preview proof for
+    // this website, and the host it was minted for is the console asking now.
+    if (params.get("preview") === "1") {
+      try {
+        const { verifyOriginProof } = await import("./lib/widget-session.server");
+        const claims = await verifyOriginProof(params.get("op"));
+        const consoleOrigin = new URL(request.url).origin;
+        if (claims?.preview && claims.wid === websiteId && claims.host === consoleOrigin) {
+          ancestors.push(
+            claims.host,
+            // The console itself is framed by the Lovable editor, and
+            // frame-ancestors must permit the whole chain.
+            "https://lovable.dev",
+            "https://*.lovable.dev",
+            "https://*.lovable.app",
+          );
+        }
+      } catch {
+        /* an unverifiable proof simply grants nothing extra */
+      }
+    }
+
     // 'self' lets the admin console frame the real widget for its live
     // preview; that session still needs a staff-issued signed proof.
     headers.set("Content-Security-Policy", `frame-ancestors 'self' ${ancestors.join(" ")}`.trim());
