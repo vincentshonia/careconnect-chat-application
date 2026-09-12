@@ -66,10 +66,9 @@ async function withSecurityHeaders(request: Request, response: Response): Promis
     } catch {
       ancestors = [];
     }
-    headers.set(
-      "Content-Security-Policy",
-      `frame-ancestors ${ancestors.length ? ancestors.join(" ") : "'none'"}`,
-    );
+    // 'self' lets the admin console frame the real widget for its live
+    // preview; that session still needs a staff-issued signed proof.
+    headers.set("Content-Security-Policy", `frame-ancestors 'self' ${ancestors.join(" ")}`.trim());
   } else {
     // Nothing may frame the staff app except the Lovable editor preview.
     headers.set(
