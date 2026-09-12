@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -118,6 +119,8 @@ function Rules() {
       });
       queryClient.invalidateQueries({ queryKey: ["routing-rules"] });
     },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not save that routing rule"),
   });
 
   const update = useMutation({
@@ -141,6 +144,8 @@ function Rules() {
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["routing-rules"] }),
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not save that routing rule"),
   });
 
   const remove = useMutation({
@@ -148,6 +153,8 @@ function Rules() {
       await saveRule({ data: { action: "delete", id } });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["routing-rules"] }),
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not save that routing rule"),
   });
 
   return (
@@ -287,6 +294,8 @@ function Templates() {
       setForm({ name: "", shortcut: "", category: "", body: "" });
       queryClient.invalidateQueries({ queryKey: ["response-templates"] });
     },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not save that template"),
   });
 
   const update = useMutation({
@@ -310,6 +319,8 @@ function Templates() {
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["response-templates"] }),
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not save that template"),
   });
 
   const remove = useMutation({
@@ -317,6 +328,8 @@ function Templates() {
       await saveTemplate({ data: { action: "delete", id } });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["response-templates"] }),
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not save that template"),
   });
 
   return (
@@ -441,6 +454,8 @@ function Outcomes() {
       queryClient.invalidateQueries({ queryKey: ["conversation-dispositions-admin"] });
       queryClient.invalidateQueries({ queryKey: ["conversation-dispositions"] });
     },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not save that outcome"),
   });
 
   return (
