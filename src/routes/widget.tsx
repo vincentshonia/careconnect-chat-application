@@ -84,7 +84,7 @@ type Config = {
     privacyNotice: string;
     emergencyMessage: string;
   };
-  departments: Array<{ id: string; name: string; description: string | null }>;
+  
   services: Array<{
     id: string;
     name: string;
@@ -1241,7 +1241,6 @@ function WidgetPage() {
                 kind: formKind,
                 after_hours: !config.businessOpen,
                 ...payload,
-                departmentId: (payload.departmentId as string) || null,
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data.error ?? "Submission failed");
@@ -1896,7 +1895,7 @@ function IntakeForm({
     healthPlan: "",
     serviceInterest: initialServiceInterest,
     preferredLanguage: "English",
-    departmentId: "",
+
 
     // Pre-checked so visitors get follow-up by default; they can opt out.
     consent: true,
@@ -1947,23 +1946,6 @@ function IntakeForm({
           {config.organization.privacyNotice}
         </p>
       )}
-      {config.departments?.length ? (
-        <label className="block text-xs font-medium text-foreground">
-          Which team can help you?
-          <select
-            value={values.departmentId}
-            onChange={(e) => set("departmentId", e.target.value)}
-            className="mt-1 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm font-normal"
-          >
-            <option value="">Choose for me</option>
-            {config.departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
       <Field
         label="Full name"
         required
