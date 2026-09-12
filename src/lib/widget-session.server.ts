@@ -23,6 +23,8 @@ export type WidgetSessionClaims = {
   org: string;
   /** Host origin the session was minted for. */
   host: string | null;
+  /** Console preview session: staff testing the widget, never real traffic. */
+  preview?: boolean;
   iat: number;
   exp: number;
 };
@@ -127,15 +129,20 @@ export async function verifySession(token: unknown): Promise<WidgetSessionClaims
  * short-lived signed proof. The widget then presents the proof when minting a
  * session, and the verified host is stored in the session claims.
  */
-export type OriginProofClaims = { wid: string; host: string; exp: number };
+export type OriginProofClaims = { wid: string; host: string; exp: number; preview?: boolean };
 
 const ORIGIN_PROOF_TTL_SECONDS = 15 * 60;
 
-export async function signOriginProof(wid: string, host: string): Promise<string> {
+export async function signOriginProof(
+  wid: string,
+  host: string,
+  preview = false,
+): Promise<string> {
   const payload: OriginProofClaims = {
     wid,
     host,
     exp: Math.floor(Date.now() / 1000) + ORIGIN_PROOF_TTL_SECONDS,
+    ...(preview ? { preview: true } : {}),
   };
   const body = b64url(new TextEncoder().encode(JSON.stringify(payload)));
   const sig = new Uint8Array(

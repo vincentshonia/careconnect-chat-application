@@ -12,6 +12,7 @@ import { logAudit } from "@/lib/audit-client";
 import type { Database } from "@/integrations/supabase/types";
 import { PanelShell } from "@/components/admin/PanelShell";
 import { WidgetPreview } from "@/components/admin/WidgetPreview";
+import { LiveWidgetPreview } from "@/components/admin/LiveWidgetPreview";
 import {
   DEFAULT_WIDGET_TABS,
   WIDGET_TAB_ICONS,
@@ -44,6 +45,7 @@ export function WebsitesPanel() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Website>>({});
   const [notice, setNotice] = useState<string | null>(null);
+  const [livePreview, setLivePreview] = useState(false);
   const [origin, setOrigin] = useState("");
   const [domainsText, setDomainsText] = useState("");
   const [creating, setCreating] = useState(false);
@@ -622,6 +624,23 @@ export function WebsitesPanel() {
             <ServicesCard organizationId={active.organization_id} />
 
             <div className="rounded-xl border border-border p-4">
+              <h2 className="text-sm font-semibold">Test the live chat</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Opens the real widget here in the console so you can ask questions, request a
+                representative and submit forms exactly as a visitor would. Test chats are marked
+                as previews and never appear in the waiting queue, the dashboard or reports.
+              </p>
+              <Button
+                className="mt-3"
+                variant="outline"
+                size="sm"
+                onClick={() => setLivePreview((v) => !v)}
+              >
+                {livePreview ? "Stop test chat" : "Start test chat"}
+              </Button>
+            </div>
+
+            <div className="rounded-xl border border-border p-4">
               <h2 className="text-sm font-semibold">Embed snippet</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Paste this before the closing body tag on {active.domain}.
@@ -700,7 +719,11 @@ export function WebsitesPanel() {
         )}
       </div>
 
-      {active ? (
+      {active && livePreview ? (
+        <LiveWidgetPreview websiteId={active.id} onClose={() => setLivePreview(false)} />
+      ) : null}
+
+      {active && !livePreview ? (
         <WidgetPreview
           config={{
             chatbotName: form.chatbot_name,

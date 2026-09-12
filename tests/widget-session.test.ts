@@ -87,3 +87,30 @@ describe("session-bound authorization", () => {
     );
   });
 });
+
+describe("console preview sessions", () => {
+  const site = { id: crypto.randomUUID(), dev_mode: false, allowed_domains: ["example.com"] };
+
+  it("authorizes a preview session from any host", async () => {
+    const { assertSessionHostAllowed } = await import("@/lib/public-chat.server");
+    expect(() =>
+      assertSessionHostAllowed(site, "https://console.internal", "https://console.internal", true),
+    ).not.toThrow();
+  });
+
+  it("still refuses a non-preview session from that host", async () => {
+    const { assertSessionHostAllowed } = await import("@/lib/public-chat.server");
+    expect(() =>
+      assertSessionHostAllowed(site, "https://console.internal", "https://console.internal", false),
+    ).toThrow(/not authorized/i);
+  });
+
+  it("carries the preview flag through a signed origin proof", async () => {
+    process.env.WIDGET_SESSION_SECRET ||= "test-secret-value-for-widget-sessions";
+    const { signOriginProof, verifyOriginProof } = await import("@/lib/widget-session.server");
+    const proof = await signOriginProof(site.id, "console.internal", true);
+    expect((await verifyOriginProof(proof))?.preview).toBe(true);
+    const plain = await signOriginProof(site.id, "example.com");
+    expect((await verifyOriginProof(plain))?.preview).toBeUndefined();
+  });
+});

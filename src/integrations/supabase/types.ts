@@ -465,6 +465,7 @@ export type Database = {
           first_response_at: string | null
           id: string
           is_ai_only: boolean
+          is_preview: boolean
           last_agent_message_at: string | null
           last_message_at: string
           last_visitor_message_at: string | null
@@ -506,6 +507,7 @@ export type Database = {
           first_response_at?: string | null
           id?: string
           is_ai_only?: boolean
+          is_preview?: boolean
           last_agent_message_at?: string | null
           last_message_at?: string
           last_visitor_message_at?: string | null
@@ -547,6 +549,7 @@ export type Database = {
           first_response_at?: string | null
           id?: string
           is_ai_only?: boolean
+          is_preview?: boolean
           last_agent_message_at?: string | null
           last_message_at?: string
           last_visitor_message_at?: string | null
@@ -2268,6 +2271,7 @@ export type Database = {
           device_type: string | null
           first_seen_at: string
           id: string
+          is_preview: boolean
           landing_page: string | null
           last_seen_at: string
           organization_id: string
@@ -2286,6 +2290,7 @@ export type Database = {
           device_type?: string | null
           first_seen_at?: string
           id?: string
+          is_preview?: boolean
           landing_page?: string | null
           last_seen_at?: string
           organization_id: string
@@ -2304,6 +2309,7 @@ export type Database = {
           device_type?: string | null
           first_seen_at?: string
           id?: string
+          is_preview?: boolean
           landing_page?: string | null
           last_seen_at?: string
           organization_id?: string
@@ -2804,6 +2810,7 @@ export type Database = {
           first_response_at: string | null
           id: string
           is_ai_only: boolean
+          is_preview: boolean
           last_agent_message_at: string | null
           last_message_at: string
           last_visitor_message_at: string | null
