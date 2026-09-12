@@ -171,7 +171,6 @@ function ContactCard({ config, brand }: { config: Config; brand: string }) {
     node: React.ReactNode;
   }>;
 
-  const [logoFailed, setLogoFailed] = useState(false);
   const NoticeIcon = config.businessOpen ? CheckCircle : Clock;
   const notice = config.businessOpen
     ? "Live representatives are available now."
@@ -182,17 +181,9 @@ function ContactCard({ config, brand }: { config: Config; brand: string }) {
       className="rounded-xl border border-border bg-card p-4"
       style={{ fontFamily: config.website.fontFamily, lineHeight: 1.5 }}
     >
-      {org.logoUrl && !logoFailed ? (
-        <img
-          src={org.logoUrl}
-          alt={org.name}
-          onError={() => setLogoFailed(true)}
-          className="mb-3 w-auto object-contain object-left"
-          style={{ maxHeight: 36 }}
-        />
-      ) : (
-        <p className="mb-3 font-semibold text-card-foreground">{org.name}</p>
-      )}
+      <h2 className="mb-3 text-base font-semibold tracking-tight text-card-foreground">
+        {org.name}
+      </h2>
 
       <div className="space-y-3">
         {rows.map((row) => (
@@ -988,7 +979,6 @@ function WidgetPage() {
           <HomeView
             config={config}
             brand={brand}
-            logoUrl={config.website.logoUrl || BRAND_LOGO_URL}
             visitorName={visitorName}
             topics={homeTopics}
             onClose={closeWidget}
@@ -1558,7 +1548,6 @@ function WidgetPage() {
 function HomeView({
   config,
   brand,
-  logoUrl,
   visitorName,
   topics,
   onClose,
@@ -1568,7 +1557,6 @@ function HomeView({
 }: {
   config: Config;
   brand: string;
-  logoUrl: string;
   visitorName: string | null;
   topics: Array<{ id: string; label: string; kind: "service" | "faq" }>;
   onClose: () => void;
@@ -1598,11 +1586,9 @@ function HomeView({
         />
 
         <div className="relative flex items-start justify-between gap-3">
-          <img
-            src={logoUrl}
-            alt={config.organization.name || "Pacific Health Group"}
-            className="h-9 w-auto max-w-[170px] object-contain object-left drop-shadow-sm"
-          />
+          <h2 className="max-w-[190px] text-[17px] font-semibold leading-tight tracking-tight text-white drop-shadow-sm">
+            {config.organization.name || "Pacific Health Group"}
+          </h2>
           <div className="flex items-center gap-2">
             {team.length > 0 && (
               <div className="flex -space-x-2" aria-label="Our team">
