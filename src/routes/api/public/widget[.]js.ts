@@ -26,6 +26,7 @@ export const Route = createFileRoute("/api/public/widget.js")({
   var host = encodeURIComponent(window.location.origin);
   var page = encodeURIComponent(window.location.pathname);
   var originProof = '';
+  var state = { open: false, bubble: false, position: 'bottom-right' };
   function mount() {
   var frame = document.createElement('iframe');
   frame.title = 'Customer support chat';
