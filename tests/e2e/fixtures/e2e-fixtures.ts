@@ -21,6 +21,17 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 /** Every synthetic artefact carries this prefix. Cleanup refuses to touch anything else. */
 export const E2E_PREFIX = "__e2e_";
 
+/** The same resolution outcomes a real organisation is seeded with. */
+export const E2E_DISPOSITIONS = [
+  "Enrolled / referral submitted",
+  "Information provided",
+  "Callback scheduled",
+  "Transferred to plan",
+  "Not eligible",
+  "Spam / test",
+  "No response from visitor",
+];
+
 type Admin = SupabaseClient<any, "public", any>;
 
 function env(name: string): string {
@@ -178,6 +189,27 @@ export async function createE2ETenant(): Promise<E2ETenant> {
       .single();
     if (deptError || !department)
       throw new Error(`E2E fixture: department insert failed — ${deptError?.message}`);
+
+    // Resolution outcomes the Resolve dialog offers. Organisation creation seeds
+    // these already; inserting the missing ones keeps the fixture independent of
+    // that trigger.
+    const { data: existingDispositions } = await db
+      .from("conversation_dispositions")
+      .select("label")
+      .eq("organization_id", organizationId);
+    const seeded = new Set((existingDispositions ?? []).map((d) => d.label as string));
+    const missing = E2E_DISPOSITIONS.filter((label) => !seeded.has(label));
+    if (missing.length > 0) {
+      const { error: dispositionError } = await db.from("conversation_dispositions").insert(
+        missing.map((label) => ({
+          organization_id: organizationId,
+          label,
+          is_active: true,
+        })),
+      );
+      if (dispositionError)
+        throw new Error(`E2E fixture: disposition insert failed — ${dispositionError.message}`);
+    }
 
     const email = `${E2E_PREFIX}agent_${runId}@example.test`;
     const password = `E2e!${randomUUID().slice(0, 18)}`;
