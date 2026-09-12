@@ -89,12 +89,25 @@ export async function resolveActor(
 
   let departmentIds: string[] = [];
   if (organizationId) {
-    const { data: depts } = await supabase
-      .from("department_members")
-      .select("department_id")
-      .eq("user_id", userId)
-      .eq("organization_id", organizationId);
-    departmentIds = (depts ?? []).map((d) => d.department_id);
+    const [deptRes, orgRes] = await Promise.all([
+      supabase
+        .from("department_members")
+        .select("department_id")
+        .eq("user_id", userId)
+        .eq("organization_id", organizationId),
+      supabase
+        .from("organizations")
+        .select("require_mfa, require_mfa_for_admins")
+        .eq("id", organizationId)
+        .maybeSingle(),
+    ]);
+    departmentIds = (deptRes.data ?? []).map((d) => d.department_id);
+    assertMfaSatisfied({
+      claims,
+      rank: role ? ROLE_RANK[role] : 0,
+      requireMfa: orgRes.data?.require_mfa === true,
+      requireMfaForAdmins: orgRes.data?.require_mfa_for_admins === true,
+    });
   }
 
   return {
