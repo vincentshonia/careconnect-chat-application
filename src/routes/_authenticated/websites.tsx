@@ -720,34 +720,32 @@ export function WebsitesPanel() {
       </div>
 
       {active && livePreview ? (
-        <LiveWidgetPreview websiteId={active.id} onClose={() => setLivePreview(false)} />
-      ) : null}
-
-      {active && !livePreview ? (
-        <WidgetPreview
+        <LiveWidgetPreview
+          websiteId={active.id}
+          onClose={() => setLivePreview(false)}
           config={{
-            chatbotName: form.chatbot_name,
-            organizationName: form.name,
-            welcomeMessage: form.welcome_message,
-            triggerMessage: form.trigger_message,
-            privacyDisclaimer: form.privacy_disclaimer,
-            primaryColor: form.primary_color,
-            accentColor: form.accent_color,
-            position: form.widget_position,
-            logoUrl: form.logo_url,
-            borderRadius: form.border_radius,
-            homeGreeting: form.home_greeting,
-            homeHeadline: form.home_headline,
-            homeSubtitle: form.home_subtitle,
-            homeCtaTitle: form.home_cta_title,
-            homeCtaSubtitle: form.home_cta_subtitle,
-            helpTitle: form.help_title,
-            privacyFooterText: form.privacy_footer_text,
-            showHomeTab: form.show_home_tab,
-            showHelpTab: form.show_help_tab,
-            showServicesTab: form.show_services_tab,
-            showRequestsTab: form.show_requests_tab,
-            topics: services.map((s) => s.name),
+            chatbotName: form.chatbot_name ?? undefined,
+            welcomeMessage: form.welcome_message ?? undefined,
+            triggerMessage: form.trigger_message ?? undefined,
+            offlineMessage: form.offline_message ?? undefined,
+            privacyDisclaimer: form.privacy_disclaimer ?? undefined,
+            primaryColor: form.primary_color ?? undefined,
+            accentColor: form.accent_color ?? undefined,
+            position: form.widget_position ?? undefined,
+            logoUrl: form.logo_url ?? undefined,
+            borderRadius: form.border_radius ?? undefined,
+            fontFamily: form.font_family ?? undefined,
+            homeGreeting: form.home_greeting ?? undefined,
+            homeHeadline: form.home_headline ?? undefined,
+            homeSubtitle: form.home_subtitle ?? undefined,
+            homeCtaTitle: form.home_cta_title ?? undefined,
+            homeCtaSubtitle: form.home_cta_subtitle ?? undefined,
+            helpTitle: form.help_title ?? undefined,
+            privacyFooterText: form.privacy_footer_text ?? undefined,
+            showHomeTab: form.show_home_tab ?? undefined,
+            showHelpTab: form.show_help_tab ?? undefined,
+            showServicesTab: form.show_services_tab ?? undefined,
+            showRequestsTab: form.show_requests_tab ?? undefined,
             tabs,
           }}
         />
