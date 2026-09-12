@@ -285,6 +285,7 @@ describe("reporting at volume", () => {
     } catch (error) {
       // A half-built fixture is exactly what gets left behind otherwise.
       await purgeSyntheticOrganizations(db, [orgA, orgB]);
+      await purgeSyntheticUsers(db, createdOwners.splice(0, createdOwners.length));
       throw error;
     }
   }, 900_000);
@@ -292,6 +293,8 @@ describe("reporting at volume", () => {
   afterAll(async () => {
     if (!configured) return;
     await purgeSyntheticOrganizations(db, [orgA, orgB]);
+    // The bulk owner accounts live outside the org-scoped sweep.
+    await purgeSyntheticUsers(db, createdOwners.splice(0, createdOwners.length));
   }, 240_000);
 
   it("reports the exact total for the tenant", async () => {
