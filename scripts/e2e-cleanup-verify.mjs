@@ -225,10 +225,17 @@ async function purgeLeakedAccounts(backend) {
   }
 }
 
+// Purging happens first so the verification below reports the state that
+// remains, not the state the run started in.
 if (purge) {
   for (const backend of backends) {
+    await purgeLeakedOrganizations(backend);
     await purgeLeakedAccounts(backend);
   }
+}
+
+for (const backend of backends) {
+  await sweep(backend);
 }
 
 let failed = false;
