@@ -142,7 +142,7 @@ export function AdminShell({
     .filter((group) => group.items.length > 0);
 
   const orgName = branding.data?.name ?? "Pacific Health";
-  const logoUrl = branding.data?.logo_url ?? null;
+  
   const initials = orgName
     .split(/\s+/)
     .filter(Boolean)
