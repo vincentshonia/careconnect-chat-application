@@ -37,12 +37,16 @@ export function RoutingPanel() {
         <TabsList>
           <TabsTrigger value="rules">Routing rules</TabsTrigger>
           <TabsTrigger value="templates">Response templates</TabsTrigger>
+          <TabsTrigger value="outcomes">Outcomes</TabsTrigger>
         </TabsList>
         <TabsContent value="rules" className="mt-4">
           <Rules />
         </TabsContent>
         <TabsContent value="templates" className="mt-4">
           <Templates />
+        </TabsContent>
+        <TabsContent value="outcomes" className="mt-4">
+          <Outcomes />
         </TabsContent>
       </Tabs>
     </PanelShell>
