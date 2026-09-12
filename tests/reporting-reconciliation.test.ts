@@ -156,6 +156,9 @@ async function makeDepartment(org: string, name: string) {
  * An owner for the rows that are being worked on. The database now insists a
  * live conversation has somebody's name on it, so the fixtures say who.
  */
+/** Every owner account this file creates, so teardown can remove them all. */
+const createdOwners: { id: string; email: string }[] = [];
+
 async function makeOwner(org: string, key: string) {
   const email = syntheticEmail(`owner_${key}`, suffix);
   const fullName = syntheticName(`owner_${key}`, suffix);
