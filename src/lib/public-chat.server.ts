@@ -923,6 +923,37 @@ export async function recordAiResponse(params: {
  * Mint a signed session for a visitor. The visitor session token is generated
  * server-side, so a browser can never claim someone else's session.
  */
+/**
+ * Best-effort public contact details, used to turn a technical refusal into
+ * something a visitor can act on. Never throws.
+ */
+export async function publicContact(
+  websiteId: string,
+): Promise<{ phone: string; domain: string; organization: string }> {
+  try {
+    if (!/^[0-9a-f-]{36}$/i.test(websiteId)) return { phone: "", domain: "", organization: "" };
+    const db = admin();
+    const { data: website } = await db
+      .from("websites")
+      .select("domain, organization_id")
+      .eq("id", websiteId)
+      .maybeSingle();
+    if (!website) return { phone: "", domain: "", organization: "" };
+    const { data: org } = await db
+      .from("organizations")
+      .select("name, phone")
+      .eq("id", website.organization_id)
+      .maybeSingle();
+    return {
+      phone: org?.phone ?? "",
+      domain: website.domain ?? "",
+      organization: org?.name ?? "",
+    };
+  } catch {
+    return { phone: "", domain: "", organization: "" };
+  }
+}
+
 export async function startWidgetSession(opts: {
   websiteId?: string | null;
   publicKey?: string | null;
@@ -971,7 +1002,8 @@ export async function startWidgetSession(opts: {
     org: website.organization_id,
     // Store the *proven* host so later endpoints authorize against a value the
     // browser proved, not one the page claimed.
-    host: provenHost ?? opts.clientHost ?? opts.host,
+    host:
+      website.dev_mode === false ? provenHost : (provenHost ?? opts.clientHost ?? opts.host),
   });
   return { token, expiresAt, websiteId: website.id as string };
 }
@@ -983,9 +1015,37 @@ export type SessionContext = {
 };
 
 /**
+ * Authorize an *established* session.
+ *
+ * For live sites the authority is `claims.host`: the host proven by a signed
+ * origin proof when the session was minted. The request's own `Origin` is only
+ * a secondary check — the widget iframe is served from our origin and a
+ * redirect hop can strip the header entirely, so its absence must never revoke
+ * a session that was proven at mint time.
+ */
+export function assertSessionHostAllowed(
+  website: Record<string, any>,
+  claimsHost: string | null,
+  requestHost: string | null,
+) {
+  if (website.dev_mode === false) {
+    const proven = hostOf(claimsHost);
+    if (!proven || !matchesAllowedDomains(website, proven)) {
+      throw new PublicChatError(403, "This chat widget is not authorized on this domain");
+    }
+    const reported = hostOf(requestHost);
+    if (reported && !isTrustedHost(reported) && !matchesAllowedDomains(website, reported)) {
+      throw new PublicChatError(403, "This chat widget is not authorized on this domain");
+    }
+    return;
+  }
+  assertHostAllowed(website, requestHost, claimsHost);
+}
+
+/**
  * Verify a session token and load the bound website + visitor. `host` is the
- * browser-reported origin; the session's stored host is only a fallback hint
- * for sites still in dev mode.
+ * browser-reported origin; authorization for live sites comes from the proven
+ * host stored in the session claims.
  */
 export async function sessionContext(token: unknown, host: string | null): Promise<SessionContext> {
   const { verifySession } = await import("./widget-session.server");
@@ -1000,7 +1060,7 @@ export async function sessionContext(token: unknown, host: string | null): Promi
   if (!website || website.status !== "active") throw new PublicChatError(404, "Website not found");
   if (website.organization_id !== claims.org)
     throw new PublicChatError(401, "Chat session is invalid");
-  assertHostAllowed(website, host, claims.host ?? null);
+  assertSessionHostAllowed(website, claims.host ?? null, host);
 
   const { data: visitor } = await db
     .from("visitors")

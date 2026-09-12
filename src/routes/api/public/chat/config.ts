@@ -19,8 +19,17 @@ export const Route = createFileRoute("/api/public/chat/config")({
           });
         } catch (error) {
           const status = error instanceof mod.PublicChatError ? error.status : 500;
+          const code = error instanceof Error ? error.message : "Unexpected error";
+          // Visitors get something they can act on; the technical reason stays
+          // in `code` for debugging.
+          const contact = status === 403 ? await mod.publicContact(websiteId) : null;
+          const friendly = contact
+            ? `This chat isn't available on this page yet.${
+                contact.phone ? ` Please call ${contact.phone}` : ""
+              }${contact.domain ? `${contact.phone ? " or" : " Please"} visit ${contact.domain}` : ""}.`
+            : code;
           return Response.json(
-            { error: error instanceof Error ? error.message : "Unexpected error" },
+            { error: friendly, code, contact },
             { status, headers: { "Cache-Control": "no-store" } },
           );
         }
