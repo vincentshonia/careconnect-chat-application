@@ -976,17 +976,29 @@ function WidgetPage() {
               {
                 key: "live_agent",
                 title: "Speak with a representative",
+                Icon: Headset,
                 sub: config.agentsAvailable
                   ? "Someone is available now"
                   : "We will reply as soon as we are back",
               },
-              { key: "referral", title: "Submit a referral", sub: "Refer a patient or member" },
+              {
+                key: "referral",
+                title: "Submit a referral",
+                Icon: UserPlus,
+                sub: "Refer a patient or member",
+              },
               {
                 key: "enrollment",
                 title: "Enrollment assistance",
+                Icon: ClipboardCheck,
                 sub: "Get help choosing or joining a plan",
               },
-              { key: "message", title: "Leave a message", sub: "We will get back to you" },
+              {
+                key: "message",
+                title: "Leave a message",
+                Icon: MessageSquare,
+                sub: "We will get back to you",
+              },
             ].map((option) => (
               <button
                 key={option.key}
