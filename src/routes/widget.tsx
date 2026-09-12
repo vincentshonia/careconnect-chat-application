@@ -1,13 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
-import {
-  ClipboardCheck,
-  Headset,
-  MessageSquare,
-  Phone,
-  UserPlus,
-} from "lucide-react";
+import { ClipboardCheck, Headset, MessageSquare, Phone, UserPlus } from "lucide-react";
 import { resolveWidgetTabs, tabIconPath } from "@/lib/widget-tabs";
 import {
   isConversationEnded,
@@ -427,7 +421,6 @@ function WidgetPage() {
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [isPreview]);
-
 
   /* ------------------- teaser / auto-open / hidden pages ---------------- */
   useEffect(() => {
@@ -869,7 +862,10 @@ function WidgetPage() {
               >
                 <p className="text-sm font-semibold text-card-foreground">{s.name}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{s.short_description}</p>
-                <span className="mt-2 inline-block text-[11px] font-semibold" style={{ color: brand }}>
+                <span
+                  className="mt-2 inline-block text-[11px] font-semibold"
+                  style={{ color: brand }}
+                >
                   View details →
                 </span>
               </button>
@@ -1756,7 +1752,6 @@ function IntakeForm({
 
     // Pre-checked so visitors get follow-up by default; they can opt out.
     consent: true,
-
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
