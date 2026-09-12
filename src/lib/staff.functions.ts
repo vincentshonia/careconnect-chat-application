@@ -146,7 +146,7 @@ export const createStaffFn = createServerFn({ method: "POST" })
     try {
       const { data: org } = await supabaseAdmin
         .from("organizations")
-        .select("name, logo_url, primary_color")
+        .select("name, logo_url, phone")
         .eq("id", organizationId)
         .maybeSingle();
 
@@ -165,7 +165,7 @@ export const createStaffFn = createServerFn({ method: "POST" })
               ? org.logo_url
               : `${APP_ORIGIN}${org.logo_url}`
             : undefined,
-          primaryColor: org?.primary_color ?? undefined,
+          supportPhone: org?.phone ?? undefined,
         },
       });
       emailed = result.sent;
