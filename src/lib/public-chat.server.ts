@@ -17,7 +17,7 @@ import {
   type ReplyLanguage,
 } from "./ai-confidence";
 import { checkGrounding, type GroundingResult } from "./grounding";
-import { isOpenNow } from "./business-hours";
+import { isOpenNow, nextOpenAt, formatNextOpen } from "./business-hours";
 
 type Admin = SupabaseClient<any, "public", any>;
 
@@ -268,6 +268,9 @@ async function buildWidgetConfig(
 
   // The organization clock is the single source of truth for open/closed.
   const open = isOpenNow((hours ?? []) as any, (holidays ?? []) as any, org?.timezone);
+  // Shown to visitors who leave details after hours, so they know when a
+  // member engagement specialist will get back to them.
+  const reopensAt = open ? null : nextOpenAt((hours ?? []) as any, (holidays ?? []) as any, org?.timezone);
   const agentsAvailable = await hasAvailableAgent(website.organization_id);
 
   return {
@@ -298,9 +301,9 @@ async function buildWidgetConfig(
       homeGreeting: website.home_greeting ?? "Hi there.",
       homeHeadline: website.home_headline ?? "How can we help?",
       homeSubtitle: website.home_subtitle ?? "CareConnect AI is available anytime.",
-      homeCtaTitle: website.home_cta_title ?? "Send us a message",
+      homeCtaTitle: website.home_cta_title ?? "Speak to a live agent",
       homeCtaSubtitle:
-        website.home_cta_subtitle ?? "CareConnect AI can help now, or leave a message",
+        website.home_cta_subtitle ?? "Talk with a member engagement specialist",
       helpTitle: website.help_title ?? "Search for help",
       privacyFooterText: website.privacy_footer_text ?? "Your privacy matters to us.",
       showHomeTab: website.show_home_tab !== false,
@@ -335,6 +338,7 @@ async function buildWidgetConfig(
         avatarUrl: p.avatar_url as string,
       })),
     businessOpen: open,
+    nextOpenAt: reopensAt ? formatNextOpen(reopensAt, org?.timezone) : null,
     agentsAvailable: open && agentsAvailable,
   };
 }
