@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
 import {
   CheckCircle,
   ClipboardCheck,
