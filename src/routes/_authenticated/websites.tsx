@@ -69,18 +69,6 @@ export function WebsitesPanel() {
   });
 
   const websites = listQuery.data ?? [];
-  const servicesQuery = useQuery({
-    queryKey: ["widget-services"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("services")
-        .select("id, name, short_description, status, sort_order")
-        .order("sort_order");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-  const services = servicesQuery.data ?? [];
   const active = websites.find((w) => w.id === activeId) ?? websites[0] ?? null;
 
   useEffect(() => {
