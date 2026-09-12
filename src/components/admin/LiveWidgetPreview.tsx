@@ -16,10 +16,14 @@ import { Button } from "@/components/ui/button";
 export function LiveWidgetPreview({
   websiteId,
   onClose,
+  config,
 }: {
   websiteId: string;
   onClose: () => void;
+  /** Unsaved form values, shallow-merged over the stored config in the widget. */
+  config?: Record<string, unknown>;
 }) {
+  const frame = useRef<HTMLIFrameElement>(null);
   const mintProof = useServerFn(widgetPreviewProofFn);
   const proofQuery = useQuery({
     queryKey: ["widget-preview-proof", websiteId],
