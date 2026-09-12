@@ -46,7 +46,7 @@ function run(command, args, env = {}) {
 /** Runs a mandatory stage; later stages are skipped once one has failed. */
 async function stage(name, command, args, env) {
   const commandLine = `${command} ${args.join(" ")}`;
-  if (stages.some((s) => s.exitCode !== 0)) {
+  if (stages.some((s) => s.status !== "PASS")) {
     stages.push({ name, command: commandLine, exitCode: null, status: "NOT RUN" });
     return null;
   }
@@ -139,7 +139,7 @@ async function probeWorkerRuntime() {
 }
 
 let runtimeBlocked = null;
-if (!stages.some((s) => s.exitCode !== 0)) {
+if (!stages.some((s) => s.status !== "PASS")) {
   const probe = await probeWorkerRuntime();
   if (!probe.ok) runtimeBlocked = probe.detail;
 }
@@ -157,7 +157,18 @@ if (runtimeBlocked) {
     PLAYWRIGHT_JSON_OUTPUT_FILE: PLAYWRIGHT_JSON,
   });
 }
-await stage("E2E cleanup verification", "node", ["scripts/e2e-cleanup-verify.mjs"]);
+if (runtimeBlocked) {
+  // The blocked runtime says nothing about tenant hygiene, so still verify it.
+  const cleanupCode = await run("node", ["scripts/e2e-cleanup-verify.mjs"]);
+  stages.push({
+    name: "E2E cleanup verification",
+    command: "node scripts/e2e-cleanup-verify.mjs",
+    exitCode: cleanupCode,
+    status: cleanupCode === 0 ? "PASS" : "FAIL",
+  });
+} else {
+  await stage("E2E cleanup verification", "node", ["scripts/e2e-cleanup-verify.mjs"]);
+}
 
 /* ------------------------------------------------------------------ *
  * Result extraction (best effort — absence of a report is itself a FAIL
@@ -270,7 +281,7 @@ if (playwright.skipped > 0) skipFailures.push(`${playwright.skipped} Playwright 
 if (stages.every((s) => s.status === "PASS") && vitest.total === 0) {
   skipFailures.push("Vitest reported zero tests");
 }
-if (stages.every((s) => s.status === "PASS") && playwright.total === 0) {
+if (!runtimeBlocked && stages.every((s) => s.status === "PASS") && playwright.total === 0) {
   skipFailures.push("Playwright reported zero tests");
 }
 
@@ -291,7 +302,15 @@ const lines = [
   `**Build identification:** ${buildIdentity()}`,
   `**Node:** ${process.version}`,
   "",
-  `## Overall: ${passed ? "PASS" : "FAIL"}`,
+  `## Overall: ${passed ? "PASS" : runtimeBlocked ? "BLOCKED" : "FAIL"}`,
+  ...(runtimeBlocked
+    ? [
+        "",
+        `> The Playwright stage could not start in this environment: ${runtimeBlocked}.`,
+        "> No spec was removed or skipped; the stage is BLOCKED, not passed, and the",
+        `> gate exits with code ${BLOCKED_EXIT_CODE}.`,
+      ]
+    : []),
   "",
   "## Stages",
   "",
@@ -336,6 +355,13 @@ console.log(`\n${"=".repeat(60)}`);
 for (const s of stages) console.log(`${s.status.padEnd(8)} ${s.name}`);
 for (const reason of skipFailures) console.log(`FAIL     ${reason}`);
 console.log(`${"=".repeat(60)}`);
-console.log(`RELEASE GATE: ${passed ? "PASS" : "FAIL"} — see FINAL_RELEASE_REPORT.md`);
+console.log(
+  `RELEASE GATE: ${passed ? "PASS" : runtimeBlocked ? "BLOCKED" : "FAIL"} — see FINAL_RELEASE_REPORT.md`,
+);
 
-process.exit(passed ? 0 : 1);
+if (passed) process.exit(0);
+// A blocked runtime gets its own exit code so automation can tell an
+// environment limitation apart from a genuine product failure.
+const onlyBlocked =
+  runtimeBlocked && stages.every((s) => s.status === "PASS" || s.status.startsWith("BLOCKED"));
+process.exit(onlyBlocked && skipFailures.length === 0 ? BLOCKED_EXIT_CODE : 1);
