@@ -599,6 +599,21 @@ function WidgetPage() {
     post("resize", { open, bubble: showTeaser && !open });
   }, [open, showTeaser]);
 
+  // On phones the on-screen keyboard shrinks the visual viewport. The panel is
+  // sized in dvh so the header and tabs stay put; we only need to bring the
+  // focused field back into the scrolling middle.
+  useEffect(() => {
+    const onFocus = (e: FocusEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el || !el.closest("input, textarea, select")) return;
+      window.setTimeout(() => {
+        el.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 250);
+    };
+    window.addEventListener("focusin", onFocus);
+    return () => window.removeEventListener("focusin", onFocus);
+  }, []);
+
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [messages, view]);
