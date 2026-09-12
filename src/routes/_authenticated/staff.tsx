@@ -158,7 +158,7 @@ export function StaffPanel() {
         data: {
           userId: id,
           ...(patch.presence !== undefined
-            ? { presence: patch.presence as "online" | "away" | "busy" | "offline" }
+            ? { presence: patch.presence as "available" | "online" | "away" | "busy" | "offline" }
             : {}),
           ...(patch.max_concurrent_chats !== undefined
             ? { maxConcurrentChats: Number(patch.max_concurrent_chats) }
