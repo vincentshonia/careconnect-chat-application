@@ -14,6 +14,13 @@ import {
   emergencyFallback,
   detectLanguage,
   normalizeLanguage,
+  outOfScopeReply,
+  scopeLimitedNotice,
+  sanitizeVisitorMessage,
+  isOutOfScope,
+  isScopeLimited,
+  nextScopeState,
+  type ScopeState,
   type ReplyLanguage,
 } from "./ai-confidence";
 import { checkGrounding, type GroundingResult } from "./grounding";
