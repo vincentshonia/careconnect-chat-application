@@ -32,6 +32,10 @@ export const Route = createFileRoute("/api/public/chat/session")({
             websiteId: parsed.data.websiteId ?? null,
             publicKey: parsed.data.publicKey ?? null,
             host: parsed.data.host ?? null,
+            // The page-reported origin is a hint only; the signed proof issued
+            // by /chat/origin is what authorizes a live (dev_mode false) site.
+            clientHost: parsed.data.host ?? null,
+            originProof: parsed.data.originProof ?? null,
             meta: parsed.data.meta ?? {},
             priorSession: parsed.data.priorSession ?? null,
           });
