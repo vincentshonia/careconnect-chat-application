@@ -165,7 +165,7 @@ export const createStaffFn = createServerFn({ method: "POST" })
               ? org.logo_url
               : `${APP_ORIGIN}${org.logo_url}`
             : undefined,
-          primaryColor: org?.primary_color ?? undefined,
+          supportPhone: org?.phone ?? undefined,
         },
       });
       emailed = result.sent;
