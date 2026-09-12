@@ -17,7 +17,11 @@ import {
   type Actor,
 } from "@/lib/authz.server";
 
-type Ctx = { supabase: Parameters<typeof resolveActor>[0]; userId: string };
+type Ctx = {
+  supabase: Parameters<typeof resolveActor>[0];
+  userId: string;
+  claims?: Parameters<typeof resolveActor>[2];
+};
 
 /** Resolve the caller and confirm they may administer departments. */
 async function authorize(context: Ctx): Promise<{ actor: Actor; organizationId: string }> {
