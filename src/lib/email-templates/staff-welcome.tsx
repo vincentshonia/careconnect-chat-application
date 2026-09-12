@@ -137,12 +137,11 @@ const StaffWelcomeEmail = ({
             <Section style={brandBar}>
               {logoUrl ? (
                 <Img src={logoUrl} alt={organizationName} style={logoImg} />
-              ) : (
-                <Text style={brandText}>CareConnect</Text>
-              )}
-              <Text style={logoUrl ? { ...brandSub, margin: "12px 0 0" } : brandSub}>
-                {organizationName}
+              ) : null}
+              <Text style={logoUrl ? { ...brandText, margin: "14px 0 0" } : brandText}>
+                CareConnect
               </Text>
+              <Text style={brandSub}>{organizationName}</Text>
             </Section>
 
             <Section style={inner}>
