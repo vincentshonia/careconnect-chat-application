@@ -569,6 +569,8 @@ function WidgetPage() {
   /* ------------------- teaser / auto-open / hidden pages ---------------- */
   useEffect(() => {
     if (!config) return;
+    // The console preview is always open; teasers and auto-open do not apply.
+    if (isPreview) return;
     post("position", { value: config.website.position });
 
     const hidden = (config.website.hiddenPaths ?? []).some((p) => p && page.startsWith(p));
@@ -590,7 +592,7 @@ function WidgetPage() {
       const t = setTimeout(() => setShowTeaser(true), config.website.triggerDelaySeconds * 1000);
       return () => clearTimeout(t);
     }
-  }, [config, page, storageKey]);
+  }, [config, page, storageKey, isPreview]);
 
   useEffect(() => {
     post("resize", { open, bubble: showTeaser && !open });
