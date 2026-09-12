@@ -217,7 +217,7 @@ async function buildWidgetConfig(
     { data: faqs },
     { data: hours },
     { data: holidays },
-    { data: departments },
+    
     { data: team },
   ] = await Promise.all([
     db.from("organizations").select("*").eq("id", website.organization_id).maybeSingle(),
