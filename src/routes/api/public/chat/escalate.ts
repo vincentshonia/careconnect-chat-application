@@ -178,7 +178,7 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             contact: "general",
             message: "general",
           };
-          await db.from("intake_requests").insert({
+          const { data: intakeRow } = await db.from("intake_requests").insert({
             organization_id: website.organization_id,
             website_id: website.id,
             conversation_id: conversation.id,
@@ -196,7 +196,47 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             source: "widget",
             after_hours: input.after_hours,
             notes: intakeNotes,
-          });
+          })
+            .select("id")
+            .single();
+
+          // Confirmation to the visitor: a written reference that we received
+          // the request and that a representative will follow up. Best effort —
+          // a mail failure must never fail the visitor's submission.
+          try {
+            const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
+            const contact = await mod.publicContact(website.id);
+            const typeLabels: Record<string, string> = {
+              referral: "referral request",
+              enrollment: "enrollment request",
+              live_agent: "request to speak with a representative",
+              contact: "contact request",
+              message: "message",
+            };
+            const referenceId = intakeRow?.id
+              ? `REQ-${String(intakeRow.id).replace(/-/g, "").slice(0, 8).toUpperCase()}`
+              : undefined;
+            await sendTemplateEmail("request-received", normalizedEmail ?? input.email, {
+              idempotencyKey: intakeRow?.id ? `intake-ack-${intakeRow.id}` : undefined,
+              templateData: {
+                fullName: input.fullName,
+                organizationName: contact.organization || undefined,
+                referenceId,
+                requestType: typeLabels[input.kind] ?? "request",
+                serviceInterest: input.serviceInterest ?? null,
+                county: input.county ?? null,
+                preferredLanguage: input.preferredLanguage ?? null,
+                message: input.reason ?? null,
+                afterHours: input.after_hours,
+                supportPhone: contact.phone || undefined,
+                supportUrl: contact.domain ? `https://${contact.domain}` : undefined,
+                logoUrl:
+                  "https://chat.mypacifichealth.com/__l5e/assets-v1/a3b250ac-f23a-4271-8d40-1f9118b44656/phg-logo-light.png",
+              },
+            });
+          } catch (mailError) {
+            console.warn("[chat/escalate] confirmation email not sent", mailError);
+          }
 
           // Full human hand-off: department routing, staff alerts and — only
           // when that department is configured for round-robin — auto-assignment.
