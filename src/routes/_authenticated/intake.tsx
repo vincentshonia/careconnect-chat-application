@@ -330,7 +330,15 @@ function IntakePage() {
                 >
                   <td className="px-4 py-2 font-mono text-xs">{i.reference}</td>
                   <td className="px-4 py-2">{i.full_name}</td>
-                  <td className="px-4 py-2">{label(i.request_type)}</td>
+                  <td className="px-4 py-2">
+                    {label(i.request_type)}
+                    {/* Left outside operating hours — nobody was on shift. */}
+                    {i.after_hours ? (
+                      <Badge variant="secondary" className="ml-2">
+                        After hours
+                      </Badge>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-2">
                     <Badge variant="outline">{label(i.stage)}</Badge>
                     {/* Overdue is judged by the organization's calendar day. */}
