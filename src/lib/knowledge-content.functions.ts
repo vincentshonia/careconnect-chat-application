@@ -49,7 +49,7 @@ export const aiReviewQueueFn = createServerFn({ method: "POST" })
       .parse(input ?? {}),
   )
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "knowledge.edit");
     const organizationId = requireOrganization(actor);
 
@@ -79,7 +79,7 @@ export const dismissAiResponseFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "knowledge.edit");
 
     const { error } = await context.supabase
@@ -94,7 +94,7 @@ export const createFaqFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => faqCreate.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "knowledge.edit");
     const organizationId = requireOrganization(actor);
 
@@ -121,7 +121,7 @@ export const updateFaqFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => faqUpdate.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "knowledge.edit");
 
     const { id, ...patch } = data;
@@ -137,7 +137,7 @@ export const deleteFaqFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "knowledge.edit");
 
     // The delete is scoped by the caller's own access rules; only clear the
@@ -159,7 +159,7 @@ export const createServiceFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => serviceCreate.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "knowledge.edit");
     const organizationId = requireOrganization(actor);
 
@@ -184,7 +184,7 @@ export const updateServiceFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => serviceUpdate.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "knowledge.edit");
 
     const { id, ...patch } = data;
@@ -200,7 +200,7 @@ export const deleteServiceFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "knowledge.edit");
 
     const { data: removed, error } = await context.supabase

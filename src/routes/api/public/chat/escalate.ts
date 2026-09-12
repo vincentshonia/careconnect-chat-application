@@ -156,12 +156,18 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             `${input.fullName} requested ${input.kind.replace("_", " ")}. Contact details captured.${input.reason ? ` Reason: ${input.reason}` : ""}`,
             "System",
           );
-          await mod.logEvent(
-            conversation.id,
-            website.organization_id,
-            "escalation_requested",
-            `Visitor requested ${input.kind.replace("_", " ")}`,
-          );
+          // The hand-off itself records the "escalation_requested" event, so
+          // nothing is written here. A finished chat is reopened first,
+          // otherwise the hand-off would be an illegal transition.
+          if (["resolved", "closed", "abandoned"].includes(String(conversation.status))) {
+            const { transitionConversation } = await import("@/lib/lifecycle.server");
+            await transitionConversation({
+              conversationId: conversation.id,
+              event: "reopen",
+              payload: { to_human: true, detail: "visitor escalated a finished chat" },
+              db,
+            });
+          }
 
           const typeMap: Record<string, string> = {
             referral: "referral",

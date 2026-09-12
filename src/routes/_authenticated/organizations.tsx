@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
+import { logAudit } from "@/lib/audit-client";
 import type { Database } from "@/integrations/supabase/types";
 import { PanelShell } from "@/components/admin/PanelShell";
 import { useSessionContext } from "@/hooks/use-session-context";
@@ -84,6 +84,7 @@ export function OrganizationsPanel() {
         .eq("id", active.id);
       if (error) throw error;
       await logAudit({
+        scope: "organization",
         action: "organization.updated",
         recordType: "organizations",
         recordId: active.id,
@@ -107,6 +108,7 @@ export function OrganizationsPanel() {
       });
       if (error) throw error;
       await logAudit({
+        scope: "organization",
         action: "brand.created",
         recordType: "workspaces",
         newValue: { name: brand.name },
@@ -130,6 +132,7 @@ export function OrganizationsPanel() {
       });
       if (error) throw error;
       await logAudit({
+        scope: "organization",
         action: "website.created",
         recordType: "websites",
         newValue: { name: site.name, domain: site.domain },

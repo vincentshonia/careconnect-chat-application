@@ -17,10 +17,14 @@ import {
   type Actor,
 } from "@/lib/authz.server";
 
-type Ctx = { supabase: Parameters<typeof resolveActor>[0]; userId: string };
+type Ctx = {
+  supabase: Parameters<typeof resolveActor>[0];
+  userId: string;
+  claims?: Parameters<typeof resolveActor>[2];
+};
 
 async function authorize(context: Ctx): Promise<{ actor: Actor; organizationId: string }> {
-  const actor = await resolveActor(context.supabase, context.userId);
+  const actor = await resolveActor(context.supabase, context.userId, context.claims);
   requirePermission(
     actor,
     "workflow.manage",

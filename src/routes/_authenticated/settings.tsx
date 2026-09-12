@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
+import { logAudit } from "@/lib/audit-client";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { PanelShell } from "@/components/admin/PanelShell";
 import { Button } from "@/components/ui/button";
@@ -97,6 +97,7 @@ export function SettingsPanel() {
       if (error) throw error;
 
       await logAudit({
+        scope: "settings",
         action: "organization_settings.logo_updated",
         recordType: "organizations",
         recordId: orgId,
@@ -154,6 +155,7 @@ export function SettingsPanel() {
         .eq("id", orgId);
       if (error) throw error;
       await logAudit({
+        scope: "settings",
         action: "organization_settings.updated",
         recordType: "organizations",
         recordId: orgId,

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Pager } from "@/components/admin/Pager";
 import { useSessionContext } from "@/hooks/use-session-context";
-import { logAudit } from "@/lib/audit";
+import { logAudit } from "@/lib/audit-client";
 import type { Database } from "@/integrations/supabase/types";
 import { reindexArticleFn, reindexAllFn } from "@/lib/admin.functions";
 import {
@@ -255,6 +255,7 @@ function Articles() {
         .eq("id", active.id);
       if (error) throw error;
       await logAudit({
+        scope: "knowledge",
         action: "knowledge_article.updated",
         recordType: "knowledge_articles",
         recordId: active.id,
@@ -289,6 +290,7 @@ function Articles() {
         .single();
       if (error) throw error;
       await logAudit({
+        scope: "knowledge",
         action: "knowledge_article.created",
         recordType: "knowledge_articles",
         recordId: data.id,
@@ -308,6 +310,7 @@ function Articles() {
       const { error } = await supabase.from("knowledge_articles").delete().eq("id", id);
       if (error) throw error;
       await logAudit({
+        scope: "knowledge",
         action: "knowledge_article.deleted",
         recordType: "knowledge_articles",
         recordId: id,
@@ -482,6 +485,7 @@ function Faqs({ prefill }: { prefill?: FaqPrefill }) {
         data: { category: draft.category, question: draft.question, answer: draft.answer },
       });
       await logAudit({
+        scope: "knowledge",
         action: "faq.created",
         recordType: "faqs",
         newValue: { category: draft.category, question: draft.question },
@@ -496,7 +500,7 @@ function Faqs({ prefill }: { prefill?: FaqPrefill }) {
   const remove = useMutation({
     mutationFn: async (id: string) => {
       await deleteFaq({ data: { id } });
-      await logAudit({ action: "faq.deleted", recordType: "faqs", recordId: id });
+      await logAudit({ scope: "knowledge", action: "faq.deleted", recordType: "faqs", recordId: id });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["kb-faqs"] }),
   });

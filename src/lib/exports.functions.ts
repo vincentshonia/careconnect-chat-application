@@ -114,7 +114,7 @@ export const exportCsvFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, PERMISSION[data.dataset] as never, "You can't export that data");
     const organizationId = requireOrganization(actor);
     if (!organizationId) throw new ForbiddenError("Your account is not linked to an organization");

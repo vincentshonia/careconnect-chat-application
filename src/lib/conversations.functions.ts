@@ -86,7 +86,7 @@ export const claimConversationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => idInput.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     if (!actor.permissions.has("conversation.claim")) {
       throw new ForbiddenError("You are not allowed to claim conversations");
     }
@@ -171,7 +171,7 @@ export const replyToConversationFn = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     const conversation = await loadConversation(data.conversationId);
 
     if (!canView(actor, conversation)) throw new ForbiddenError("Conversation not found");
@@ -270,7 +270,7 @@ export const reassignmentCandidatesFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => idInput.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     if (!isSupervisor(actor)) {
       throw new ForbiddenError("Only team leads and above can transfer conversations");
     }
@@ -298,7 +298,7 @@ export const reassignConversationFn = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     if (!isSupervisor(actor)) {
       throw new ForbiddenError("Only team leads and above can reassign conversations");
     }
@@ -403,7 +403,7 @@ export const closeConversationFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => idInput.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     const conversation = await loadConversation(data.conversationId);
     if (!canView(actor, conversation)) throw new ForbiddenError("Conversation not found");
 
@@ -447,7 +447,7 @@ export const resolveConversationFn = createServerFn({ method: "POST" })
     z.object({ conversationId: z.string().uuid(), dispositionId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     const conversation = await loadConversation(data.conversationId);
     if (!canView(actor, conversation)) throw new ForbiddenError("Conversation not found");
 
@@ -505,7 +505,7 @@ export const attachmentUrlFn = createServerFn({ method: "POST" })
     z.object({ conversationId: z.string().uuid(), path: z.string().min(1).max(500) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     const conversation = await loadConversation(data.conversationId);
     if (!canView(actor, conversation)) throw new ForbiddenError("Conversation not found");
     // The stored path is namespaced by org + conversation: refuse anything else.

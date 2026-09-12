@@ -84,7 +84,7 @@ export const createStaffFn = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => createStaffInput.parse(input))
   .handler(async ({ data, context }) => {
     // Authorize from the authoritative membership record.
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "staff.create", "Only administrators can add staff members");
     const organizationId = requireOrganization(actor);
     const callerProfile = { full_name: actor.fullName };
@@ -189,7 +189,7 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (data.userId === context.userId) throw new Error("You cannot change your own access");
 
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(
       actor,
       data.action === "remove" ? "staff.remove" : "staff.disable",
@@ -297,7 +297,7 @@ export const updateStaffProfileFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => staffProfileInput.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     const isSelf = data.userId === context.userId;
     const selfPresenceOnly = isSelf && data.maxConcurrentChats === undefined;
     if (!selfPresenceOnly) {

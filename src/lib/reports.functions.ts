@@ -265,7 +265,7 @@ export const runReportFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     const scope = reportScope(actor);
     if (!canRunSection(scope, data.section)) {
       throw new ForbiddenError("That report is outside your reporting scope");
@@ -347,7 +347,7 @@ export const exportReportFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => exportSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     const scope = reportScope(actor);
     const spec = DATASETS[data.dataset];
     if (!canRunSection(scope, spec.section)) {
@@ -430,7 +430,7 @@ export const exportReportFn = createServerFn({ method: "POST" })
 export const reportFilterOptionsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     const scope = reportScope(actor);
     const { admin } = await import("@/lib/public-chat.server");
     const db = admin();

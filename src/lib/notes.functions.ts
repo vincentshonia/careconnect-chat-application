@@ -17,7 +17,7 @@ export const addInternalNoteFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => noteInput.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     const organizationId = requireOrganization(actor);
 
     // RLS-scoped read: a conversation the caller cannot see cannot be noted on.

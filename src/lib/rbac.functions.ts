@@ -26,7 +26,7 @@ const changeRoleInput = z.object({
 export const getAuthorizationFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     return {
       userId: actor.userId,
       organizationId: actor.organizationId,
@@ -45,7 +45,7 @@ export const setUserRoleFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => changeRoleInput.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "role.manage", "Only administrators can change roles");
     const organizationId = requireOrganization(actor);
 

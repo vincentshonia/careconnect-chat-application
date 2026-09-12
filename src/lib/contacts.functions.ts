@@ -24,7 +24,7 @@ export const updateContactFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => updateInput.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "contact.edit", "Only managers and above can edit contacts");
     const organizationId = requireOrganization(actor);
 

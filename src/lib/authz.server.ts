@@ -29,8 +29,46 @@ export type Actor = {
 
 type Client = SupabaseClient<Database>;
 
+/** The verified token claims the auth middleware puts on the request context. */
+export type ActorClaims = { aal?: unknown } | null | undefined;
+
+/** Thrown when the tenant requires two-step verification and the session lacks it. */
+export class MfaRequiredError extends Error {
+  readonly status = 403;
+  constructor(message = "Two-step verification required") {
+    super(message);
+    this.name = "MfaRequiredError";
+  }
+}
+
+/** Rank at which a member counts as an administrator for MFA enforcement. */
+const ADMIN_RANK = 4;
+
+/**
+ * Enforce the tenant's two-step verification policy on a server call.
+ *
+ * The database already blocks these sessions through `can_access_org()`; this
+ * repeats the decision at the server-function boundary so a caller gets one
+ * clear 403 instead of a scattering of empty results.
+ */
+export function assertMfaSatisfied(input: {
+  claims: ActorClaims;
+  rank: number;
+  requireMfa: boolean;
+  requireMfaForAdmins: boolean;
+}): void {
+  const applies = input.requireMfa || (input.requireMfaForAdmins && input.rank >= ADMIN_RANK);
+  if (!applies) return;
+  if (String(input.claims?.aal ?? "") === "aal2") return;
+  throw new MfaRequiredError();
+}
+
 /** Resolve the caller's tenant membership, platform role and permissions. */
-export async function resolveActor(supabase: Client, userId: string): Promise<Actor> {
+export async function resolveActor(
+  supabase: Client,
+  userId: string,
+  claims?: ActorClaims,
+): Promise<Actor> {
   const [membershipRes, platformRes, profileRes] = await Promise.all([
     supabase
       .from("organization_memberships")
@@ -51,12 +89,25 @@ export async function resolveActor(supabase: Client, userId: string): Promise<Ac
 
   let departmentIds: string[] = [];
   if (organizationId) {
-    const { data: depts } = await supabase
-      .from("department_members")
-      .select("department_id")
-      .eq("user_id", userId)
-      .eq("organization_id", organizationId);
-    departmentIds = (depts ?? []).map((d) => d.department_id);
+    const [deptRes, orgRes] = await Promise.all([
+      supabase
+        .from("department_members")
+        .select("department_id")
+        .eq("user_id", userId)
+        .eq("organization_id", organizationId),
+      supabase
+        .from("organizations")
+        .select("require_mfa, require_mfa_for_admins")
+        .eq("id", organizationId)
+        .maybeSingle(),
+    ]);
+    departmentIds = (deptRes.data ?? []).map((d) => d.department_id);
+    assertMfaSatisfied({
+      claims,
+      rank: role ? ROLE_RANK[role] : 0,
+      requireMfa: orgRes.data?.require_mfa === true,
+      requireMfaForAdmins: orgRes.data?.require_mfa_for_admins === true,
+    });
   }
 
   return {

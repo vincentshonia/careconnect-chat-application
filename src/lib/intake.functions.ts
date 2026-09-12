@@ -55,7 +55,7 @@ export const updateIntakeFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => updateInput.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(
       actor,
       "workflow.manage",
@@ -137,7 +137,7 @@ export const addIntakeNoteFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => noteInput.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     const organizationId = requireOrganization(actor);
     const intake = await loadIntake(context.supabase, data.id);
     if (intake.organization_id !== organizationId && !actor.isPlatformAdmin) {
