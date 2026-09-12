@@ -49,14 +49,14 @@ export function LiveWidgetPreview({
   }, [serialized, src, origin]);
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex w-[380px] flex-col gap-2">
+    <div className="fixed bottom-6 right-6 z-50 flex w-[400px] max-w-[calc(100vw-24px)] flex-col gap-2">
       <div className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2 shadow-lg">
         <p className="text-xs text-muted-foreground">Live preview — real widget</p>
         <Button size="sm" variant="ghost" onClick={onClose}>
           Hide
         </Button>
       </div>
-      <div className="h-[640px] overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
+      <div className="h-[720px] max-h-[calc(100vh-140px)] overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
         {proofQuery.isError ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
             <p className="text-sm text-muted-foreground">

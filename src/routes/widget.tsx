@@ -30,7 +30,8 @@ export const Route = createFileRoute("/widget")({
     ],
     styles: [
       {
-        children: "html,body,#root{background:transparent !important;margin:0;overflow:hidden;}",
+        children:
+          "html,body,#root{background:transparent !important;margin:0;padding:0;height:100%;height:100dvh;max-height:100dvh;overflow:hidden;}",
       },
     ],
   }),
@@ -598,6 +599,21 @@ function WidgetPage() {
     post("resize", { open, bubble: showTeaser && !open });
   }, [open, showTeaser]);
 
+  // On phones the on-screen keyboard shrinks the visual viewport. The panel is
+  // sized in dvh so the header and tabs stay put; we only need to bring the
+  // focused field back into the scrolling middle.
+  useEffect(() => {
+    const onFocus = (e: FocusEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el || !el.closest("input, textarea, select")) return;
+      window.setTimeout(() => {
+        el.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 250);
+    };
+    window.addEventListener("focusin", onFocus);
+    return () => window.removeEventListener("focusin", onFocus);
+  }, []);
+
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [messages, view]);
@@ -815,7 +831,7 @@ function WidgetPage() {
 
   if (error) {
     return (
-      <div className="flex h-screen items-end justify-end p-2">
+      <div className="flex h-dvh items-end justify-end p-2">
         <div className="rounded-lg border border-border bg-card p-3 text-xs text-muted-foreground">
           {error}
         </div>
@@ -823,12 +839,12 @@ function WidgetPage() {
     );
   }
 
-  if (!config) return <div className="h-screen w-full bg-transparent" />;
+  if (!config) return <div className="h-dvh w-full bg-transparent" />;
 
   if (!open) {
     return (
       <div
-        className="flex h-screen w-full flex-col items-end justify-end gap-3 p-2"
+        className="flex h-dvh w-full flex-col items-end justify-end gap-3 p-2"
         style={{ fontFamily: config.website.fontFamily }}
       >
         {showTeaser && (
@@ -888,12 +904,12 @@ function WidgetPage() {
 
   return (
     <div
-      className="flex h-screen w-full flex-col overflow-hidden bg-card shadow-float ring-1 ring-black/5"
+      className="flex h-dvh max-h-dvh w-full flex-col overflow-hidden bg-card shadow-float ring-1 ring-black/5"
       style={{ borderRadius: radius, fontFamily: config.website.fontFamily }}
     >
       {view !== "menu" && (
         <header
-          className="relative flex items-center gap-3 px-4 py-3.5 text-white"
+          className="relative flex shrink-0 items-center gap-3 px-4 py-3.5 text-white"
           style={{
             background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 68%, black))`,
           }}
@@ -975,7 +991,7 @@ function WidgetPage() {
 
       <div
         ref={scroller}
-        className={`flex-1 overflow-y-auto bg-background ${view === "menu" ? "" : "px-4 py-4"}`}
+        className={`min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background ${view === "menu" ? "" : "px-4 py-4"}`}
       >
         {view === "menu" && (
           <HomeView
@@ -1605,7 +1621,7 @@ function HomeView({
   const [showPrivacy, setShowPrivacy] = useState(false);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-full flex-col">
       {/* ---------------------------- hero ---------------------------- */}
       <div
         className="relative shrink-0 overflow-hidden px-5 pb-9 pt-4 text-white"
