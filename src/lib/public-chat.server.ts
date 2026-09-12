@@ -870,6 +870,30 @@ export async function answerQuestion(opts: {
   }));
 
   if (!relevant.length) {
+    // Nothing cleared the floor. No word overlap at all with any candidate
+    // means the question is about something else entirely — say so plainly
+    // rather than pretending we merely lack confidence.
+    const offTopic = isOutOfScope(matches.length ? matches : [{ text_score: 0 }]);
+    if (offTopic) {
+      const next = await bumpScopeState(
+        db,
+        website,
+        opts.conversationId ?? null,
+        scope,
+        true,
+      );
+      return {
+        answer: next.limitReached
+          ? `${outOfScopeReply(orgName, language)} ${scopeLimitedNotice(orgName, language)}`
+          : outOfScopeReply(orgName, language),
+        sources: [],
+        confidence: 0,
+        escalate: false,
+        crisis: false,
+        diagnostics: { retrieval, floor: MIN_SIMILARITY, language },
+      };
+    }
+    await bumpScopeState(db, website, opts.conversationId ?? null, scope, false);
     return {
       answer: lowConfidenceReply(language),
       sources: [],
@@ -879,6 +903,8 @@ export async function answerQuestion(opts: {
       diagnostics: { retrieval, floor: MIN_SIMILARITY, language },
     };
   }
+
+  await bumpScopeState(db, website, opts.conversationId ?? null, scope, false);
 
   const context = relevant.map((m, i) => `[Source ${i + 1}] ${m.title}\n${m.content}`).join("\n\n");
 
