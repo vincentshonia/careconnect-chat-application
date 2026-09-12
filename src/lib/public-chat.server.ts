@@ -845,6 +845,7 @@ export async function answerQuestion(opts: {
   // reciprocal rank fusion so an exact plan name or phone number is found even
   // when the embedding misses it.
   let matches: Array<Record<string, any>> = [];
+  let retrievalFailed = false;
   try {
     const embedding = await embedText(question);
     const { data } = await db.rpc("match_knowledge_hybrid", {
@@ -858,7 +859,9 @@ export async function answerQuestion(opts: {
   } catch (err) {
     if (err instanceof AiGatewayError && (err.status === 429 || err.status === 402)) throw err;
     matches = [];
+    retrievalFailed = true;
   }
+
 
   const relevant = matches.filter(
     (m) =>
