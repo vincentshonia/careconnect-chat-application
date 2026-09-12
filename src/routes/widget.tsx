@@ -1629,7 +1629,9 @@ function IntakeForm({
     preferredLanguage: "English",
     departmentId: "",
 
-    consent: false,
+    // Pre-checked so visitors get follow-up by default; they can opt out.
+    consent: true,
+
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
