@@ -314,9 +314,12 @@ async function buildWidgetConfig(
     },
     organization: {
       name: org?.name ?? "",
+      // Relative path served by the /api/public/branding proxy.
+      logoUrl: org?.logo_url ?? null,
       phone: org?.phone ?? "",
       email: org?.email ?? "",
       address: org?.address ?? "",
+      mapsUrl: org?.maps_url ?? null,
       privacyNotice: org?.privacy_notice ?? "",
       emergencyMessage: org?.emergency_message ?? "",
     },

@@ -1589,6 +1589,7 @@ export type Database = {
           emergency_message: string
           id: string
           logo_url: string | null
+          maps_url: string | null
           name: string
           phone: string | null
           primary_color: string
@@ -1610,6 +1611,7 @@ export type Database = {
           emergency_message?: string
           id?: string
           logo_url?: string | null
+          maps_url?: string | null
           name: string
           phone?: string | null
           primary_color?: string
@@ -1631,6 +1633,7 @@ export type Database = {
           emergency_message?: string
           id?: string
           logo_url?: string | null
+          maps_url?: string | null
           name?: string
           phone?: string | null
           primary_color?: string
