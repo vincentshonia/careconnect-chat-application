@@ -11,7 +11,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit-client";
 import type { Database } from "@/integrations/supabase/types";
 import { PanelShell } from "@/components/admin/PanelShell";
-import { WidgetPreview } from "@/components/admin/WidgetPreview";
 import { LiveWidgetPreview } from "@/components/admin/LiveWidgetPreview";
 import {
   DEFAULT_WIDGET_TABS,
@@ -45,7 +44,7 @@ export function WebsitesPanel() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Website>>({});
   const [notice, setNotice] = useState<string | null>(null);
-  const [livePreview, setLivePreview] = useState(false);
+  const [livePreview, setLivePreview] = useState(true);
   const [origin, setOrigin] = useState("");
   const [domainsText, setDomainsText] = useState("");
   const [creating, setCreating] = useState(false);
@@ -70,18 +69,6 @@ export function WebsitesPanel() {
   });
 
   const websites = listQuery.data ?? [];
-  const servicesQuery = useQuery({
-    queryKey: ["widget-services"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("services")
-        .select("id, name, short_description, status, sort_order")
-        .order("sort_order");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-  const services = servicesQuery.data ?? [];
   const active = websites.find((w) => w.id === activeId) ?? websites[0] ?? null;
 
   useEffect(() => {
@@ -624,11 +611,12 @@ export function WebsitesPanel() {
             <ServicesCard organizationId={active.organization_id} />
 
             <div className="rounded-xl border border-border p-4">
-              <h2 className="text-sm font-semibold">Test the live chat</h2>
+              <h2 className="text-sm font-semibold">Live preview — real widget</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Opens the real widget here in the console so you can ask questions, request a
-                representative and submit forms exactly as a visitor would. Test chats are marked
-                as previews and never appear in the waiting queue, the dashboard or reports.
+                The panel in the corner is the real widget, fully clickable: ask questions, request
+                a representative and submit forms exactly as a visitor would. Unsaved changes above
+                appear instantly. Preview chats never appear in the waiting queue, the dashboard or
+                reports.
               </p>
               <Button
                 className="mt-3"
@@ -636,7 +624,7 @@ export function WebsitesPanel() {
                 size="sm"
                 onClick={() => setLivePreview((v) => !v)}
               >
-                {livePreview ? "Stop test chat" : "Start test chat"}
+                {livePreview ? "Hide preview" : "Show preview"}
               </Button>
             </div>
 
@@ -720,34 +708,32 @@ export function WebsitesPanel() {
       </div>
 
       {active && livePreview ? (
-        <LiveWidgetPreview websiteId={active.id} onClose={() => setLivePreview(false)} />
-      ) : null}
-
-      {active && !livePreview ? (
-        <WidgetPreview
+        <LiveWidgetPreview
+          websiteId={active.id}
+          onClose={() => setLivePreview(false)}
           config={{
-            chatbotName: form.chatbot_name,
-            organizationName: form.name,
-            welcomeMessage: form.welcome_message,
-            triggerMessage: form.trigger_message,
-            privacyDisclaimer: form.privacy_disclaimer,
-            primaryColor: form.primary_color,
-            accentColor: form.accent_color,
-            position: form.widget_position,
-            logoUrl: form.logo_url,
-            borderRadius: form.border_radius,
-            homeGreeting: form.home_greeting,
-            homeHeadline: form.home_headline,
-            homeSubtitle: form.home_subtitle,
-            homeCtaTitle: form.home_cta_title,
-            homeCtaSubtitle: form.home_cta_subtitle,
-            helpTitle: form.help_title,
-            privacyFooterText: form.privacy_footer_text,
-            showHomeTab: form.show_home_tab,
-            showHelpTab: form.show_help_tab,
-            showServicesTab: form.show_services_tab,
-            showRequestsTab: form.show_requests_tab,
-            topics: services.map((s) => s.name),
+            chatbotName: form.chatbot_name ?? undefined,
+            welcomeMessage: form.welcome_message ?? undefined,
+            triggerMessage: form.trigger_message ?? undefined,
+            offlineMessage: form.offline_message ?? undefined,
+            privacyDisclaimer: form.privacy_disclaimer ?? undefined,
+            primaryColor: form.primary_color ?? undefined,
+            accentColor: form.accent_color ?? undefined,
+            position: form.widget_position ?? undefined,
+            logoUrl: form.logo_url ?? undefined,
+            borderRadius: form.border_radius ?? undefined,
+            fontFamily: form.font_family ?? undefined,
+            homeGreeting: form.home_greeting ?? undefined,
+            homeHeadline: form.home_headline ?? undefined,
+            homeSubtitle: form.home_subtitle ?? undefined,
+            homeCtaTitle: form.home_cta_title ?? undefined,
+            homeCtaSubtitle: form.home_cta_subtitle ?? undefined,
+            helpTitle: form.help_title ?? undefined,
+            privacyFooterText: form.privacy_footer_text ?? undefined,
+            showHomeTab: form.show_home_tab ?? undefined,
+            showHelpTab: form.show_help_tab ?? undefined,
+            showServicesTab: form.show_services_tab ?? undefined,
+            showRequestsTab: form.show_requests_tab ?? undefined,
             tabs,
           }}
         />

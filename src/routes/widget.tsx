@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import brandLogoAsset from "@/assets/phg-logo-light.png.asset.json";
+import { ClipboardCheck, Headset, MessageSquare, Phone, UserPlus } from "lucide-react";
 import { resolveWidgetTabs, tabIconPath } from "@/lib/widget-tabs";
 import {
   isConversationEnded,
@@ -175,6 +176,8 @@ function WidgetPage() {
   const hostOrigin = params.get("h");
   const originProof = params.get("op");
   const page = params.get("p") ?? "";
+  /** Admin console preview: accepts live config edits from the parent frame. */
+  const isPreview = params.get("preview") === "1";
 
   const [config, setConfig] = useState<Config | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -402,6 +405,22 @@ function WidgetPage() {
       })
       .catch((e: Error) => setError(e.message));
   }, [websiteId, hostOrigin, originProof]);
+
+  /* ------- live config edits from the admin console (preview only) ------- */
+  useEffect(() => {
+    if (!isPreview || typeof window === "undefined") return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== window.parent) return;
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as { type?: string; config?: Record<string, unknown> } | null;
+      if (!data || data.type !== "cc-preview-config" || !data.config) return;
+      setConfig((prev) =>
+        prev ? { ...prev, website: { ...prev.website, ...data.config } } : prev,
+      );
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [isPreview]);
 
   /* ------------------- teaser / auto-open / hidden pages ---------------- */
   useEffect(() => {
@@ -843,7 +862,10 @@ function WidgetPage() {
               >
                 <p className="text-sm font-semibold text-card-foreground">{s.name}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{s.short_description}</p>
-                <span className="mt-2 inline-block text-[11px] font-semibold" style={{ color: brand }}>
+                <span
+                  className="mt-2 inline-block text-[11px] font-semibold"
+                  style={{ color: brand }}
+                >
                   View details →
                 </span>
               </button>
@@ -976,17 +998,29 @@ function WidgetPage() {
               {
                 key: "live_agent",
                 title: "Speak with a representative",
+                Icon: Headset,
                 sub: config.agentsAvailable
                   ? "Someone is available now"
                   : "We will reply as soon as we are back",
               },
-              { key: "referral", title: "Submit a referral", sub: "Refer a patient or member" },
+              {
+                key: "referral",
+                title: "Submit a referral",
+                Icon: UserPlus,
+                sub: "Refer a patient or member",
+              },
               {
                 key: "enrollment",
                 title: "Enrollment assistance",
+                Icon: ClipboardCheck,
                 sub: "Get help choosing or joining a plan",
               },
-              { key: "message", title: "Leave a message", sub: "We will get back to you" },
+              {
+                key: "message",
+                title: "Leave a message",
+                Icon: MessageSquare,
+                sub: "We will get back to you",
+              },
             ].map((option) => (
               <button
                 key={option.key}
@@ -1002,10 +1036,12 @@ function WidgetPage() {
                 className="flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-panel"
               >
                 <span
-                  className="h-8 w-1 shrink-0 rounded-full"
-                  style={{ background: brand }}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
+                  style={{ background: `color-mix(in oklab, ${brand} 10%, transparent)` }}
                   aria-hidden="true"
-                />
+                >
+                  <option.Icon size={18} style={{ color: brand }} />
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-card-foreground">
                     {option.title}
@@ -1018,8 +1054,9 @@ function WidgetPage() {
             ))}
             <button
               onClick={() => setView("contact")}
-              className="w-full rounded-2xl border border-border px-4 py-2.5 text-xs font-semibold text-foreground"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-2.5 text-xs font-semibold text-foreground"
             >
+              <Phone size={15} style={{ color: brand }} aria-hidden="true" />
               View contact details
             </button>
           </div>
@@ -1715,7 +1752,6 @@ function IntakeForm({
 
     // Pre-checked so visitors get follow-up by default; they can opt out.
     consent: true,
-
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);

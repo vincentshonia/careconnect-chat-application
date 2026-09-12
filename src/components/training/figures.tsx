@@ -1001,7 +1001,7 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
 
   websites: {
     title: "Websites & widget settings",
-    alt: "Website settings with a site list, grouped settings cards for basics, home screen, chat copy and bottom navigation, the embed snippet and a live widget preview.",
+    alt: "Website settings with a site list, grouped settings cards for basics, home screen, chat copy and bottom navigation, the embed snippet and a live preview that is the real widget, fully clickable; preview chats are excluded from the queue and reports.",
     markers: [
       "Website list, plus + Add website.",
       "Site basics: names, domains, allowed embed domains, colors, position and trigger delay.",
