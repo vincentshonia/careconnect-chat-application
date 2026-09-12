@@ -216,3 +216,74 @@ export const manageResponseTemplateFn = createServerFn({ method: "POST" })
     });
     return { ok: true };
   });
+
+/**
+ * Resolution outcomes ("dispositions") an agent picks when closing a chat.
+ * Managers curate the list; agents only choose from it.
+ */
+const dispositionInput = z.object({
+  action: z.enum(["create", "rename", "activate", "deactivate"]),
+  id: z.string().uuid().optional(),
+  label: z.string().trim().min(1).max(80).optional(),
+});
+
+export const manageDispositionFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => dispositionInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { actor, organizationId } = await authorize(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    if (data.action === "create") {
+      if (!data.label) throw new Error("Give the outcome a name");
+      const { data: created, error } = await supabaseAdmin
+        .from("conversation_dispositions")
+        .insert({ organization_id: organizationId, label: data.label, is_active: true })
+        .select("id")
+        .single();
+      if (error) throw new Error(error.message);
+      await writeAudit(supabaseAdmin, {
+        actor,
+        organizationId,
+        action: "disposition.created",
+        recordType: "conversation_dispositions",
+        recordId: created.id,
+        newValue: { label: data.label },
+      });
+      return { ok: true, id: created.id };
+    }
+
+    if (!data.id) throw new Error("Missing outcome");
+    const { data: row } = await supabaseAdmin
+      .from("conversation_dispositions")
+      .select("id, organization_id, label, is_active")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!row || (row.organization_id !== organizationId && !actor.isPlatformAdmin)) {
+      throw new ForbiddenError("Outcome not found in your organization");
+    }
+
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (data.action === "rename") {
+      if (!data.label) throw new Error("Give the outcome a name");
+      patch["label"] = data.label;
+    } else {
+      patch["is_active"] = data.action === "activate";
+    }
+
+    const { error } = await supabaseAdmin
+      .from("conversation_dispositions")
+      .update(patch as never)
+      .eq("id", row.id);
+    if (error) throw new Error(error.message);
+    await writeAudit(supabaseAdmin, {
+      actor,
+      organizationId: row.organization_id,
+      action: `disposition.${data.action === "rename" ? "renamed" : data.action === "activate" ? "activated" : "deactivated"}`,
+      recordType: "conversation_dispositions",
+      recordId: row.id,
+      previousValue: { label: row.label, is_active: row.is_active },
+      newValue: patch,
+    });
+    return { ok: true };
+  });
