@@ -126,3 +126,84 @@ export function applyConfidenceBand(
     hedged: false,
   };
 }
+
+/* ------------------------------- scope guard ------------------------------ */
+
+/**
+ * Reply used whenever a visitor asks about something that is not this
+ * organization's services, eligibility, enrolment, coverage area or contact
+ * details. The assistant is deliberately narrow: it is a website helper, not a
+ * general-purpose chatbot.
+ */
+export function outOfScopeReply(orgName: string, language: ReplyLanguage = "en") {
+  return language === "es"
+    ? `Solo puedo ayudar con preguntas sobre los servicios y programas de ${orgName}. Para cualquier otro tema, comuníquese con nosotros directamente o hable con un representante.`
+    : `I can only help with questions about ${orgName}'s services and programs. For anything else, please contact us directly or talk to a representative.`;
+}
+
+/** Added once the visitor keeps asking off-topic questions. */
+export function scopeLimitedNotice(orgName: string, language: ReplyLanguage = "en") {
+  return language === "es"
+    ? `Este chat se limita a temas de ${orgName}.`
+    : `This chat is limited to ${orgName} topics.`;
+}
+
+/** How long the assistant stops calling the model after repeated off-topic asks. */
+export const SCOPE_LIMIT_MS = 10 * 60_000;
+/** Consecutive off-topic questions tolerated before the limit kicks in. */
+export const SCOPE_STREAK_LIMIT = 3;
+
+/**
+ * Remove prompt-injection scaffolding a visitor may have pasted in. Lines that
+ * pose as system instructions never reach the model.
+ */
+export function sanitizeVisitorMessage(text: string): string {
+  return (text ?? "")
+    .split(/\r?\n/)
+    .filter((line) => {
+      const l = line.trim().toLowerCase();
+      if (!l) return true;
+      if (l.startsWith("system:")) return false;
+      if (l.startsWith("ignore previous") || l.startsWith("ignore all previous")) return false;
+      if (l.startsWith("you are now")) return false;
+      if (l.includes("###")) return false;
+      return true;
+    })
+    .join("\n")
+    .trim();
+}
+
+export type ScopeCandidate = { similarity?: number; text_score?: number };
+
+/**
+ * Nothing cleared the relevance floor. Decide whether this is a question we
+ * simply have no good source for (low confidence) or one that has nothing to do
+ * with the organization at all (out of scope): zero lexical overlap with every
+ * candidate chunk means the visitor is asking about something else entirely.
+ */
+export function isOutOfScope(candidates: ScopeCandidate[]): boolean {
+  return candidates.every((c) => Number(c.text_score ?? 0) === 0);
+}
+
+export type ScopeState = { streak: number; limitedUntil: number };
+
+/** Advance the per-conversation off-topic streak and its cool-off window. */
+export function nextScopeState(
+  prev: ScopeState,
+  outOfScope: boolean,
+  now: number = Date.now(),
+): ScopeState & { limitReached: boolean } {
+  if (!outOfScope) return { streak: 0, limitedUntil: 0, limitReached: false };
+  const streak = (prev.streak ?? 0) + 1;
+  const limitReached = streak >= SCOPE_STREAK_LIMIT;
+  return {
+    streak,
+    limitedUntil: limitReached ? now + SCOPE_LIMIT_MS : (prev.limitedUntil ?? 0),
+    limitReached,
+  };
+}
+
+/** True while the conversation is inside its off-topic cool-off window. */
+export function isScopeLimited(state: ScopeState, now: number = Date.now()): boolean {
+  return Number(state?.limitedUntil ?? 0) > now;
+}

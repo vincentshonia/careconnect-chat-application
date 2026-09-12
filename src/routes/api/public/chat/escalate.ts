@@ -16,7 +16,7 @@ const bodySchema = z.object({
   consent: z.literal(true),
   /** Submitted outside the organization's operating hours. */
   after_hours: z.boolean().optional().default(false),
-  departmentId: z.string().uuid().nullable().optional(),
+  
   kind: z
     .enum(["live_agent", "contact", "referral", "enrollment", "message"])
     .default("live_agent"),
@@ -131,11 +131,12 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               )
             : (input.reason ?? null);
 
-          // The visitor's chosen department wins; otherwise routing rules, then default.
+          // Visitors never pick a team: routing rules decide, then the
+          // organization's default department. Staff transfer from the inbox.
           const { resolveDepartment } = await import("@/lib/handoff.server");
           const departmentId = await resolveDepartment({
             organizationId: website.organization_id,
-            preferredDepartmentId: input.departmentId ?? null,
+            preferredDepartmentId: null,
             matchValue: input.kind,
             currentDepartmentId: conversation.department_id ?? null,
           });
