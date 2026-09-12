@@ -164,7 +164,7 @@ export const createStaffFn = createServerFn({ method: "POST" })
             ? org.logo_url.startsWith("http")
               ? org.logo_url
               : `${APP_ORIGIN}${org.logo_url}`
-            : undefined,
+            : `${APP_ORIGIN}${brandLogoAsset.url}`,
           supportPhone: org?.phone ?? undefined,
         },
       });
