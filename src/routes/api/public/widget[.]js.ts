@@ -9,13 +9,19 @@ export const Route = createFileRoute("/api/public/widget.js")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        // The canonical origin is the one that actually served this script.
+        // Embeds that point at an address which redirects here would otherwise
+        // make every follow-up request cross-origin-redirected, which strips the
+        // Origin header and breaks the embedding-origin proof.
+        const canonicalOrigin = new URL(request.url).origin;
         const js = `(function(){
   var cur = document.currentScript || document.querySelector('script[data-website-id]');
   var id = cur && cur.getAttribute('data-website-id');
   if (!id) { console.error('[chat-widget] data-website-id is required'); return; }
   if (window.__lovableChatWidget) return;
   window.__lovableChatWidget = true;
-  var widgetOrigin = new URL(cur && cur.src ? cur.src : '/api/public/widget.js', window.location.href).origin;
+  var widgetOrigin = ${JSON.stringify(canonicalOrigin)};
+
 
   var host = encodeURIComponent(window.location.origin);
   var page = encodeURIComponent(window.location.pathname);
