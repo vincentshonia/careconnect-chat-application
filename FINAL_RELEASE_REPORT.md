@@ -3,9 +3,9 @@
 > Generated automatically by `bun run release:gate`. PASS/FAIL is derived
 > from process exit codes only. No credentials or secrets are recorded.
 
-**Executed (UTC):** 2026-09-12T05:05:18.888Z
-**Completed (UTC):** 2026-09-12T05:05:31.787Z
-**Build identification:** 66315a963963cf81b6a33bcc2b45c11739e45dc9
+**Executed (UTC):** 2026-09-12T05:16:11.366Z
+**Completed (UTC):** 2026-09-12T05:30:53.639Z
+**Build identification:** 170f05487698ac8cceef0a711d5e8f67d6277c96
 **Node:** v22.22.0
 
 ## Overall: FAIL
@@ -15,47 +15,43 @@
 | Stage | Command | Exit code | Result |
 | --- | --- | --- | --- |
 | Preflight | `node scripts/release-preflight.mjs` | 0 | PASS |
-| Lint | `bunx eslint .` | 1 | FAIL |
-| Typecheck | `bunx tsgo --noEmit` | — | NOT RUN |
-| Production build | `bun run build` | — | NOT RUN |
-| Vitest | `bunx vitest run --reporter=json --reporter=default --outputFile.json=/dev-server/.release/vitest.json` | — | NOT RUN |
-| Playwright E2E | `bunx playwright test --reporter=json` | — | NOT RUN |
+| Lint | `bunx eslint .` | 0 | PASS |
+| Typecheck | `bunx tsgo --noEmit` | 0 | PASS |
+| Production build | `bun run build` | 0 | PASS |
+| Vitest | `bunx vitest run --reporter=json --reporter=default --outputFile.json=/dev-server/.release/vitest.json` | 0 | PASS |
+| Playwright E2E | `bunx playwright test --reporter=json` | 1 | FAIL |
 | E2E cleanup verification | `node scripts/e2e-cleanup-verify.mjs` | — | NOT RUN |
 
 ## Vitest
 
-- Test files: 0
-- Passed: 0
+- Test files: 23
+- Passed: 392
 - Failed: 0
 - Skipped: 0
-- Total: 0
+- Total: 392
 
 ## Playwright (browser E2E)
 
-- Tests: 0
-- Passed: 0
-- Failed: 0
+- Tests: 17
+- Passed: 16
+- Failed: 1
 - Skipped: 0
 
 ## Required suites
 
 | Suite | Result |
 | --- | --- |
-| RBAC suite (tests/rbac.test.ts) | NOT RUN |
-| Permissions suite (tests/permissions.test.ts) | NOT RUN |
-| Tenant-isolation suite (tests/tenant-isolation.test.ts) | NOT RUN |
-| Report/dashboard scope suite (tests/report-scope.test.ts) | NOT RUN |
-| Concurrency/routing suite (tests/concurrency-routing.test.ts) | NOT RUN |
-| Scale/data-volume suite (tests/reporting-reconciliation.test.ts) | NOT RUN |
-| Widget regression suite (tests/widget-session.test.ts) | NOT RUN |
-| Browser E2E suite (Playwright) | NOT RUN |
+| RBAC suite (tests/rbac.test.ts) | PASS |
+| Permissions suite (tests/permissions.test.ts) | PASS |
+| Tenant-isolation suite (tests/tenant-isolation.test.ts) | PASS |
+| Report/dashboard scope suite (tests/report-scope.test.ts) | PASS |
+| Concurrency/routing suite (tests/concurrency-routing.test.ts) | PASS |
+| Scale/data-volume suite (tests/reporting-reconciliation.test.ts) | PASS |
+| Widget regression suite (tests/widget-session.test.ts) | PASS |
+| Browser E2E suite (Playwright) | FAIL |
 | E2E cleanup verification | NOT RUN |
 
 ## Blocking failures
 
-- Stage **Lint** — FAIL
-- Stage **Typecheck** — NOT RUN
-- Stage **Production build** — NOT RUN
-- Stage **Vitest** — NOT RUN
-- Stage **Playwright E2E** — NOT RUN
+- Stage **Playwright E2E** — FAIL
 - Stage **E2E cleanup verification** — NOT RUN
