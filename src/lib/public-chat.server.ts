@@ -875,10 +875,11 @@ export async function answerQuestion(opts: {
   }));
 
   if (!relevant.length) {
-    // Nothing cleared the floor. No word overlap at all with any candidate
-    // means the question is about something else entirely — say so plainly
-    // rather than pretending we merely lack confidence.
-    const offTopic = isOutOfScope(matches.length ? matches : [{ text_score: 0 }]);
+    // Nothing cleared the floor. Only call it off-topic when we actually got
+    // candidates back and none of them share a single word with the question.
+    // A failed search, or no candidates at all, is our problem, not the
+    // visitor's — treat that as low confidence and offer a person.
+    const offTopic = !retrievalFailed && matches.length > 0 && isOutOfScope(matches);
     if (offTopic) {
       const next = await bumpScopeState(
         db,
@@ -893,8 +894,10 @@ export async function answerQuestion(opts: {
           : outOfScopeReply(orgName, language),
         sources: [],
         confidence: 0,
-        escalate: false,
+        // Keep the "talk to a representative" offer available.
+        escalate: true,
         crisis: false,
+
         diagnostics: { retrieval, floor: MIN_SIMILARITY, language },
       };
     }
