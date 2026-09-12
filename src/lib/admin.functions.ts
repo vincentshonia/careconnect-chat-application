@@ -8,7 +8,7 @@ export const reindexArticleFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ articleId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "knowledge.edit");
 
     const { data: article, error } = await context.supabase
@@ -27,7 +27,7 @@ export const reindexArticleFn = createServerFn({ method: "POST" })
 export const reindexAllFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "knowledge.edit");
     const organizationId = requireOrganization(actor);
 
@@ -44,7 +44,7 @@ export const testAiAnswerFn = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "knowledge.edit");
     const organizationId = requireOrganization(actor);
 
@@ -94,7 +94,7 @@ export const testAiAnswerFn = createServerFn({ method: "POST" })
 export const cronHealthFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "settings.manage");
 
     // Cron and pg_net internals are not exposed to signed-in roles, so this
@@ -129,7 +129,7 @@ export const cronHealthFn = createServerFn({ method: "POST" })
 export const adminStatusFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "settings.manage");
     const organizationId = requireOrganization(actor);
 

@@ -18,7 +18,7 @@ export const transferConversationFn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     // Transfer is a supervisory action — Standard Users may not perform it.
     const { resolveActor, requirePermission } = await import("@/lib/authz.server");
-    const actorContext = await resolveActor(context.supabase, context.userId);
+    const actorContext = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(
       actorContext,
       "conversation.transfer",

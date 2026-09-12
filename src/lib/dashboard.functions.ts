@@ -24,7 +24,7 @@ export const getDashboardMetricsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => inputSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     const organizationId = requireOrganization(actor);
 
     // Scope is derived from permissions, never from the request.

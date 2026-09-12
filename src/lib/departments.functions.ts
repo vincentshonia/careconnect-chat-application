@@ -21,7 +21,7 @@ type Ctx = { supabase: Parameters<typeof resolveActor>[0]; userId: string };
 
 /** Resolve the caller and confirm they may administer departments. */
 async function authorize(context: Ctx): Promise<{ actor: Actor; organizationId: string }> {
-  const actor = await resolveActor(context.supabase, context.userId);
+  const actor = await resolveActor(context.supabase, context.userId, context.claims);
   requirePermission(actor, "department.manage", "Only administrators can change departments");
   return { actor, organizationId: requireOrganization(actor) };
 }

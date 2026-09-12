@@ -30,7 +30,7 @@ export const createQaReviewFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => reviewInput.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     // Reviews are a supervisory activity; team leads and above hold this.
     requirePermission(actor, "quality.review", "Only supervisors can record quality reviews");
     const organizationId = requireOrganization(actor);

@@ -20,7 +20,7 @@ import {
 type Ctx = { supabase: Parameters<typeof resolveActor>[0]; userId: string };
 
 async function authorize(context: Ctx): Promise<{ actor: Actor; organizationId: string }> {
-  const actor = await resolveActor(context.supabase, context.userId);
+  const actor = await resolveActor(context.supabase, context.userId, context.claims);
   requirePermission(
     actor,
     "workflow.manage",

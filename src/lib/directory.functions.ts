@@ -40,7 +40,7 @@ export const listStaffFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => listSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "staff.view", "You don't have access to the team directory");
     const organizationId = requireOrganization(actor);
 

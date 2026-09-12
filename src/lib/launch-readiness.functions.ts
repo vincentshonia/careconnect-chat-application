@@ -36,7 +36,7 @@ function isProductionDomain(domain: string | null): boolean {
 export const launchReadinessFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const actor = await resolveActor(context.supabase, context.userId);
+    const actor = await resolveActor(context.supabase, context.userId, context.claims);
     requirePermission(actor, "settings.manage");
     const organizationId = requireOrganization(actor);
 
