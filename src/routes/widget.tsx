@@ -1014,10 +1014,12 @@ function WidgetPage() {
                 className="flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-panel"
               >
                 <span
-                  className="h-8 w-1 shrink-0 rounded-full"
-                  style={{ background: brand }}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
+                  style={{ background: `color-mix(in oklab, ${brand} 10%, transparent)` }}
                   aria-hidden="true"
-                />
+                >
+                  <option.Icon size={18} style={{ color: brand }} />
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-card-foreground">
                     {option.title}
