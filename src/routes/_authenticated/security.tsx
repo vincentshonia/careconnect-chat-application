@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
+import { logAudit } from "@/lib/audit-client";
 import { PanelShell } from "@/components/admin/PanelShell";
 import { MfaPolicyCard } from "@/components/admin/MfaPolicyCard";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +69,7 @@ export function SecurityPanel() {
       });
       if (error) throw error;
       await logAudit({
+        scope: "security",
         action: "security.mfa_enabled",
         recordType: "auth_factor",
         recordId: enroll.id,
@@ -88,6 +89,7 @@ export function SecurityPanel() {
       const { error } = await supabase.auth.mfa.unenroll({ factorId });
       if (error) throw error;
       await logAudit({
+        scope: "security",
         action: "security.mfa_disabled",
         recordType: "auth_factor",
         recordId: factorId,

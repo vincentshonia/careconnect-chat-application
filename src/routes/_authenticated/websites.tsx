@@ -8,7 +8,7 @@ import {
 } from "@/lib/knowledge-content.functions";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
+import { logAudit } from "@/lib/audit-client";
 import type { Database } from "@/integrations/supabase/types";
 import { PanelShell } from "@/components/admin/PanelShell";
 import { WidgetPreview } from "@/components/admin/WidgetPreview";
@@ -136,6 +136,7 @@ export function WebsitesPanel() {
         .eq("id", active.id);
       if (error) throw error;
       await logAudit({
+        scope: "website",
         action: "website_settings.updated",
         recordType: "websites",
         recordId: active.id,
@@ -183,6 +184,7 @@ export function WebsitesPanel() {
         .single();
       if (error) throw error;
       await logAudit({
+        scope: "website",
         action: "website.created",
         recordType: "websites",
         recordId: data.id,
@@ -207,6 +209,7 @@ export function WebsitesPanel() {
       const { error } = await supabase.from("websites").update({ status }).eq("id", active.id);
       if (error) throw error;
       await logAudit({
+        scope: "website",
         action: `website.${status === "suspended" ? "suspended" : "activated"}`,
         recordType: "websites",
         recordId: active.id,
@@ -231,6 +234,7 @@ export function WebsitesPanel() {
       const { error } = await supabase.from("websites").delete().eq("id", active.id);
       if (error) throw error;
       await logAudit({
+        scope: "website",
         action: "website.deleted",
         recordType: "websites",
         recordId: active.id,

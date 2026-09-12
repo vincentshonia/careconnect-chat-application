@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { logAudit } from "@/lib/audit";
+import { logAudit } from "@/lib/audit-client";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +45,7 @@ export function MfaPolicyCard() {
       const { error } = await supabase.from("organizations").update(patch).eq("id", orgId);
       if (error) throw error;
       await logAudit({
+        scope: "security",
         action: "security.mfa_policy_updated",
         recordType: "organization",
         recordId: orgId,
