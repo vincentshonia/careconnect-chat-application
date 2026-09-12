@@ -182,6 +182,8 @@ export type ScopeCandidate = { similarity?: number; text_score?: number };
  * candidate chunk means the visitor is asking about something else entirely.
  */
 export function isOutOfScope(candidates: ScopeCandidate[]): boolean {
+  // No candidates at all tells us nothing about the question — never off topic.
+  if (!candidates.length) return false;
   return candidates.every((c) => Number(c.text_score ?? 0) === 0);
 }
 
