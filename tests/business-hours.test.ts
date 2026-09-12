@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isOpenNow, type BusinessHourRow } from "@/lib/business-hours";
+import { isOpenNow, nextOpenAt, formatNextOpen, type BusinessHourRow } from "@/lib/business-hours";
 
 const TZ = "America/Los_Angeles";
 
