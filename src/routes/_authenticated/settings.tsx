@@ -34,6 +34,7 @@ export function SettingsPanel() {
     phone: "",
     email: "",
     address: "",
+    maps_url: "",
     timezone: "",
     sla_first_response_minutes: "15",
     ai_instructions: "",
@@ -63,6 +64,7 @@ export function SettingsPanel() {
         phone: org.data.phone ?? "",
         email: org.data.email ?? "",
         address: org.data.address ?? "",
+        maps_url: (org.data as { maps_url?: string | null }).maps_url ?? "",
         timezone: org.data.timezone ?? "",
         sla_first_response_minutes: String(
           (org.data as { sla_first_response_minutes?: number | null }).sla_first_response_minutes ??
@@ -141,6 +143,7 @@ export function SettingsPanel() {
           phone: form.phone || null,
           email: form.email || null,
           address: form.address || null,
+          maps_url: form.maps_url || null,
           timezone: form.timezone || "America/Los_Angeles",
           // Minutes a visitor may wait for a first human reply before staff
           // are alerted. Kept inside a sensible range so alerts stay useful.
@@ -269,13 +272,28 @@ export function SettingsPanel() {
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="address">Address</Label>
-          <Input
-            id="address"
-            value={form.address}
-            onChange={(e) => setForm({ ...form, address: e.target.value })}
-          />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="address">Address</Label>
+            <Input
+              id="address"
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="maps_url">Map link</Label>
+            <Input
+              id="maps_url"
+              type="url"
+              placeholder="https://maps.google.com/…"
+              value={form.maps_url}
+              onChange={(e) => setForm({ ...form, maps_url: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Link visitors can tap to open this address in a map.
+            </p>
+          </div>
         </div>
 
         <div className="space-y-2">

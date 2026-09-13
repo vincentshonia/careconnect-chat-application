@@ -14,7 +14,10 @@ const bodySchema = z.object({
   serviceInterest: z.string().trim().max(160).optional().nullable(),
   preferredLanguage: z.string().trim().max(60).optional().nullable(),
   consent: z.literal(true),
-  /** Submitted outside the organization's operating hours. */
+  /**
+   * Client hint only. The authoritative value is recomputed on the server from
+   * the organization's hours, holidays and timezone.
+   */
   after_hours: z.boolean().optional().default(false),
 
   kind: z
@@ -44,6 +47,8 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
           const ctx = await mod.sessionContext(input.session, mod.verifiedOrigin(request));
           await mod.enforceRateLimit(`esc:s:${ctx.claims.sid}`, 5, 300);
           const website = ctx.website;
+          // The browser's flag is only a hint; the organization's own clock decides.
+          const afterHours = !(await mod.isOrganizationOpen(website));
           const conversation = input.conversationId
             ? await mod.conversationForSession(ctx, input.conversationId)
             : await mod.ensureConversation(website, ctx.visitor, null);
@@ -197,7 +202,7 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               service_interest: input.serviceInterest ?? null,
               preferred_language: input.preferredLanguage ?? "English",
               source: "widget",
-              after_hours: input.after_hours,
+              after_hours: afterHours,
               notes: intakeNotes,
             })
             .select("id")
@@ -230,7 +235,7 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
                 county: input.county ?? null,
                 preferredLanguage: input.preferredLanguage ?? null,
                 message: input.reason ?? null,
-                afterHours: input.after_hours,
+                afterHours,
                 supportPhone: contact.phone || undefined,
                 supportUrl: contact.domain ? `https://${contact.domain}` : undefined,
                 logoUrl:
@@ -257,7 +262,7 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               currentDepartmentId: conversation.department_id ?? null,
               reason: input.reason ?? `${input.fullName} requested a live representative`,
               visitorLabel: input.fullName,
-              afterHours: input.after_hours,
+              afterHours,
             });
             assigned = handoff.assigned;
           } else {
