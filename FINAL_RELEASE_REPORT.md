@@ -3,12 +3,12 @@
 > Generated automatically by `bun run release:gate`. PASS/FAIL is derived
 > from process exit codes only. No credentials or secrets are recorded.
 
-**Executed (UTC):** 2026-09-13T05:50:53.977Z
-**Completed (UTC):** 2026-09-13T06:05:17.545Z
-**Build identification:** fdb76226cab76fd17dfb01a16d0fb12a38e760c6
+**Executed (UTC):** 2026-09-13T06:05:59.886Z
+**Completed (UTC):** 2026-09-13T06:19:34.426Z
+**Build identification:** fcbbbb53d80ff600c8064c0a366fd5fda8936190
 **Node:** v22.22.0
 
-## Overall: FAIL
+## Overall: PASS
 
 ## Stages
 
@@ -20,7 +20,7 @@
 | Production build | `bun run build` | 0 | PASS |
 | Vitest | `bunx vitest run --reporter=json --reporter=default --outputFile.json=/dev-server/.release/vitest.json` | 0 | PASS |
 | Playwright E2E | `bunx playwright test --reporter=json` | 0 | PASS |
-| E2E cleanup verification | `node scripts/e2e-cleanup-verify.mjs` | 1 | FAIL |
+| E2E cleanup verification | `node scripts/e2e-cleanup-verify.mjs` | 0 | PASS |
 
 ## Vitest
 
@@ -49,8 +49,4 @@
 | Scale/data-volume suite (tests/reporting-reconciliation.test.ts) | PASS |
 | Widget regression suite (tests/widget-session.test.ts) | PASS |
 | Browser E2E suite (Playwright) | PASS |
-| E2E cleanup verification | FAIL |
-
-## Blocking failures
-
-- Stage **E2E cleanup verification** — FAIL
+| E2E cleanup verification | PASS |
