@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useDebounced } from "@/hooks/use-debounced";
 import { Pager } from "@/components/admin/Pager";
+import { StaffAvatar } from "@/components/admin/StaffAvatar";
 import { listStaffFn, STAFF_PAGE_SIZE, type StaffRow } from "@/lib/directory.functions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
