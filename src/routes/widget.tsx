@@ -633,7 +633,15 @@ function WidgetPage() {
         const head = headerRef.current?.offsetHeight ?? 0;
         const tabs = tabsRef.current?.offsetHeight ?? 0;
         const composer = composerRef.current?.offsetHeight ?? 0;
-        const content = scroller.current?.scrollHeight ?? 0;
+        // The scroller stretches to fill the frame, so measure the content
+        // itself plus the scroller's own padding.
+        const inner = contentRef.current?.offsetHeight ?? 0;
+        let pad = 0;
+        if (scroller.current) {
+          const cs = window.getComputedStyle(scroller.current);
+          pad = parseFloat(cs.paddingTop || "0") + parseFloat(cs.paddingBottom || "0");
+        }
+        const content = inner + pad;
         height = Math.ceil(head + tabs + composer + content) + 2;
       }
       post("resize", {
