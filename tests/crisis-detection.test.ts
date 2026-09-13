@@ -50,7 +50,8 @@ describe("applyConfidenceBand", () => {
     expect(band.hedged).toBe(true);
     expect(band.escalate).toBe(true);
     expect(band.useSources).toBe(true);
-    expect(band.answer).toBe(`${HEDGE_PREFIX}open enrollment ends in December.`);
+    // The answer is kept verbatim — lower-casing it would mangle proper nouns.
+    expect(band.answer).toBe(`${HEDGE_PREFIX}Open enrollment ends in December.`);
   });
 
   it("uses the canned reply below 0.3", () => {
