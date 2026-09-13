@@ -378,6 +378,17 @@ function WidgetPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
+  /** Below 480px the host page shows the panel full-screen. */
+  const [isNarrowViewport, setIsNarrowViewport] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(max-width: 479px)");
+    const sync = () => setIsNarrowViewport(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   const storageKey = `phg-widget-${websiteId}`;
   const threadKey = `${storageKey}-conv-v1`;
   const ended = isConversationEnded(convStatus);
