@@ -26,7 +26,8 @@ export const Route = createFileRoute("/api/public/widget.js")({
   var host = encodeURIComponent(window.location.origin);
   var page = encodeURIComponent(window.location.pathname);
   var originProof = '';
-  var state = { open: false, bubble: false, position: 'bottom-right' };
+  var state = { open: false, bubble: false, position: 'bottom-right', height: 720 };
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function mount() {
   var frame = document.createElement('iframe');
   frame.title = 'Customer support chat';
@@ -34,7 +35,8 @@ export const Route = createFileRoute("/api/public/widget.js")({
     '&op=' + encodeURIComponent(originProof) +
     '&r=' + encodeURIComponent(document.referrer || '') + '&q=' + encodeURIComponent(window.location.search || '');
   frame.setAttribute('allowtransparency', 'true');
-  frame.style.cssText = 'position:fixed;bottom:16px;right:16px;width:88px;height:88px;border:0;z-index:2147483000;background:transparent;color-scheme:normal;transition:width .18s ease,height .18s ease;';
+  frame.style.cssText = 'position:fixed;bottom:16px;right:16px;width:88px;height:88px;border:0;z-index:2147483000;background:transparent;color-scheme:normal;' +
+    (reduceMotion ? '' : 'transition:width .18s ease,height .18s ease;');
   document.body.appendChild(frame);
 
   // The panel always fits the space the page can give it; the widget itself
@@ -68,7 +70,8 @@ export const Route = createFileRoute("/api/public/widget.js")({
     if (state.position === 'bottom-left') { frame.style.right = 'auto'; frame.style.left = '16px'; }
     else { frame.style.left = 'auto'; frame.style.right = '16px'; }
     frame.style.width = Math.min(400, vw - 24) + 'px';
-    frame.style.height = Math.min(720, vh - 24) + 'px';
+    // The widget asks for exactly the height its content needs, capped at 720.
+    frame.style.height = Math.min(state.height || 720, 720, vh - 24) + 'px';
   }
 
   window.addEventListener('message', function (e) {
@@ -77,6 +80,7 @@ export const Route = createFileRoute("/api/public/widget.js")({
     if (d.type === 'resize') {
       state.open = !!d.open;
       state.bubble = !!d.bubble;
+      if (typeof d.height === 'number' && d.height > 0) state.height = d.height;
       apply();
     }
     if (d.type === 'position') {

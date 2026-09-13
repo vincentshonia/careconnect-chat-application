@@ -294,6 +294,21 @@ const TABS: { key: Tab; label: string; view: View; icon: string }[] = [
   },
 ];
 
+/** Content-sized frame bounds, in CSS pixels. */
+const WIDGET_MIN_H = 420;
+const WIDGET_MAX_H = 720;
+
+/** Views with scrolling lists always request the full cap so they never jump. */
+function isFullHeightView(view: View): boolean {
+  return (
+    view === "chat" ||
+    view === "waiting" ||
+    view === "faq" ||
+    view === "services" ||
+    view === "form"
+  );
+}
+
 function tabForView(view: View): Tab {
   if (view === "chat" || view === "waiting") return "chat";
   if (view === "faq") return "help";
@@ -350,6 +365,11 @@ function WidgetPage() {
   /** True once a human (not the assistant) has replied in this conversation. */
   const [agentReplied, setAgentReplied] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
+  /** Pieces measured to size the frame to its content on short views. */
+  const headerRef = useRef<HTMLElement>(null);
+  const composerRef = useRef<HTMLFormElement>(null);
+  const tabsRef = useRef<HTMLElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   /** Newest message timestamp we have rendered, per conversation id. */
   const lastSeenByConversation = useRef<Record<string, string>>({});
   /** Set while a send is in flight so two fast Enters cannot open two chats. */
@@ -600,6 +620,37 @@ function WidgetPage() {
   useEffect(() => {
     post("resize", { open, bubble: showTeaser && !open });
   }, [open, showTeaser]);
+
+  // Short views (Home, Requests, contact details, a service card, confirmations)
+  // ask the host page for exactly the height they need, so there is no dead
+  // space under the last card. Phones stay full-screen and are left alone.
+  useEffect(() => {
+    if (!open || typeof window === "undefined") return;
+    const measure = () => {
+      if (window.innerWidth < 480) return;
+      let height = WIDGET_MAX_H;
+      if (!isFullHeightView(view)) {
+        const head = headerRef.current?.offsetHeight ?? 0;
+        const tabs = tabsRef.current?.offsetHeight ?? 0;
+        const composer = composerRef.current?.offsetHeight ?? 0;
+        const content = scroller.current?.scrollHeight ?? 0;
+        height = Math.ceil(head + tabs + composer + content) + 2;
+      }
+      post("resize", {
+        open: true,
+        bubble: false,
+        height: Math.max(WIDGET_MIN_H, Math.min(WIDGET_MAX_H, height)),
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(() => measure());
+    if (contentRef.current) ro.observe(contentRef.current);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [open, view, config, messages, error, ended]);
 
   // On phones the on-screen keyboard shrinks the visual viewport. The panel is
   // sized in dvh so the header and tabs stay put; we only need to bring the
@@ -911,6 +962,7 @@ function WidgetPage() {
     >
       {view !== "menu" && (
         <header
+          ref={headerRef}
           className="relative flex shrink-0 items-center gap-3 px-4 py-3.5 text-white"
           style={{
             background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 68%, black))`,
@@ -1008,6 +1060,7 @@ function WidgetPage() {
         ref={scroller}
         className={`min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background ${view === "menu" ? "" : "px-4 py-4"}`}
       >
+        <div ref={contentRef}>
         {view === "menu" && (
           <HomeView
             config={config}
@@ -1467,10 +1520,12 @@ function WidgetPage() {
             )}
           </div>
         )}
+        </div>
       </div>
 
       {(view === "chat" || view === "waiting") && !ended && (
         <form
+          ref={composerRef}
           className="border-t border-border/70 bg-card px-3 pb-3 pt-2.5"
           onSubmit={(e) => {
             e.preventDefault();
@@ -1554,6 +1609,7 @@ function WidgetPage() {
       )}
 
       <nav
+        ref={tabsRef}
         aria-label="Chat sections"
         className="flex shrink-0 items-stretch gap-0.5 border-t border-border/60 bg-card px-1.5 pb-2 pt-1.5 [&>button]:flex-1"
       >

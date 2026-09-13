@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { widgetPreviewProofFn } from "@/lib/widget-preview.functions";
@@ -24,6 +24,21 @@ export function LiveWidgetPreview({
   config?: Record<string, unknown>;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
+  // The widget asks for the height its content needs; the preview follows it,
+  // capped at 720, so it looks exactly like the embedded panel.
+  const [height, setHeight] = useState(720);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const d = event.data as { source?: string; type?: string; height?: number } | null;
+      if (!d || d.source !== "lovable-chat-widget" || d.type !== "resize") return;
+      if (typeof d.height === "number" && d.height > 0) {
+        setHeight(Math.min(720, Math.max(280, d.height)));
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
   const mintProof = useServerFn(widgetPreviewProofFn);
   const proofQuery = useQuery({
     queryKey: ["widget-preview-proof", websiteId],
@@ -56,7 +71,10 @@ export function LiveWidgetPreview({
           Hide
         </Button>
       </div>
-      <div className="h-[720px] max-h-[calc(100vh-140px)] overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
+      <div
+        style={{ height, transition: "height 180ms ease" }}
+        className="max-h-[calc(100vh-140px)] overflow-hidden rounded-xl border border-border bg-background shadow-2xl motion-reduce:transition-none"
+      >
         {proofQuery.isError ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
             <p className="text-sm text-muted-foreground">
