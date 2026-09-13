@@ -980,6 +980,9 @@ export async function answerQuestion(opts: {
     result.answer ?? "",
     used.map((m) => `${m.title}\n${m.content}`),
     Math.max(0, Math.min(1, Number(result.confidence) || 0)),
+    // The organization's own contact details are handed to the model in the
+    // prompt above, so repeating them is accurate rather than invented.
+    [org?.phone, org?.email, (org as { address?: string | null } | null)?.address],
   );
 
   const confidence = grounding.confidence;
