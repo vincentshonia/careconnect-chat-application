@@ -70,7 +70,8 @@ export const Route = createFileRoute("/api/public/widget.js")({
     if (state.position === 'bottom-left') { frame.style.right = 'auto'; frame.style.left = '16px'; }
     else { frame.style.left = 'auto'; frame.style.right = '16px'; }
     frame.style.width = Math.min(400, vw - 24) + 'px';
-    frame.style.height = Math.min(720, vh - 24) + 'px';
+    // The widget asks for exactly the height its content needs, capped at 720.
+    frame.style.height = Math.min(state.height || 720, 720, vh - 24) + 'px';
   }
 
   window.addEventListener('message', function (e) {
@@ -79,6 +80,7 @@ export const Route = createFileRoute("/api/public/widget.js")({
     if (d.type === 'resize') {
       state.open = !!d.open;
       state.bubble = !!d.bubble;
+      if (typeof d.height === 'number' && d.height > 0) state.height = d.height;
       apply();
     }
     if (d.type === 'position') {
