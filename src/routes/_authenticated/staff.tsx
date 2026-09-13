@@ -420,7 +420,9 @@ export function StaffPanel() {
             return (
               <article key={p.id} className="rounded-xl border border-border p-4">
                 <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
+                  <div className="flex items-start gap-3">
+                    <StaffAvatar userId={p.id} name={p.full_name} className="h-10 w-10" />
+                    <div>
                     <h2 className="text-sm font-semibold">
                       {p.full_name || "Unnamed staff member"}
                     </h2>
@@ -437,6 +439,7 @@ export function StaffPanel() {
                           {p.status === "archived" ? "removed" : p.status}
                         </Badge>
                       ) : null}
+                    </div>
                     </div>
                   </div>
 

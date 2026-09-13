@@ -36,7 +36,10 @@ export const Route = createFileRoute("/api/public/chat/poll")({
               .maybeSingle();
             agentName = agent?.display_name ?? agent?.full_name ?? null;
             // The photo is only shared with visitors when the employee opted in.
-            agentAvatarUrl = agent?.show_in_widget_team ? (agent?.avatar_url ?? null) : null;
+            const { avatarPublicUrl } = await import("@/lib/image-bytes");
+            agentAvatarUrl = agent?.show_in_widget_team
+              ? avatarPublicUrl(agent?.avatar_url ?? null)
+              : null;
           }
 
           return Response.json(

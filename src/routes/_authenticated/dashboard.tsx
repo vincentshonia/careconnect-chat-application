@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { StaffAvatar } from "@/components/admin/StaffAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSessionContext } from "@/hooks/use-session-context";
@@ -187,15 +188,11 @@ function DashboardPage() {
     >
       {/* Personalised header ------------------------------------------------ */}
       <header className="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card p-4">
-        <div className="h-14 w-14 overflow-hidden rounded-full bg-muted">
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-muted-foreground">
-              {firstName.charAt(0).toUpperCase()}
-            </div>
-          )}
-        </div>
+        <StaffAvatar
+          userId={session.data?.userId ?? null}
+          name={profile?.display_name || profile?.full_name || firstName}
+          className="h-14 w-14 text-lg"
+        />
         <div className="min-w-[220px] flex-1">
           <h1 className="text-xl font-semibold">
             {greeting()}, {firstName}

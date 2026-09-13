@@ -21,10 +21,11 @@ export const Route = createFileRoute("/api/public/staff-avatar/$")({
         // A stored photo is not public by itself: it is served only when it
         // belongs to an active staff member who explicitly opted in to being
         // shown in the widget. Otherwise the object stays private.
+        // Photos are stored as the object path; older rows hold the proxy URL.
         const { data: owner } = await supabaseAdmin
           .from("profiles")
           .select("id")
-          .eq("avatar_url", `/api/public/staff-avatar/${key}`)
+          .or(`avatar_url.eq.${key},avatar_url.eq./api/public/staff-avatar/${key}`)
           .eq("status", "active")
           .eq("show_in_widget_team", true)
           .maybeSingle();

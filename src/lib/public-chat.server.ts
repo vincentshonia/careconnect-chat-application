@@ -42,6 +42,7 @@ export function admin(): Admin {
 
 export { PublicChatError } from "./public-chat-error";
 import { PublicChatError } from "./public-chat-error";
+import { avatarPublicUrl } from "./image-bytes";
 
 function hostOf(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -333,7 +334,7 @@ async function buildWidgetConfig(
       .map((p) => ({
         id: p.id as string,
         name: (p.display_name || p.full_name || "Team member") as string,
-        avatarUrl: p.avatar_url as string,
+        avatarUrl: avatarPublicUrl(p.avatar_url as string) as string,
       })),
     businessOpen: open,
     nextOpenAt: reopensAt ? formatNextOpen(reopensAt, org?.timezone) : null,
