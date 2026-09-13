@@ -8,6 +8,10 @@ import { useTheme, type ThemePreference } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useServerFn } from "@tanstack/react-start";
+import { StaffAvatar, useStaffAvatarUrl } from "@/components/admin/StaffAvatar";
+import { removeStaffAvatarFn, uploadStaffAvatarFn } from "@/lib/staff-avatar.functions";
+import { MAX_AVATAR_BYTES, sniffImage } from "@/lib/image-bytes";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
@@ -45,7 +49,13 @@ function PersonalSettingsPage() {
 
   const [notice, setNotice] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  // `avatarUrl` holds the stored object path; `signedAvatar` is the freshly
+  // uploaded link so the new photo shows without waiting for a refetch.
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [signedAvatar, setSignedAvatar] = useState<string | null>(null);
+  const uploadAvatar = useServerFn(uploadStaffAvatarFn);
+  const removeAvatar = useServerFn(removeStaffAvatarFn);
+  const avatarQuery = useStaffAvatarUrl(userId);
   // Public visibility of name + photo in the widget. Opt-in, never assumed.
   const [showInWidget, setShowInWidget] = useState(false);
   const [form, setForm] = useState({
@@ -126,31 +136,39 @@ function PersonalSettingsPage() {
     onError: (e) => setNotice(e instanceof Error ? e.message : "Could not save your settings"),
   });
 
+  async function refreshAvatarQueries() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["my-profile", userId] }),
+      queryClient.invalidateQueries({ queryKey: ["profile"] }),
+      queryClient.invalidateQueries({ queryKey: ["staff"] }),
+      queryClient.invalidateQueries({ queryKey: ["staff-avatar", userId] }),
+      queryClient.invalidateQueries({ queryKey: ["session-context"] }),
+    ]);
+  }
+
   async function handleAvatarUpload(file: File) {
     if (!userId) return;
     setNotice(null);
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > MAX_AVATAR_BYTES) {
       setNotice("Photos must be under 5 MB.");
       return;
     }
     setUploading(true);
     try {
-      const ext = (file.name.split(".").pop() || "png").toLowerCase();
-      const path = `${userId}/avatar-${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("staff-avatars")
-        .upload(path, file, { cacheControl: "300", upsert: true, contentType: file.type });
-      if (uploadError) throw uploadError;
-
-      const url = `/api/public/staff-avatar/${path}`;
-      const { error } = await supabase
-        .from("profiles")
-        .update({ avatar_url: url })
-        .eq("id", userId);
-      if (error) throw error;
-      setAvatarUrl(url);
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (!sniffImage(bytes)) {
+        setNotice("Please choose a PNG or JPG photo.");
+        return;
+      }
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      }
+      const result = await uploadAvatar({ data: { base64: btoa(binary) } });
+      setSignedAvatar(result.url ?? null);
+      setAvatarUrl(result.path);
       setNotice("Profile photo updated.");
-      await queryClient.invalidateQueries({ queryKey: ["my-profile", userId] });
+      await refreshAvatarQueries();
     } catch (e) {
       setNotice(e instanceof Error ? e.message : "Photo upload failed");
     } finally {
@@ -160,14 +178,16 @@ function PersonalSettingsPage() {
 
   async function handleAvatarRemove() {
     if (!userId) return;
-    const { error } = await supabase.from("profiles").update({ avatar_url: null }).eq("id", userId);
-    if (error) {
-      setNotice(error.message);
+    try {
+      await removeAvatar({});
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Could not remove the photo");
       return;
     }
+    setSignedAvatar(null);
     setAvatarUrl(null);
     setNotice("Profile photo removed.");
-    await queryClient.invalidateQueries({ queryKey: ["my-profile", userId] });
+    await refreshAvatarQueries();
   }
 
   async function handleThemeChange(value: ThemePreference) {
@@ -185,13 +205,6 @@ function PersonalSettingsPage() {
     });
     setNotice(error ? error.message : `Password reset link sent to ${email}.`);
   }
-
-  const initials = (form.display_name || form.full_name || "?")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join("");
 
   return (
     <AdminShell
@@ -216,22 +229,17 @@ function PersonalSettingsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
-            <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-full border border-border bg-muted text-sm font-semibold text-muted-foreground">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt="Your profile photo"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                initials || "—"
-              )}
-            </div>
+            <StaffAvatar
+              userId={userId}
+              name={form.display_name || form.full_name}
+              className="h-16 w-16"
+              imageUrl={signedAvatar ?? (avatarUrl ? (avatarQuery.data ?? null) : null)}
+            />
             <div className="flex flex-wrap items-center gap-2">
               <input
                 id="avatar-file"
                 type="file"
-                accept="image/png,image/jpeg,image/webp"
+                accept="image/png,image/jpeg"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
