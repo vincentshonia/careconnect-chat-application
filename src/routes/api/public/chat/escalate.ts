@@ -47,6 +47,8 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
           const ctx = await mod.sessionContext(input.session, mod.verifiedOrigin(request));
           await mod.enforceRateLimit(`esc:s:${ctx.claims.sid}`, 5, 300);
           const website = ctx.website;
+          // The browser's flag is only a hint; the organization's own clock decides.
+          const afterHours = !(await mod.isOrganizationOpen(website));
           const conversation = input.conversationId
             ? await mod.conversationForSession(ctx, input.conversationId)
             : await mod.ensureConversation(website, ctx.visitor, null);
