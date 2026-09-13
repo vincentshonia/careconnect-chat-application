@@ -621,6 +621,37 @@ function WidgetPage() {
     post("resize", { open, bubble: showTeaser && !open });
   }, [open, showTeaser]);
 
+  // Short views (Home, Requests, contact details, a service card, confirmations)
+  // ask the host page for exactly the height they need, so there is no dead
+  // space under the last card. Phones stay full-screen and are left alone.
+  useEffect(() => {
+    if (!open || typeof window === "undefined") return;
+    const measure = () => {
+      if (window.innerWidth < 480) return;
+      let height = WIDGET_MAX_H;
+      if (!isFullHeightView(view)) {
+        const head = headerRef.current?.offsetHeight ?? 0;
+        const tabs = tabsRef.current?.offsetHeight ?? 0;
+        const composer = composerRef.current?.offsetHeight ?? 0;
+        const content = scroller.current?.scrollHeight ?? 0;
+        height = Math.ceil(head + tabs + composer + content) + 2;
+      }
+      post("resize", {
+        open: true,
+        bubble: false,
+        height: Math.max(WIDGET_MIN_H, Math.min(WIDGET_MAX_H, height)),
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(() => measure());
+    if (contentRef.current) ro.observe(contentRef.current);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [open, view, config, messages, error, ended]);
+
   // On phones the on-screen keyboard shrinks the visual viewport. The panel is
   // sized in dvh so the header and tabs stay put; we only need to bring the
   // focused field back into the scrolling middle.
