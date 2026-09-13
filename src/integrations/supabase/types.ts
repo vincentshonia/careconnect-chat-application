@@ -2717,6 +2717,8 @@ export type Database = {
           text_rank: number
           text_score: number
           title: string
+          trigram_score: number
+          ts_score: number
           vector_rank: number
         }[]
       }
