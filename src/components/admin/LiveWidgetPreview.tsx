@@ -24,6 +24,21 @@ export function LiveWidgetPreview({
   config?: Record<string, unknown>;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
+  // The widget asks for the height its content needs; the preview follows it,
+  // capped at 720, so it looks exactly like the embedded panel.
+  const [height, setHeight] = useState(720);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const d = event.data as { source?: string; type?: string; height?: number } | null;
+      if (!d || d.source !== "lovable-chat-widget" || d.type !== "resize") return;
+      if (typeof d.height === "number" && d.height > 0) {
+        setHeight(Math.min(720, Math.max(280, d.height)));
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
   const mintProof = useServerFn(widgetPreviewProofFn);
   const proofQuery = useQuery({
     queryKey: ["widget-preview-proof", websiteId],
