@@ -365,6 +365,11 @@ function WidgetPage() {
   /** True once a human (not the assistant) has replied in this conversation. */
   const [agentReplied, setAgentReplied] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
+  /** Pieces measured to size the frame to its content on short views. */
+  const headerRef = useRef<HTMLElement>(null);
+  const composerRef = useRef<HTMLFormElement>(null);
+  const tabsRef = useRef<HTMLElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   /** Newest message timestamp we have rendered, per conversation id. */
   const lastSeenByConversation = useRef<Record<string, string>>({});
   /** Set while a send is in flight so two fast Enters cannot open two chats. */
