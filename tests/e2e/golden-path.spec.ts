@@ -99,9 +99,7 @@ test("visitor → AI chat → human hand-off → agent claim, reply and resoluti
   await visitor.getByRole("button", { name: "Talk to an agent" }).click();
   await expect(visitor.getByText("Speak with a representative")).toBeVisible();
 
-  await visitor
-    .getByLabel("Which team can help you?")
-    .selectOption({ label: tenant.departmentName });
+  // Visitors no longer pick a team: routing rules and the default department decide.
   await visitor.getByLabel("Full name").fill(`E2E Visitor ${tenant.runId}`);
   await visitor.getByLabel("Phone number").fill("5555550142");
   await visitor.getByLabel("Email address").fill(`${tenant.runId}.visitor@example.test`);
