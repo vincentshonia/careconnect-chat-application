@@ -71,7 +71,10 @@ export function LiveWidgetPreview({
           Hide
         </Button>
       </div>
-      <div className="h-[720px] max-h-[calc(100vh-140px)] overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
+      <div
+        style={{ height, transition: "height 180ms ease" }}
+        className="max-h-[calc(100vh-140px)] overflow-hidden rounded-xl border border-border bg-background shadow-2xl motion-reduce:transition-none"
+      >
         {proofQuery.isError ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
             <p className="text-sm text-muted-foreground">
