@@ -142,7 +142,7 @@ export function AdminShell({
     .filter((group) => group.items.length > 0);
 
   const orgName = branding.data?.name ?? "Pacific Health";
-  
+
   const initials = orgName
     .split(/\s+/)
     .filter(Boolean)
@@ -183,7 +183,6 @@ export function AdminShell({
           )}
         </Link>
       </div>
-
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
         {visibleGroups.map((group) => (

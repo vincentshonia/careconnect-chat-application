@@ -89,9 +89,7 @@ export function nextOpenAt(
 ): Date | null {
   if (!hours?.length) return null;
   const zone = safeTimeZone(timezone);
-  const closedDates = new Set(
-    (holidays ?? []).map((h) => String(h.holiday_date).slice(0, 10)),
-  );
+  const closedDates = new Set((holidays ?? []).map((h) => String(h.holiday_date).slice(0, 10)));
   const base = zonedParts(now, zone);
 
   for (let i = 0; i < 14; i++) {

@@ -224,7 +224,7 @@ async function buildWidgetConfig(
     { data: faqs },
     { data: hours },
     { data: holidays },
-    
+
     { data: team },
   ] = await Promise.all([
     db.from("organizations").select("*").eq("id", website.organization_id).maybeSingle(),
@@ -271,7 +271,9 @@ async function buildWidgetConfig(
   const open = isOpenNow((hours ?? []) as any, (holidays ?? []) as any, org?.timezone);
   // Shown to visitors who leave details after hours, so they know when a
   // member engagement specialist will get back to them.
-  const reopensAt = open ? null : nextOpenAt((hours ?? []) as any, (holidays ?? []) as any, org?.timezone);
+  const reopensAt = open
+    ? null
+    : nextOpenAt((hours ?? []) as any, (holidays ?? []) as any, org?.timezone);
   const agentsAvailable = await hasAvailableAgent(website.organization_id);
 
   return {
@@ -303,8 +305,7 @@ async function buildWidgetConfig(
       homeHeadline: website.home_headline ?? "How can we help?",
       homeSubtitle: website.home_subtitle ?? "CareConnect AI is available anytime.",
       homeCtaTitle: website.home_cta_title ?? "Speak to a live agent",
-      homeCtaSubtitle:
-        website.home_cta_subtitle ?? "Talk with a member engagement specialist",
+      homeCtaSubtitle: website.home_cta_subtitle ?? "Talk with a member engagement specialist",
       helpTitle: website.help_title ?? "Search for help",
       privacyFooterText: website.privacy_footer_text ?? "Your privacy matters to us.",
       showHomeTab: website.show_home_tab !== false,
@@ -840,7 +841,6 @@ export async function answerQuestion(opts: {
     };
   }
 
-
   // Hybrid retrieval: meaning-similarity and word/fuzzy matching, blended by
   // reciprocal rank fusion so an exact plan name or phone number is found even
   // when the embedding misses it.
@@ -862,7 +862,6 @@ export async function answerQuestion(opts: {
     retrievalFailed = true;
   }
 
-
   const relevant = matches.filter(
     (m) =>
       Number(m.similarity ?? 0) >= MIN_SIMILARITY || Number(m.text_score ?? 0) >= MIN_TEXT_SCORE,
@@ -881,13 +880,7 @@ export async function answerQuestion(opts: {
     // visitor's — treat that as low confidence and offer a person.
     const offTopic = !retrievalFailed && matches.length > 0 && isOutOfScope(matches);
     if (offTopic) {
-      const next = await bumpScopeState(
-        db,
-        website,
-        opts.conversationId ?? null,
-        scope,
-        true,
-      );
+      const next = await bumpScopeState(db, website, opts.conversationId ?? null, scope, true);
       return {
         answer: next.limitReached
           ? `${outOfScopeReply(orgName, language)} ${scopeLimitedNotice(orgName, language)}`
@@ -1148,8 +1141,7 @@ export async function startWidgetSession(opts: {
     org: website.organization_id,
     // Store the *proven* host so later endpoints authorize against a value the
     // browser proved, not one the page claimed.
-    host:
-      website.dev_mode === false ? provenHost : (provenHost ?? opts.clientHost ?? opts.host),
+    host: website.dev_mode === false ? provenHost : (provenHost ?? opts.clientHost ?? opts.host),
     ...(isPreview ? { preview: true } : {}),
   });
   return { token, expiresAt, websiteId: website.id as string };

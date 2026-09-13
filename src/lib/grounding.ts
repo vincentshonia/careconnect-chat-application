@@ -71,9 +71,7 @@ export function checkGrounding(
   alwaysAllowed: (string | null | undefined)[] = [],
 ): GroundingResult {
   const body = (answer ?? "").trim();
-  const haystack = normalize(
-    [...citedTexts, ...alwaysAllowed.filter(Boolean)].join(" \n "),
-  );
+  const haystack = normalize([...citedTexts, ...alwaysAllowed.filter(Boolean)].join(" \n "));
 
   if (!citedTexts.length) {
     return {

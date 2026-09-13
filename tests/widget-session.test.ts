@@ -75,9 +75,9 @@ describe("session-bound authorization", () => {
 
   it("refuses when the request carries a disallowed Origin", async () => {
     const { assertSessionHostAllowed } = await import("@/lib/public-chat.server");
-    expect(() => assertSessionHostAllowed(site, "https://example.com", "https://evil.test")).toThrow(
-      /not authorized/i,
-    );
+    expect(() =>
+      assertSessionHostAllowed(site, "https://example.com", "https://evil.test"),
+    ).toThrow(/not authorized/i);
   });
 
   it("refuses a session that was minted without a proven host", async () => {

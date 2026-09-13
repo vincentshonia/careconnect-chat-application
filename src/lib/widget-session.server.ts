@@ -133,11 +133,7 @@ export type OriginProofClaims = { wid: string; host: string; exp: number; previe
 
 const ORIGIN_PROOF_TTL_SECONDS = 15 * 60;
 
-export async function signOriginProof(
-  wid: string,
-  host: string,
-  preview = false,
-): Promise<string> {
+export async function signOriginProof(wid: string, host: string, preview = false): Promise<string> {
   const payload: OriginProofClaims = {
     wid,
     host,
