@@ -341,6 +341,37 @@ async function buildWidgetConfig(
   };
 }
 
+/**
+ * Server-side "are we open right now?" for a website's organization.
+ *
+ * The widget sends its own idea of after-hours, but a visitor can tamper with
+ * anything the browser sends, so anything that routes work to staff decides
+ * this here, from the organization's own hours, holidays and timezone.
+ */
+export async function isOrganizationOpen(website: {
+  id: string;
+  organization_id: string;
+}): Promise<boolean> {
+  const db = admin();
+  const [{ data: org }, { data: hours }, { data: holidays }] = await Promise.all([
+    db.from("organizations").select("timezone").eq("id", website.organization_id).maybeSingle(),
+    db
+      .from("business_hours")
+      .select("*")
+      .eq("organization_id", website.organization_id)
+      .is("department_id", null)
+      .or(`website_id.is.null,website_id.eq.${website.id}`),
+    db
+      .from("holidays")
+      .select("holiday_date,website_id")
+      .eq("organization_id", website.organization_id)
+      .or(`website_id.is.null,website_id.eq.${website.id}`),
+  ]);
+  return isOpenNow((hours ?? []) as any, (holidays ?? []) as any, org?.timezone);
+}
+
+
+
 export const DEFAULT_MENU = [
   { key: "services", label: "Services", icon: "heart" },
   { key: "faq", label: "Frequently Asked Questions", icon: "help" },
