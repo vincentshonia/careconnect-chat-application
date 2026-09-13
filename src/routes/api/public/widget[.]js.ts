@@ -35,7 +35,8 @@ export const Route = createFileRoute("/api/public/widget.js")({
     '&op=' + encodeURIComponent(originProof) +
     '&r=' + encodeURIComponent(document.referrer || '') + '&q=' + encodeURIComponent(window.location.search || '');
   frame.setAttribute('allowtransparency', 'true');
-  frame.style.cssText = 'position:fixed;bottom:16px;right:16px;width:88px;height:88px;border:0;z-index:2147483000;background:transparent;color-scheme:normal;transition:width .18s ease,height .18s ease;';
+  frame.style.cssText = 'position:fixed;bottom:16px;right:16px;width:88px;height:88px;border:0;z-index:2147483000;background:transparent;color-scheme:normal;' +
+    (reduceMotion ? '' : 'transition:width .18s ease,height .18s ease;');
   document.body.appendChild(frame);
 
   // The panel always fits the space the page can give it; the widget itself
