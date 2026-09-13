@@ -41,12 +41,16 @@ let baseline: ProtectedBaseline | null = null;
 
 /** Deletes every fixture; safe mid-setup and safe to call twice. */
 async function teardown() {
-  // Organizations first: their rows reference the accounts.
-  if (orgId) {
-    await purgeSyntheticOrganizations(db, [orgId]);
-    orgId = "";
+  // Organizations first: their rows reference the accounts. The account purge
+  // runs in a `finally` so an organization purge that throws can never leave
+  // synthetic logins — or a half-deleted org — behind for the next run.
+  const organization = orgId;
+  orgId = "";
+  try {
+    if (organization) await purgeSyntheticOrganizations(db, [organization]);
+  } finally {
+    await purgeSyntheticUsers(db, createdUsers.splice(0, createdUsers.length));
   }
-  await purgeSyntheticUsers(db, createdUsers.splice(0, createdUsers.length));
 }
 
 type ClaimResult = { ok?: boolean; code?: string; message?: string; assigned_to?: string };
