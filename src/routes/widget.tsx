@@ -378,6 +378,17 @@ function WidgetPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
+  /** Below 480px the host page shows the panel full-screen. */
+  const [isNarrowViewport, setIsNarrowViewport] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(max-width: 479px)");
+    const sync = () => setIsNarrowViewport(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   const storageKey = `phg-widget-${websiteId}`;
   const threadKey = `${storageKey}-conv-v1`;
   const ended = isConversationEnded(convStatus);
@@ -964,9 +975,18 @@ function WidgetPage() {
     );
   }
 
+  // Short views hug their content and sit flush against the bottom of the
+  // frame, so a host that hands us a taller box never shows dead space between
+  // the last card and the tab bar. Full-screen phones keep the full height.
+  const hugContent = !isFullHeightView(view) && !isNarrowViewport;
+
   return (
     <div
-      className="flex h-dvh max-h-dvh w-full flex-col overflow-hidden bg-card shadow-float ring-1 ring-black/5"
+      className={`flex w-full flex-col overflow-hidden bg-card shadow-float ring-1 ring-black/5 ${
+        hugContent
+          ? "absolute bottom-0 left-0 right-0 h-auto max-h-dvh"
+          : "h-dvh max-h-dvh"
+      }`}
       style={{ borderRadius: radius, fontFamily: config.website.fontFamily }}
     >
       {view !== "menu" && (
