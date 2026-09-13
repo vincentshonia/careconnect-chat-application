@@ -206,7 +206,6 @@ function PersonalSettingsPage() {
     setNotice(error ? error.message : `Password reset link sent to ${email}.`);
   }
 
-
   return (
     <AdminShell
       title="My settings"

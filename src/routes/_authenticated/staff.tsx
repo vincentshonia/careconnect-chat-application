@@ -424,23 +424,23 @@ export function StaffPanel() {
                   <div className="flex items-start gap-3">
                     <StaffAvatar userId={p.id} name={p.full_name} className="h-10 w-10" />
                     <div>
-                    <h2 className="text-sm font-semibold">
-                      {p.full_name || "Unnamed staff member"}
-                    </h2>
-                    <p className="text-xs text-muted-foreground">{p.email}</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Badge variant="outline" className="capitalize">
-                        {role ? ROLE_LABEL[role as OrgRole] : "No role"}
-                      </Badge>
-                      <Badge variant="outline" className="capitalize">
-                        {p.presence}
-                      </Badge>
-                      {p.status !== "active" ? (
-                        <Badge variant="destructive" className="capitalize">
-                          {p.status === "archived" ? "removed" : p.status}
+                      <h2 className="text-sm font-semibold">
+                        {p.full_name || "Unnamed staff member"}
+                      </h2>
+                      <p className="text-xs text-muted-foreground">{p.email}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Badge variant="outline" className="capitalize">
+                          {role ? ROLE_LABEL[role as OrgRole] : "No role"}
                         </Badge>
-                      ) : null}
-                    </div>
+                        <Badge variant="outline" className="capitalize">
+                          {p.presence}
+                        </Badge>
+                        {p.status !== "active" ? (
+                          <Badge variant="destructive" className="capitalize">
+                            {p.status === "archived" ? "removed" : p.status}
+                          </Badge>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
 
