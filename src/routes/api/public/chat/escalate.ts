@@ -14,7 +14,10 @@ const bodySchema = z.object({
   serviceInterest: z.string().trim().max(160).optional().nullable(),
   preferredLanguage: z.string().trim().max(60).optional().nullable(),
   consent: z.literal(true),
-  /** Submitted outside the organization's operating hours. */
+  /**
+   * Client hint only. The authoritative value is recomputed on the server from
+   * the organization's hours, holidays and timezone.
+   */
   after_hours: z.boolean().optional().default(false),
 
   kind: z
