@@ -962,6 +962,8 @@ function WidgetPage() {
     >
       {view !== "menu" && (
         <header
+          ref={headerRef}
+
           className="relative flex shrink-0 items-center gap-3 px-4 py-3.5 text-white"
           style={{
             background: `linear-gradient(135deg, ${brand}, color-mix(in oklab, ${brand} 68%, black))`,
