@@ -368,6 +368,37 @@ describe("reporting at volume", () => {
     expect(none.total).toBe(0);
   });
 
+  it("never counts a preview chat in the overview", async () => {
+    const before = await rpc<{ kpis: Record<string, unknown> }>("report_overview", {
+      ...baseFilters(),
+      _sla: 15,
+    });
+
+    const previewId = randomUUID();
+    const { error } = await db.from("conversations").insert({
+      id: previewId,
+      organization_id: orgA,
+      website_id: siteA,
+      reference: `SC-${suffix}-preview`,
+      status: "resolved",
+      is_preview: true,
+      created_at: new Date(Date.UTC(2025, 0, 15, 12, 0, 0)).toISOString(),
+      resolved_at: new Date(Date.UTC(2025, 0, 15, 12, 5, 0)).toISOString(),
+    } as never);
+    expect(error).toBeNull();
+
+    try {
+      const after = await rpc<{ kpis: Record<string, unknown> }>("report_overview", {
+        ...baseFilters(),
+        _sla: 15,
+      });
+      expect(Number(after.kpis["total"])).toBe(Number(before.kpis["total"]));
+      expect(Number(after.kpis["resolved"])).toBe(Number(before.kpis["resolved"]));
+    } finally {
+      await db.from("conversations").delete().eq("id", previewId);
+    }
+  }, 120_000);
+
   /* ------------------------- KPI ↔ drill-down parity ------------------------ */
 
   it("overview counts reconcile exactly with the ticket drill-downs", async () => {

@@ -156,9 +156,10 @@ export async function handoffToHumans(input: {
     },
   });
 
-  const routingMode = input.forceSharedQueue || input.afterHours
-    ? ("shared_queue" as const)
-    : await departmentRoutingMode(departmentId);
+  const routingMode =
+    input.forceSharedQueue || input.afterHours
+      ? ("shared_queue" as const)
+      : await departmentRoutingMode(departmentId);
 
   const assigned =
     routingMode === "round_robin"

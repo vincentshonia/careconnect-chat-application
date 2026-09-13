@@ -22,7 +22,26 @@ describe("out-of-scope detection", () => {
   });
 
   it("keeps a weak but overlapping question in scope", () => {
-    expect(isOutOfScope([{ similarity: 0.1, text_score: 0.04 }])).toBe(false);
+    expect(isOutOfScope([{ similarity: 0.1, text_score: 0.04, ts_score: 0.04 }])).toBe(false);
+  });
+
+  it('classifies "write me a poem about the moon" as off topic on recorded scores', () => {
+    // Recorded from match_knowledge_hybrid: no shared search term, only the
+    // fuzzy character overlap every pair of English sentences produces.
+    const recorded = [
+      { similarity: 0.71, ts_score: 0, trigram_score: 0.085, text_score: 0.085 },
+      { similarity: 0.69, ts_score: 0, trigram_score: 0.071, text_score: 0.071 },
+      { similarity: 0.68, ts_score: 0, trigram_score: 0.06, text_score: 0.06 },
+    ];
+    expect(isOutOfScope(recorded)).toBe(true);
+  });
+
+  it('keeps "What counties do you serve?" in scope', () => {
+    const recorded = [
+      { similarity: 0.84, ts_score: 0.09, trigram_score: 0.19, text_score: 0.19 },
+      { similarity: 0.8, ts_score: 0, trigram_score: 0.14, text_score: 0.14 },
+    ];
+    expect(isOutOfScope(recorded)).toBe(false);
   });
 
   it("names the organization in the reply", () => {

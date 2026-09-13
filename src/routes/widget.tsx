@@ -20,7 +20,6 @@ import {
   shouldShowRating,
 } from "@/lib/widget-client";
 
-
 export const Route = createFileRoute("/widget")({
   head: () => ({
     meta: [
@@ -85,7 +84,7 @@ type Config = {
     privacyNotice: string;
     emergencyMessage: string;
   };
-  
+
   services: Array<{
     id: string;
     name: string;
@@ -182,7 +181,6 @@ function ContactCard({ config, brand }: { config: Config; brand: string }) {
     >
       {/* The company name is shown in the panel header on this view. */}
 
-
       <div className="space-y-3">
         {rows.map((row) => (
           <div key={row.key} className="flex items-start gap-3">
@@ -214,7 +212,12 @@ function ContactCard({ config, brand }: { config: Config; brand: string }) {
           className="mt-4 flex items-start gap-2 rounded-lg p-3 text-muted-foreground"
           style={{ background: `${brand}0f`, fontSize: 13, lineHeight: 1.5 }}
         >
-          <NoticeIcon size={15} style={{ color: brand }} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <NoticeIcon
+            size={15}
+            style={{ color: brand }}
+            className="mt-0.5 shrink-0"
+            aria-hidden="true"
+          />
           <span>{notice}</span>
         </div>
       ) : null}
@@ -960,7 +963,7 @@ function WidgetPage() {
               }
             >
               {view === "contact"
-                ? (config.organization.name || "Pacific Health Group")
+                ? config.organization.name || "Pacific Health Group"
                 : (agentName ?? "PHG CareConnect Assistant")}
             </p>
             <p className="truncate text-[11px] text-white/80">
@@ -973,7 +976,6 @@ function WidgetPage() {
                     : "AI assistant · leave a message anytime"}
             </p>
           </div>
-
 
           {!agentName && view !== "contact" && (
             // Outside business hours nobody can pick the chat up, so the offer
@@ -1732,8 +1734,7 @@ function HomeView({
                 ? afterHoursNotice(config)
                 : config.agentsAvailable
                   ? "Typical reply time is a few minutes"
-                  : config.website.homeCtaSubtitle ||
-                    "Talk with a member engagement specialist"}
+                  : config.website.homeCtaSubtitle || "Talk with a member engagement specialist"}
             </span>
           </span>
           <svg
@@ -1964,7 +1965,6 @@ function IntakeForm({
     healthPlan: "",
     serviceInterest: initialServiceInterest,
     preferredLanguage: "English",
-
 
     // Pre-checked so visitors get follow-up by default; they can opt out.
     consent: true,

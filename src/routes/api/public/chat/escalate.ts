@@ -16,7 +16,7 @@ const bodySchema = z.object({
   consent: z.literal(true),
   /** Submitted outside the organization's operating hours. */
   after_hours: z.boolean().optional().default(false),
-  
+
   kind: z
     .enum(["live_agent", "contact", "referral", "enrollment", "message"])
     .default("live_agent"),
@@ -179,25 +179,27 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             contact: "general",
             message: "general",
           };
-          const { data: intakeRow } = await db.from("intake_requests").insert({
-            organization_id: website.organization_id,
-            website_id: website.id,
-            conversation_id: conversation.id,
-            contact_id: contactId,
-            department_id: departmentId,
-            request_type: typeMap[input.kind] ?? "general",
-            priority: input.kind === "live_agent" ? "high" : "normal",
-            full_name: input.fullName,
-            email: normalizedEmail ?? input.email,
-            phone: normalizedPhone ?? input.phone,
-            county: input.county ?? null,
-            health_plan: input.healthPlan ?? null,
-            service_interest: input.serviceInterest ?? null,
-            preferred_language: input.preferredLanguage ?? "English",
-            source: "widget",
-            after_hours: input.after_hours,
-            notes: intakeNotes,
-          })
+          const { data: intakeRow } = await db
+            .from("intake_requests")
+            .insert({
+              organization_id: website.organization_id,
+              website_id: website.id,
+              conversation_id: conversation.id,
+              contact_id: contactId,
+              department_id: departmentId,
+              request_type: typeMap[input.kind] ?? "general",
+              priority: input.kind === "live_agent" ? "high" : "normal",
+              full_name: input.fullName,
+              email: normalizedEmail ?? input.email,
+              phone: normalizedPhone ?? input.phone,
+              county: input.county ?? null,
+              health_plan: input.healthPlan ?? null,
+              service_interest: input.serviceInterest ?? null,
+              preferred_language: input.preferredLanguage ?? "English",
+              source: "widget",
+              after_hours: input.after_hours,
+              notes: intakeNotes,
+            })
             .select("id")
             .single();
 

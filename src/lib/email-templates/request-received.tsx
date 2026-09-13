@@ -137,9 +137,7 @@ const RequestReceivedEmail = ({
   const accent = primaryColor || BRAND_DEEP;
   const expectation =
     responseTime ||
-    (afterHours
-      ? "on our next business day"
-      : "within one business day, and usually much sooner");
+    (afterHours ? "on our next business day" : "within one business day, and usually much sooner");
   return (
     <Html lang="en" dir="ltr">
       <Head />
@@ -197,8 +195,8 @@ const RequestReceivedEmail = ({
                 and mention your reference number.
               </Text>
               <Text style={note}>
-                If this is a medical emergency, call 911. For behavioral health support at any
-                hour, call{" "}
+                If this is a medical emergency, call 911. For behavioral health support at any hour,
+                call{" "}
                 <Link href={`tel:${crisisPhone.replace(/[^\d+]/g, "")}`} style={footerLink}>
                   {crisisPhone}
                 </Link>

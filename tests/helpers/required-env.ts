@@ -213,14 +213,31 @@ export async function purgeSyntheticOrganizations(
     if (!org) continue;
     assertSynthetic((org as { name: string }).name, "organization");
 
+    /* A single failing child table must never stop the organization itself from
+       being deleted — that is exactly how a synthetic org survives a run. Every
+       failure is collected, the organization row is deleted regardless, and the
+       collected failures are reported afterwards. */
+    const failures: string[] = [];
+    const counts: Record<string, number> = {};
     for (const table of ORG_SCOPED_TABLES) {
-      const { error } = await db.from(table).delete().eq("organization_id", organizationId);
-      // A residual row is a silent leak into the live project, so it fails loudly.
-      if (error) throw new Error(`purge ${table} for ${organizationId}: ${error.message}`);
+      const { error, count } = await db
+        .from(table)
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId);
+      if (error) failures.push(`${table}: ${error.message}`);
+      else if (count) counts[table] = count;
     }
     const { error } = await db.from("organizations").delete().eq("id", organizationId);
-    if (error) throw new Error(`purge organization ${organizationId}: ${error.message}`);
-    removed += 1;
+    if (error) failures.push(`organizations: ${error.message}`);
+    else removed += 1;
+
+    const deleted = Object.entries(counts)
+      .map(([table, n]) => `${table}=${n}`)
+      .join(" ");
+    console.log(`[cleanup] ${organizationId} deleted rows: ${deleted || "none"}`);
+    if (failures.length) {
+      throw new Error(`purge ${organizationId} left rows behind — ${failures.join("; ")}`);
+    }
   }
   if (removed > 0) console.log(`[cleanup] removed ${removed} synthetic organization(s)`);
   return removed;

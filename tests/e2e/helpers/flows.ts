@@ -67,7 +67,7 @@ export async function escalateToHuman(
   await page.getByRole("button", { name: "Talk to an agent" }).click();
   await expect(page.getByText("Speak with a representative")).toBeVisible();
 
-  await page.getByLabel("Which team can help you?").selectOption({ label: options.departmentName });
+  // Visitors no longer pick a team: routing rules and the default department decide.
   await page.getByLabel("Full name").fill(options.visitorName);
   await page.getByLabel("Phone number").fill("5555550142");
   await page.getByLabel("Email address").fill(`${tenant.runId}.visitor@example.test`);

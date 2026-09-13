@@ -3,9 +3,9 @@
 > Generated automatically by `bun run release:gate`. PASS/FAIL is derived
 > from process exit codes only. No credentials or secrets are recorded.
 
-**Executed (UTC):** 2026-09-12T05:32:38.162Z
-**Completed (UTC):** 2026-09-12T05:46:10.135Z
-**Build identification:** 27259ea3f587d1b1b4279e46b3b7639be28abef1
+**Executed (UTC):** 2026-09-13T06:05:59.886Z
+**Completed (UTC):** 2026-09-13T06:19:34.426Z
+**Build identification:** fcbbbb53d80ff600c8064c0a366fd5fda8936190
 **Node:** v22.22.0
 
 ## Overall: PASS
@@ -24,11 +24,11 @@
 
 ## Vitest
 
-- Test files: 23
-- Passed: 392
+- Test files: 24
+- Passed: 413
 - Failed: 0
 - Skipped: 0
-- Total: 392
+- Total: 413
 
 ## Playwright (browser E2E)
 

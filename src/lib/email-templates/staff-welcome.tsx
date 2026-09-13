@@ -135,9 +135,7 @@ const StaffWelcomeEmail = ({
         <Container style={container}>
           <Section style={card}>
             <Section style={brandBar}>
-              {logoUrl ? (
-                <Img src={logoUrl} alt={organizationName} style={logoImg} />
-              ) : null}
+              {logoUrl ? <Img src={logoUrl} alt={organizationName} style={logoImg} /> : null}
               <Text style={logoUrl ? { ...brandText, margin: "14px 0 0" } : brandText}>
                 CareConnect
               </Text>
@@ -223,6 +221,7 @@ export const template = {
     inviteUrl: "https://chat.mypacifichealth.com/invite?t=example-token",
     expiresAt: "2026-09-16T00:00:00.000Z",
     role: "agent",
-    logoUrl: "https://chat.mypacifichealth.com/__l5e/assets-v1/a3b250ac-f23a-4271-8d40-1f9118b44656/phg-logo-light.png",
+    logoUrl:
+      "https://chat.mypacifichealth.com/__l5e/assets-v1/a3b250ac-f23a-4271-8d40-1f9118b44656/phg-logo-light.png",
   },
 } satisfies TemplateEntry;
