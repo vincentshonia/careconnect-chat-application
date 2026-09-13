@@ -63,9 +63,17 @@ export function checkGrounding(
   answer: string,
   citedTexts: string[],
   confidence: number,
+  /**
+   * Details the organization publishes about itself — its phone, email and
+   * address. They are given to the model directly rather than through a
+   * knowledge chunk, so repeating them is correct, not a fabrication.
+   */
+  alwaysAllowed: (string | null | undefined)[] = [],
 ): GroundingResult {
   const body = (answer ?? "").trim();
-  const haystack = normalize(citedTexts.join(" \n "));
+  const haystack = normalize(
+    [...citedTexts, ...alwaysAllowed.filter(Boolean)].join(" \n "),
+  );
 
   if (!citedTexts.length) {
     return {

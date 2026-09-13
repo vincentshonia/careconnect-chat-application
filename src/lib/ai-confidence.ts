@@ -113,7 +113,9 @@ export function applyConfidenceBand(
   }
   if (confidence >= 0.3 && body) {
     return {
-      answer: hedgePrefix(language) + body.charAt(0).toLowerCase() + body.slice(1),
+      // The answer is kept verbatim: lower-casing the first letter mangles
+      // names like "Pacific Health Group" and "Medi-Cal".
+      answer: hedgePrefix(language) + body,
       escalate: true,
       useSources: true,
       hedged: true,
@@ -173,18 +175,37 @@ export function sanitizeVisitorMessage(text: string): string {
     .trim();
 }
 
-export type ScopeCandidate = { similarity?: number; text_score?: number };
+export type ScopeCandidate = {
+  similarity?: number;
+  /** Blended lexical score: GREATEST(ts_score, trigram_score). */
+  text_score?: number;
+  /** Word-match score (ts_rank_cd). Zero means no shared search term at all. */
+  ts_score?: number;
+  /** Fuzzy character-overlap score. Rarely exactly zero, so it needs a floor. */
+  trigram_score?: number;
+};
+
+/**
+ * A trigram score below this is noise: any two English sentences share a few
+ * three-letter sequences. Recorded off-topic questions land at 0.06–0.085.
+ */
+export const TRIGRAM_SCOPE_FLOOR = 0.12;
 
 /**
  * Nothing cleared the relevance floor. Decide whether this is a question we
  * simply have no good source for (low confidence) or one that has nothing to do
- * with the organization at all (out of scope): zero lexical overlap with every
- * candidate chunk means the visitor is asking about something else entirely.
+ * with the organization at all (out of scope).
+ *
+ * Out of scope means: not one candidate shares a search term with the question
+ * (`ts_score` is zero everywhere) and even the fuzzy character overlap is
+ * below the noise floor.
  */
 export function isOutOfScope(candidates: ScopeCandidate[]): boolean {
   // No candidates at all tells us nothing about the question — never off topic.
   if (!candidates.length) return false;
-  return candidates.every((c) => Number(c.text_score ?? 0) === 0);
+  const maxTs = Math.max(...candidates.map((c) => Number(c.ts_score ?? c.text_score ?? 0)));
+  const maxTrigram = Math.max(...candidates.map((c) => Number(c.trigram_score ?? 0)));
+  return maxTs === 0 && maxTrigram < TRIGRAM_SCOPE_FLOOR;
 }
 
 export type ScopeState = { streak: number; limitedUntil: number };
