@@ -627,7 +627,8 @@ function WidgetPage() {
   useEffect(() => {
     if (!open || typeof window === "undefined") return;
     const measure = () => {
-      if (window.innerWidth < 480) return;
+      // The host page decides full-screen on phones and ignores the height
+      // we send there, so we always report our content height.
       let height = WIDGET_MAX_H;
       if (!isFullHeightView(view)) {
         const head = headerRef.current?.offsetHeight ?? 0;
