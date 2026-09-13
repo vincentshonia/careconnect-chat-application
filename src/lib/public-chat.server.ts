@@ -348,10 +348,7 @@ async function buildWidgetConfig(
  * anything the browser sends, so anything that routes work to staff decides
  * this here, from the organization's own hours, holidays and timezone.
  */
-export async function isOrganizationOpen(website: {
-  id: string;
-  organization_id: string;
-}): Promise<boolean> {
+export async function isOrganizationOpen(website: Record<string, any>): Promise<boolean> {
   const db = admin();
   const [{ data: org }, { data: hours }, { data: holidays }] = await Promise.all([
     db.from("organizations").select("timezone").eq("id", website.organization_id).maybeSingle(),
