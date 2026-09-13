@@ -202,7 +202,7 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               service_interest: input.serviceInterest ?? null,
               preferred_language: input.preferredLanguage ?? "English",
               source: "widget",
-              after_hours: input.after_hours,
+              after_hours: afterHours,
               notes: intakeNotes,
             })
             .select("id")
@@ -235,7 +235,7 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
                 county: input.county ?? null,
                 preferredLanguage: input.preferredLanguage ?? null,
                 message: input.reason ?? null,
-                afterHours: input.after_hours,
+                afterHours,
                 supportPhone: contact.phone || undefined,
                 supportUrl: contact.domain ? `https://${contact.domain}` : undefined,
                 logoUrl:
@@ -262,7 +262,7 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               currentDepartmentId: conversation.department_id ?? null,
               reason: input.reason ?? `${input.fullName} requested a live representative`,
               visitorLabel: input.fullName,
-              afterHours: input.after_hours,
+              afterHours,
             });
             assigned = handoff.assigned;
           } else {
