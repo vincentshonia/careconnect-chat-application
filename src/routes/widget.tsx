@@ -294,6 +294,21 @@ const TABS: { key: Tab; label: string; view: View; icon: string }[] = [
   },
 ];
 
+/** Content-sized frame bounds, in CSS pixels. */
+const WIDGET_MIN_H = 420;
+const WIDGET_MAX_H = 720;
+
+/** Views with scrolling lists always request the full cap so they never jump. */
+function isFullHeightView(view: View): boolean {
+  return (
+    view === "chat" ||
+    view === "waiting" ||
+    view === "faq" ||
+    view === "services" ||
+    view === "form"
+  );
+}
+
 function tabForView(view: View): Tab {
   if (view === "chat" || view === "waiting") return "chat";
   if (view === "faq") return "help";
