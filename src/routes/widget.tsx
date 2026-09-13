@@ -1609,6 +1609,7 @@ function WidgetPage() {
       )}
 
       <nav
+        ref={tabsRef}
         aria-label="Chat sections"
         className="flex shrink-0 items-stretch gap-0.5 border-t border-border/60 bg-card px-1.5 pb-2 pt-1.5 [&>button]:flex-1"
       >
