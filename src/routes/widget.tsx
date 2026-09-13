@@ -1059,6 +1059,7 @@ function WidgetPage() {
         ref={scroller}
         className={`min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background ${view === "menu" ? "" : "px-4 py-4"}`}
       >
+        <div ref={contentRef}>
         {view === "menu" && (
           <HomeView
             config={config}
