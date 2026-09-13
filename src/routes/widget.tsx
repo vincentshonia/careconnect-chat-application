@@ -1692,7 +1692,7 @@ function HomeView({
   const [showPrivacy, setShowPrivacy] = useState(false);
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex flex-col">
       {/* ---------------------------- hero ---------------------------- */}
       <div
         className="relative shrink-0 overflow-hidden px-5 pb-9 pt-4 text-white"
