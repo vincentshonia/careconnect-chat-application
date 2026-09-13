@@ -1519,10 +1519,12 @@ function WidgetPage() {
             )}
           </div>
         )}
+        </div>
       </div>
 
       {(view === "chat" || view === "waiting") && !ended && (
         <form
+          ref={composerRef}
           className="border-t border-border/70 bg-card px-3 pb-3 pt-2.5"
           onSubmit={(e) => {
             e.preventDefault();
