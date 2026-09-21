@@ -235,7 +235,7 @@ export function AdminShell({
                       activeOptions={{ includeSearch: false }}
                       activeProps={{
                         className:
-                          "gradient-brand text-sidebar-primary-foreground font-semibold shadow-glow hover:text-sidebar-primary-foreground",
+                          "sidebar-active font-semibold shadow-glow hover:text-white",
                       }}
                     >
                       <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
