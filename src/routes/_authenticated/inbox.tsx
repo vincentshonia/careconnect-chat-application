@@ -136,7 +136,17 @@ function InboxPage() {
   );
   const statusFilter = search.status ?? null;
 
-  const [activeId, setActiveId] = useState<string | null>(search.c ?? null);
+  // Selection lives in the URL so row clicks and notification links
+  // (/inbox?c=<id>) share exactly one code path.
+  const navigate = useNavigate();
+  const activeId = search.c ?? null;
+  const setActiveId = (id: string | null) => {
+    void navigate({
+      to: "/inbox",
+      search: (prev: Record<string, unknown>) => ({ ...prev, c: id ?? undefined }),
+      replace: true,
+    });
+  };
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
