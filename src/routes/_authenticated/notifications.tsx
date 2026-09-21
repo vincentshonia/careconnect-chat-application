@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,7 +42,19 @@ type Prefs = {
 };
 
 function NotificationsPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
+
+  /**
+   * Notification links are stored as plain strings ("/inbox?c=<id>"). The
+   * router's `to` prop never parses a raw query string, so split it here and
+   * hand the params over as real search params.
+   */
+  const openLink = (link: string) => {
+    const [pathname, queryString] = link.split("?");
+    const search = Object.fromEntries(new URLSearchParams(queryString ?? ""));
+    void router.navigate({ to: pathname, search } as never);
+  };
   const session = useSessionContext();
   const { notifications, unread, markRead } = useNotifications();
   const { count: waitingCount } = useWaitingCount();
@@ -191,9 +203,13 @@ function NotificationsPage() {
               {n.body ? <p className="mt-2 text-sm text-muted-foreground">{n.body}</p> : null}
               <div className="mt-3 flex items-center gap-3 text-xs">
                 {n.link ? (
-                  <Link to={n.link} className="font-medium text-primary hover:underline">
+                  <button
+                    type="button"
+                    className="font-medium text-primary hover:underline"
+                    onClick={() => openLink(n.link!)}
+                  >
                     Open
-                  </Link>
+                  </button>
                 ) : null}
                 {!n.read_at ? (
                   <button
