@@ -88,20 +88,43 @@ async function call(path: string, init: RequestInit = {}): Promise<Response | nu
 
 export type RingCentralChat = { id: string; name: string };
 
-/** Teams and private channels the authenticated app can post into (no 1:1 DMs). */
+/**
+ * Teams and private channels the authenticated app can post into (no 1:1 DMs).
+ *
+ * RingCentral rejects a comma-joined `type` filter here (400 CMN-101), so we ask
+ * for every conversation and keep only Team/Private ourselves, following
+ * pagination tokens so later pages of teams are not lost.
+ */
 export async function listChats(): Promise<RingCentralChat[]> {
   try {
-    const res = await call("/restapi/v1.0/glip/chats?type=Team,Private&recordCount=250");
-    if (!res || !res.ok) {
-      if (res) console.warn("[ringcentral] chat list failed", res.status);
-      return [];
+    const out: RingCentralChat[] = [];
+    const seen = new Set<string>();
+    let pageToken: string | undefined;
+
+    for (let page = 0; page < 20; page++) {
+      const query = new URLSearchParams({ recordCount: "250" });
+      if (pageToken) query.set("pageToken", pageToken);
+      const res = await call(`/restapi/v1.0/glip/chats?${query.toString()}`);
+      if (!res || !res.ok) {
+        if (res) console.warn("[ringcentral] chat list failed", res.status);
+        break;
+      }
+      const json = (await res.json()) as {
+        records?: Array<{ id?: string; name?: string; type?: string }>;
+        navigation?: { nextPageToken?: string };
+      };
+      for (const r of json.records ?? []) {
+        if (!r.id || (r.type !== "Team" && r.type !== "Private")) continue;
+        const id = String(r.id);
+        if (seen.has(id)) continue;
+        seen.add(id);
+        out.push({ id, name: r.name?.trim() || `Channel ${id}` });
+      }
+      pageToken = json.navigation?.nextPageToken;
+      if (!pageToken) break;
     }
-    const json = (await res.json()) as {
-      records?: Array<{ id?: string; name?: string; type?: string }>;
-    };
-    return (json.records ?? [])
-      .filter((r) => r.id && r.type !== "Direct" && r.type !== "Personal")
-      .map((r) => ({ id: String(r.id), name: r.name?.trim() || `Channel ${r.id}` }));
+
+    return out.sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
     console.warn("[ringcentral] chat list threw", error);
     return [];
