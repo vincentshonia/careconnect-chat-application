@@ -31,12 +31,15 @@ export const ringCentralChatsFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await authorize(context as Ctx);
-    const { isRingCentralConfigured, listChats } = await import("@/lib/ringcentral.server");
+    const { isRingCentralConfigured, listChats, botStatus } = await import(
+      "@/lib/ringcentral.server"
+    );
+    const bot = await botStatus();
     if (!isRingCentralConfigured()) {
-      return { connected: false as const, chats: [] as Array<{ id: string; name: string }> };
+      return { connected: false as const, chats: [] as Array<{ id: string; name: string }>, bot };
     }
     const chats = await listChats();
-    return { connected: true as const, chats };
+    return { connected: true as const, chats, bot };
   });
 
 const mapInput = z.object({

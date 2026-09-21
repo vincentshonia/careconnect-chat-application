@@ -39,6 +39,7 @@ import { Route as AuthenticatedAiConsoleRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as ApiPublicWidgetDotjsRouteImport } from './routes/api/public/widget[.]js'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
+import { Route as ApiRingcentralBotOauthRouteImport } from './routes/api/ringcentral/bot/oauth'
 import { Route as ApiPublicStaffAvatarSplatRouteImport } from './routes/api/public/staff-avatar/$'
 import { Route as ApiPublicHooksSlaCheckRouteImport } from './routes/api/public/hooks/sla-check'
 import { Route as ApiPublicHooksAbandonmentSweepRouteImport } from './routes/api/public/hooks/abandonment-sweep'
@@ -206,6 +207,11 @@ const LovableEmailTransactionalPreviewRoute =
     path: '/lovable/email/transactional/preview',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiRingcentralBotOauthRoute = ApiRingcentralBotOauthRouteImport.update({
+  id: '/api/ringcentral/bot/oauth',
+  path: '/api/ringcentral/bot/oauth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicStaffAvatarSplatRoute =
   ApiPublicStaffAvatarSplatRouteImport.update({
     id: '/api/public/staff-avatar/$',
@@ -316,6 +322,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/abandonment-sweep': typeof ApiPublicHooksAbandonmentSweepRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
   '/api/public/staff-avatar/$': typeof ApiPublicStaffAvatarSplatRoute
+  '/api/ringcentral/bot/oauth': typeof ApiRingcentralBotOauthRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
@@ -360,6 +367,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/abandonment-sweep': typeof ApiPublicHooksAbandonmentSweepRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
   '/api/public/staff-avatar/$': typeof ApiPublicStaffAvatarSplatRoute
+  '/api/ringcentral/bot/oauth': typeof ApiRingcentralBotOauthRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
@@ -406,6 +414,7 @@ export interface FileRoutesById {
   '/api/public/hooks/abandonment-sweep': typeof ApiPublicHooksAbandonmentSweepRoute
   '/api/public/hooks/sla-check': typeof ApiPublicHooksSlaCheckRoute
   '/api/public/staff-avatar/$': typeof ApiPublicStaffAvatarSplatRoute
+  '/api/ringcentral/bot/oauth': typeof ApiRingcentralBotOauthRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
@@ -452,6 +461,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/abandonment-sweep'
     | '/api/public/hooks/sla-check'
     | '/api/public/staff-avatar/$'
+    | '/api/ringcentral/bot/oauth'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -496,6 +506,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/abandonment-sweep'
     | '/api/public/hooks/sla-check'
     | '/api/public/staff-avatar/$'
+    | '/api/ringcentral/bot/oauth'
     | '/lovable/email/transactional/preview'
   id:
     | '__root__'
@@ -541,6 +552,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/abandonment-sweep'
     | '/api/public/hooks/sla-check'
     | '/api/public/staff-avatar/$'
+    | '/api/ringcentral/bot/oauth'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
@@ -567,6 +579,7 @@ export interface RootRouteChildren {
   ApiPublicHooksAbandonmentSweepRoute: typeof ApiPublicHooksAbandonmentSweepRoute
   ApiPublicHooksSlaCheckRoute: typeof ApiPublicHooksSlaCheckRoute
   ApiPublicStaffAvatarSplatRoute: typeof ApiPublicStaffAvatarSplatRoute
+  ApiRingcentralBotOauthRoute: typeof ApiRingcentralBotOauthRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
@@ -782,6 +795,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ringcentral/bot/oauth': {
+      id: '/api/ringcentral/bot/oauth'
+      path: '/api/ringcentral/bot/oauth'
+      fullPath: '/api/ringcentral/bot/oauth'
+      preLoaderRoute: typeof ApiRingcentralBotOauthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/staff-avatar/$': {
       id: '/api/public/staff-avatar/$'
       path: '/api/public/staff-avatar/$'
@@ -948,6 +968,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksAbandonmentSweepRoute: ApiPublicHooksAbandonmentSweepRoute,
   ApiPublicHooksSlaCheckRoute: ApiPublicHooksSlaCheckRoute,
   ApiPublicStaffAvatarSplatRoute: ApiPublicStaffAvatarSplatRoute,
+  ApiRingcentralBotOauthRoute: ApiRingcentralBotOauthRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
 export const routeTree = rootRouteImport
