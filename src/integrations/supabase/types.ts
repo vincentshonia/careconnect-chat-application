@@ -2625,27 +2625,6 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["conversation_status"][]
       }
-      can_access_org: { Args: { _org: string }; Returns: boolean }
-      can_reply_conversation: {
-        Args: { _conversation: string }
-        Returns: boolean
-      }
-      can_view_contact: {
-        Args: { _contact: string; _org: string; _owner: string }
-        Returns: boolean
-      }
-      can_view_conversation: {
-        Args: { _assigned: string; _dept: string; _org: string }
-        Returns: boolean
-      }
-      can_view_conversation_id: {
-        Args: { _conversation: string }
-        Returns: boolean
-      }
-      can_view_intake: {
-        Args: { _assigned: string; _dept: string; _org: string }
-        Returns: boolean
-      }
       claim_conversation: {
         Args: { _conversation: string; _user: string }
         Returns: Json
@@ -2665,8 +2644,6 @@ export type Database = {
           timed_out: boolean
         }[]
       }
-      current_org_id: { Args: never; Returns: string }
-      current_rank: { Args: never; Returns: number }
       dashboard_metrics: {
         Args: {
           _dept: string[]
@@ -2692,16 +2669,11 @@ export type Database = {
         }
         Returns: Json
       }
-      effective_user: { Args: { _user: string }; Returns: string }
       eligible_notification_recipients: {
         Args: { _department: string; _org: string; _pref: string }
         Returns: {
           user_id: string
         }[]
-      }
-      has_perm: {
-        Args: { _org: string; _perm: string; _user?: string }
-        Returns: boolean
       }
       has_role: {
         Args: {
@@ -2714,13 +2686,6 @@ export type Database = {
         Args: { _dept?: string; _org: string; _search?: string; _type?: string }
         Returns: Json
       }
-      is_org_admin: { Args: { _org: string }; Returns: boolean }
-      is_org_member: {
-        Args: { _org: string; _user?: string }
-        Returns: boolean
-      }
-      is_platform_admin: { Args: { _user?: string }; Returns: boolean }
-      is_super_admin: { Args: never; Returns: boolean }
       match_knowledge: {
         Args: {
           _org: string
@@ -2764,11 +2729,6 @@ export type Database = {
           vector_rank: number
         }[]
       }
-      mfa_satisfied: { Args: { _org?: string }; Returns: boolean }
-      my_department_ids: {
-        Args: { _org: string; _user?: string }
-        Returns: string[]
-      }
       my_mfa_requirement: { Args: never; Returns: boolean }
       next_round_robin_agent: {
         Args: { _department: string }
@@ -2777,15 +2737,6 @@ export type Database = {
           membership_id: string
           user_id: string
         }[]
-      }
-      org_role_of: {
-        Args: { _org: string; _user?: string }
-        Returns: Database["public"]["Enums"]["app_role"]
-      }
-      org_role_rank: { Args: { _org: string; _user?: string }; Returns: number }
-      platform_can: {
-        Args: { _perm: string; _user?: string }
-        Returns: boolean
       }
       platform_role_of: {
         Args: { _user?: string }
