@@ -17,6 +17,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ringCentralChatsFn, setDepartmentChatFn } from "@/lib/ringcentral.functions";
 
 export const Route = createFileRoute("/_authenticated/departments")({
   // Moved into the Admin hub. The old address still works so existing links,
@@ -84,6 +92,27 @@ function DepartmentsTab() {
       if (error) return [] as Array<{ department_id: string; user_id: string }>;
       return (data ?? []) as Array<{ department_id: string; user_id: string }>;
     },
+  });
+
+  // RingCentral channels available for mapping, plus the connection status.
+  const loadChats = useServerFn(ringCentralChatsFn);
+  const ringCentral = useQuery({
+    queryKey: ["ringcentral-chats"],
+    staleTime: 5 * 60_000,
+    queryFn: async () => await loadChats(),
+  });
+
+  const saveChat = useServerFn(setDepartmentChatFn);
+  const mapChannel = useMutation({
+    mutationFn: async (vars: { departmentId: string; chatId: string | null }) => {
+      await saveChat({ data: vars });
+    },
+    onSuccess: () => {
+      toast.success("RingCentral channel saved");
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not save that channel"),
   });
 
   // Department changes run server-side behind a permission check with audit rows.
@@ -202,6 +231,22 @@ function DepartmentsTab() {
         );
       })()}
 
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border px-4 py-3">
+        <p className="text-sm font-medium">RingCentral Team Messaging</p>
+        {ringCentral.isLoading ? (
+          <Badge variant="outline">Checking…</Badge>
+        ) : ringCentral.data?.connected ? (
+          <Badge>Connected</Badge>
+        ) : (
+          <Badge variant="destructive">Not connected</Badge>
+        )}
+        <p className="text-xs text-muted-foreground">
+          {ringCentral.data?.connected
+            ? "Pick the channel each team should be alerted in when a visitor is waiting."
+            : "Not connected — add RingCentral credentials in project secrets."}
+        </p>
+      </div>
+
       <ul className="divide-y divide-border rounded-xl border border-border">
         {(list.data ?? []).map((d) => {
           const count = (members.data ?? []).filter((m) => m.department_id === d.id).length;
@@ -219,6 +264,29 @@ function DepartmentsTab() {
                 <Badge variant="destructive">No members — routing will fail</Badge>
               ) : null}
               <Badge variant="outline">{d.status}</Badge>
+              {ringCentral.data?.connected ? (
+                <Select
+                  value={d.ringcentral_chat_id ?? "none"}
+                  onValueChange={(value) =>
+                    mapChannel.mutate({
+                      departmentId: d.id,
+                      chatId: value === "none" ? null : value,
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-56" aria-label={`RingCentral channel for ${d.name}`}>
+                    <SelectValue placeholder="RingCentral channel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No RingCentral channel</SelectItem>
+                    {(ringCentral.data?.chats ?? []).map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
               <div className="ml-auto flex gap-2">
                 <Button
                   size="sm"
@@ -465,6 +533,7 @@ function HolidaysTab() {
           Add closure
         </Button>
       </form>
+
 
       <ul className="divide-y divide-border rounded-xl border border-border">
         {(list.data ?? []).map((h) => (

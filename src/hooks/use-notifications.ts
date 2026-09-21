@@ -56,6 +56,9 @@ export function useNotifications(options: { alerts?: boolean } = {}) {
   const query = useQuery({
     queryKey: ["notifications"],
     refetchInterval: 60_000,
+    // Keep polling while the console sits in a background tab, so a desktop
+    // alert still arrives when nobody is looking at the window.
+    refetchIntervalInBackground: true,
     queryFn: async () => {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) return [] as NotificationRow[];

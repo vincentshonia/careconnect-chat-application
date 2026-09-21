@@ -88,7 +88,10 @@ function NotificationsPage() {
     };
     for (const t of TOGGLES) {
       next[`inapp_${t.key}`] = (p?.[`inapp_${t.key}`] as boolean) ?? true;
-      next[`email_${t.key}`] = (p?.[`email_${t.key}`] as boolean) ?? t.key === "escalations";
+      // Chat-alert emails (escalations, and new intake) are on by default so a
+      // waiting visitor reaches the team without anyone configuring anything.
+      next[`email_${t.key}`] =
+        (p?.[`email_${t.key}`] as boolean) ?? (t.key === "escalations" || t.key === "new_intake");
     }
     setForm(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps

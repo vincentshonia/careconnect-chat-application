@@ -676,6 +676,7 @@ export type Database = {
           is_default: boolean
           name: string
           organization_id: string
+          ringcentral_chat_id: string | null
           routing_method: string
           status: Database["public"]["Enums"]["entity_status"]
           timezone: string
@@ -690,6 +691,7 @@ export type Database = {
           is_default?: boolean
           name: string
           organization_id: string
+          ringcentral_chat_id?: string | null
           routing_method?: string
           status?: Database["public"]["Enums"]["entity_status"]
           timezone?: string
@@ -704,6 +706,7 @@ export type Database = {
           is_default?: boolean
           name?: string
           organization_id?: string
+          ringcentral_chat_id?: string | null
           routing_method?: string
           status?: Database["public"]["Enums"]["entity_status"]
           timezone?: string

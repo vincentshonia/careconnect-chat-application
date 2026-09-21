@@ -1,5 +1,13 @@
 import { admin } from "@/lib/public-chat.server";
 import { alertRecipients } from "@/lib/assignment.server";
+import {
+  EMAIL_PREF_COLUMN,
+  consoleLink,
+  emailIdempotencyKey,
+  isChatAlertType,
+  ringCentralText,
+  type ChatAlertType,
+} from "@/lib/notify-channels";
 
 type NotifyInput = {
   organizationId: string;
@@ -71,7 +79,118 @@ export async function notifyStaff(input: NotifyInput) {
         break;
       }
     }
+
+    // Email + RingCentral ride on the same event, but never on its failure.
+    await fanOutExternal(input);
   } catch (error) {
     console.warn("[notifications] fan-out failed", error);
   }
 }
+
+/**
+ * Extra channels for the three "a chat needs a human" events: an email to the
+ * owning department's members (or the assigned agent), and one post into the
+ * department's RingCentral channel. Every step is best-effort.
+ */
+async function fanOutExternal(input: NotifyInput) {
+  try {
+    if (!isChatAlertType(input.type)) return;
+    const type = input.type as ChatAlertType;
+    const conversationId = input.recordType === "conversations" ? (input.recordId ?? null) : null;
+    const link = consoleLink(input.recordType, input.recordId);
+
+    const db = admin();
+    let departmentName: string | null = null;
+    let ringChatId: string | null = null;
+    if (input.departmentId) {
+      const { data: dept } = await db
+        .from("departments")
+        .select("name, ringcentral_chat_id")
+        .eq("id", input.departmentId)
+        .maybeSingle();
+      departmentName = dept?.name ?? null;
+      ringChatId = dept?.ringcentral_chat_id ?? null;
+    }
+
+    let reference: string | null = null;
+    if (conversationId) {
+      const { data: conv } = await db
+        .from("conversations")
+        .select("reference")
+        .eq("id", conversationId)
+        .maybeSingle();
+      reference = conv?.reference ?? null;
+    }
+
+    await emailAlert({ input, type, conversationId, link, departmentName, reference });
+
+    // Exactly one post per event: only the department-scoped call posts, never
+    // the follow-up call that targets the assigned agent.
+    if (input.departmentId && !input.userIds?.length && ringChatId) {
+      const { isRingCentralConfigured, postToChat } = await import("@/lib/ringcentral.server");
+      if (isRingCentralConfigured()) {
+        await postToChat(ringChatId, ringCentralText({ departmentName, title: input.title, link }));
+      }
+    }
+  } catch (error) {
+    console.warn("[notifications] external channels failed", error);
+  }
+}
+
+async function emailAlert(args: {
+  input: NotifyInput;
+  type: ChatAlertType;
+  conversationId: string | null;
+  link: string;
+  departmentName: string | null;
+  reference: string | null;
+}) {
+  try {
+    const { input, type, conversationId, link, departmentName, reference } = args;
+    const column = EMAIL_PREF_COLUMN[type];
+
+    let ids: string[];
+    if (input.userIds?.length) {
+      const eligible = new Set(await alertRecipients(input.organizationId, null, column));
+      ids = input.userIds.filter((id) => eligible.has(id));
+    } else {
+      ids = await alertRecipients(input.organizationId, input.departmentId ?? null, column);
+    }
+    if (ids.length === 0) return;
+
+    const db = admin();
+    const { data: people } = await db
+      .from("profiles")
+      .select("id, email")
+      .in("id", ids.slice(0, INSERT_BATCH));
+    const recipients = (people ?? []).filter((p) => Boolean(p.email));
+    if (recipients.length === 0) return;
+
+    const { data: org } = await db
+      .from("organizations")
+      .select("name")
+      .eq("id", input.organizationId)
+      .maybeSingle();
+
+    const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
+    for (const person of recipients) {
+      try {
+        await sendTemplateEmail("staff-chat-alert", person.email!, {
+          idempotencyKey: emailIdempotencyKey(conversationId, person.id, type),
+          templateData: {
+            departmentName,
+            reason: input.title,
+            referenceId: reference,
+            conversationUrl: link,
+            organizationName: org?.name ?? "Pacific Health Group",
+          },
+        });
+      } catch (error) {
+        console.warn("[notifications] alert email failed", error);
+      }
+    }
+  } catch (error) {
+    console.warn("[notifications] email fan-out failed", error);
+  }
+}
+
