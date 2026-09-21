@@ -175,6 +175,7 @@ describe("dashboard bot token (env)", () => {
 
   it("ignores an empty env token so the DB path still applies", async () => {
     process.env["RINGCENTRAL_BOT_TOKEN"] = "   ";
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 401 })));
     const mod = await freshModule();
     expect(await mod.getBotToken()).toBeNull();
   });
