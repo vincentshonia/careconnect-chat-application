@@ -191,9 +191,13 @@ function NotificationsPage() {
               {n.body ? <p className="mt-2 text-sm text-muted-foreground">{n.body}</p> : null}
               <div className="mt-3 flex items-center gap-3 text-xs">
                 {n.link ? (
-                  <Link to={n.link} className="font-medium text-primary hover:underline">
+                  <button
+                    type="button"
+                    className="font-medium text-primary hover:underline"
+                    onClick={() => openLink(n.link!)}
+                  >
                     Open
-                  </Link>
+                  </button>
                 ) : null}
                 {!n.read_at ? (
                   <button

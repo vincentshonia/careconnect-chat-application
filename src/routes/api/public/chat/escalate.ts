@@ -274,7 +274,9 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               title: `New ${input.kind.replace("_", " ")} from ${input.fullName}`,
               // No contact details in the alert body — staff open the record.
               body: input.reason ?? "Contact details captured. Open the request to view them.",
-              link: "/intake",
+              // Prospect chats are worked in the inbox thread, not the intake
+              // queue, so "Open" must land on the conversation itself.
+              link: `/inbox?c=${conversation.id}`,
               recordType: "conversations",
               recordId: conversation.id,
             });
