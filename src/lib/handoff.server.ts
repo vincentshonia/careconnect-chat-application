@@ -198,7 +198,9 @@ export async function handoffToHumans(input: {
       link: `/inbox?c=${input.conversationId}`,
       recordType: "conversations",
       recordId: input.conversationId,
+      visitorName: input.visitorLabel ?? null,
     });
+
   }
 
   if (assigned) {

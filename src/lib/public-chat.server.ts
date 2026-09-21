@@ -662,6 +662,16 @@ export async function insertMessage(
       .eq("type", "visitor_reply")
       .gte("created_at", since);
     if (!count) {
+      // Name only, so the team channel says who is waiting without any other detail.
+      let visitorName: string | null = null;
+      if (conversation.contact_id) {
+        const { data: contact } = await db
+          .from("contacts")
+          .select("full_name")
+          .eq("id", conversation.contact_id)
+          .maybeSingle();
+        visitorName = contact?.full_name ?? null;
+      }
       const { notifyStaff } = await import("@/lib/notifications.server");
       await notifyStaff({
         organizationId: conversation.organization_id,
@@ -672,11 +682,13 @@ export async function insertMessage(
         link: `/inbox?c=${conversation.id}`,
         recordType: "conversations",
         recordId: conversation.id,
+        ...(visitorName ? { visitorName } : {}),
         ...(conversation.department_id
           ? { departmentId: conversation.department_id as string }
           : {}),
       });
     }
+
   }
   return data;
 }

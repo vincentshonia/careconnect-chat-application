@@ -37,15 +37,27 @@ describe("console links", () => {
 });
 
 describe("outgoing message shapes", () => {
-  it("names the department and carries a link, with no visitor details", () => {
+  it("names the department and visitor and carries a link", () => {
+    const text = ringCentralText({
+      departmentName: "Member Engagement",
+      title: "New chat waiting for a human",
+      link: `${CONSOLE_ORIGIN}/inbox?c=xyz`,
+      visitorName: "Jane Doe",
+    });
+    expect(text).toContain("Member Engagement");
+    expect(text).toContain("Visitor: Jane Doe");
+    expect(text).toContain(`${CONSOLE_ORIGIN}/inbox?c=xyz`);
+  });
+
+  it("falls back to a generic visitor when no name is known", () => {
     const text = ringCentralText({
       departmentName: "Member Engagement",
       title: "New chat waiting for a human",
       link: `${CONSOLE_ORIGIN}/inbox?c=xyz`,
     });
-    expect(text).toContain("Member Engagement");
-    expect(text).toContain(`${CONSOLE_ORIGIN}/inbox?c=xyz`);
+    expect(text).toContain("Visitor: a website visitor");
   });
+
 
   it("dedupes an email per conversation, person and type", () => {
     const key = emailIdempotencyKey("conv-1", "user-1", "escalation");
