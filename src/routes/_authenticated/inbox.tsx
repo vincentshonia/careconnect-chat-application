@@ -433,7 +433,7 @@ function InboxPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("messages")
-        .select("id, sender_type, sender_name, body, created_at, metadata")
+        .select("id, sender_type, sender_name, sender_user_id, body, created_at, metadata")
         .eq("conversation_id", activeId!)
         // Newest 200 first, then flipped for display: a very long chat still
         // shows its latest turns instead of truncating at the beginning.
@@ -960,27 +960,7 @@ function InboxPage() {
                   />
                 ) : null}
                 {(messagesQuery.data ?? []).map((m) => (
-                  <div
-                    key={m.id}
-                    className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                      m.sender_type === "visitor"
-                        ? "bg-muted text-foreground"
-                        : m.sender_type === "agent"
-                          ? "ml-auto bg-primary text-primary-foreground"
-                          : "border border-border bg-card text-foreground"
-                    }`}
-                  >
-                    <p className="mb-1 text-xs opacity-70">
-                      {m.sender_name ?? m.sender_type} · {formatTimeInZone(m.created_at)}
-                    </p>
-                    <p className="whitespace-pre-wrap">{m.body}</p>
-                    {(m.metadata as { attachment?: Attachment } | null)?.attachment ? (
-                      <AttachmentCard
-                        conversationId={active.id}
-                        attachment={(m.metadata as { attachment: Attachment }).attachment}
-                      />
-                    ) : null}
-                  </div>
+                  <ThreadMessage key={m.id} message={m} conversationId={active.id} />
                 ))}
                 <div ref={bottomRef} />
               </div>
