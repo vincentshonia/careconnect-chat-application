@@ -1,16 +1,9 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useWaitingCount } from "@/hooks/use-waiting-count";
-import { pushStatus, requestPush, type PushStatus } from "@/lib/desktop-push";
-import { useSessionContext } from "@/hooks/use-session-context";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { formatInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/notifications")({
@@ -27,23 +20,8 @@ export const Route = createFileRoute("/_authenticated/notifications")({
   component: NotificationsPage,
 });
 
-const TOGGLES = [
-  { key: "escalations", label: "Live-agent escalations" },
-  { key: "new_intake", label: "New referrals & enrollments" },
-  { key: "sla_breach", label: "First-response SLA breaches" },
-  { key: "low_rating", label: "Low satisfaction ratings" },
-] as const;
-
-type Prefs = {
-  user_id: string;
-  organization_id: string | null;
-  sla_first_response_minutes: number;
-  [key: string]: unknown;
-};
-
 function NotificationsPage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   /**
    * Notification links are stored as plain strings ("/inbox?c=<id>"). The
@@ -55,7 +33,6 @@ function NotificationsPage() {
     const search = Object.fromEntries(new URLSearchParams(queryString ?? ""));
     void router.navigate({ to: pathname, search } as never);
   };
-  const session = useSessionContext();
   const { notifications, unread, markRead } = useNotifications();
   const { count: waitingCount } = useWaitingCount();
 
