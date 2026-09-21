@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/notifications")({
       { title: "Notifications — Pacific Health Group Support Console" },
       {
         name: "description",
-        content: "Escalation alerts, new intake notices, SLA warnings, and your alert preferences.",
+        content: "Escalation alerts, new intake notices and SLA warnings for your account.",
       },
       { name: "robots", content: "noindex" },
     ],

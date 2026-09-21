@@ -428,7 +428,7 @@ function PersonalSettingsPage() {
           </div>
         </section>
 
-        {/* Notifications + security */}
+        {/* Security */}
         <section className="space-y-3 rounded-xl border border-border bg-card p-4">
           <div>
             <h2 className="text-sm font-semibold text-card-foreground">Security</h2>
