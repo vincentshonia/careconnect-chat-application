@@ -311,6 +311,26 @@ function DepartmentsTab() {
             ? "Pick the channel each team should be alerted in when a visitor is waiting."
             : "Not connected — add RingCentral credentials in project secrets."}
         </p>
+        <div className="flex w-full flex-wrap items-center gap-2">
+          <p className="text-sm font-medium">Alert bot</p>
+          {ringCentral.data?.bot?.connected ? (
+            <>
+              <Badge>Connected</Badge>
+              <p className="text-xs text-muted-foreground">
+                Alerts post as {ringCentral.data.bot.name ?? "the CareConnect Alerts bot"}. The bot
+                must be added to each channel it posts into.
+              </p>
+            </>
+          ) : (
+            <>
+              <Badge variant="outline">Not connected</Badge>
+              <p className="text-xs text-muted-foreground">
+                Install the CareConnect Alerts bot in RingCentral — until then alerts post from the
+                connected staff account.
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
       <ul className="divide-y divide-border rounded-xl border border-border">

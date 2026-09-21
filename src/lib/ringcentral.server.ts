@@ -131,13 +131,215 @@ export async function listChats(): Promise<RingCentralChat[]> {
   }
 }
 
-/** Post a plain-text message into a channel. Never throws. */
-export async function postToChat(chatId: string, text: string): Promise<boolean> {
+/* ------------------------------------------------------------------ *
+ * Bot identity
+ *
+ * Alerts should read as coming from "CareConnect Alerts", not from the human
+ * whose JWT we use for admin reads. The bot's token arrives through the bot
+ * OAuth install flow and is stored in a single backend-only row.
+ * ------------------------------------------------------------------ */
+
+export type BotCredentials = { clientId: string; clientSecret: string; serverUrl: string };
+
+export function botCredentials(): BotCredentials | null {
+  const clientId = process.env["RINGCENTRAL_BOT_CLIENT_ID"];
+  const clientSecret = process.env["RINGCENTRAL_BOT_CLIENT_SECRET"];
+  const serverUrl = process.env["RINGCENTRAL_SERVER_URL"];
+  if (!clientId || !clientSecret || !serverUrl) return null;
+  return { clientId, clientSecret, serverUrl: serverUrl.replace(/\/+$/, "") };
+}
+
+export type BotAuthRow = {
+  access_token: string | null;
+  refresh_token: string | null;
+  token_expires_at: string | null;
+  refresh_expires_at: string | null;
+  bot_name: string | null;
+  bot_extension_id: string | null;
+};
+
+/** Storage seam so the token logic can be tested without a database. */
+export type BotAuthStore = {
+  load: () => Promise<BotAuthRow | null>;
+  save: (patch: Partial<BotAuthRow>) => Promise<void>;
+};
+
+export function supabaseBotStore(): BotAuthStore {
+  return {
+    async load() {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data } = await supabaseAdmin
+        .from("ringcentral_bot_auth")
+        .select(
+          "access_token, refresh_token, token_expires_at, refresh_expires_at, bot_name, bot_extension_id",
+        )
+        .limit(1)
+        .maybeSingle();
+      return (data as BotAuthRow | null) ?? null;
+    },
+    async save(patch) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin
+        .from("ringcentral_bot_auth")
+        .upsert(
+          { singleton: true, ...patch, updated_at: new Date().toISOString() },
+          { onConflict: "singleton" },
+        );
+    },
+  };
+}
+
+/** Refresh a minute early so a long request never races the expiry. */
+const SKEW_MS = 60_000;
+
+export type BotToken = { token: string; name: string | null };
+
+/**
+ * Resolve a usable bot access token, refreshing it when needed.
+ * Returns null when the bot has not been installed yet — callers fall back to
+ * the JWT-user identity so alerting keeps working.
+ */
+export async function resolveBotToken(
+  store: BotAuthStore,
+  now: number = Date.now(),
+): Promise<BotToken | null> {
+  const creds = botCredentials();
+  if (!creds) return null;
+
+  let row: BotAuthRow | null = null;
   try {
-    const res = await call(`/restapi/v1.0/glip/chats/${encodeURIComponent(chatId)}/posts`, {
+    row = await store.load();
+  } catch (error) {
+    console.warn("[ringcentral] bot token load failed", error);
+    return null;
+  }
+  if (!row?.access_token) return null;
+
+  const expiresAt = row.token_expires_at ? Date.parse(row.token_expires_at) : 0;
+  if (expiresAt && expiresAt - SKEW_MS > now) {
+    return { token: row.access_token, name: row.bot_name };
+  }
+
+  const refreshExpires = row.refresh_expires_at ? Date.parse(row.refresh_expires_at) : 0;
+  if (!row.refresh_token || (refreshExpires && refreshExpires <= now)) {
+    // Nothing left to refresh with: the bot has to be re-installed.
+    return expiresAt ? null : { token: row.access_token, name: row.bot_name };
+  }
+
+  const refreshed = await exchangeBotToken(creds, {
+    grant_type: "refresh_token",
+    refresh_token: row.refresh_token,
+  });
+  if (!refreshed) return null;
+
+  const patch = tokenPatch(refreshed, now);
+  try {
+    await store.save(patch);
+  } catch (error) {
+    console.warn("[ringcentral] bot token save failed", error);
+  }
+  return { token: refreshed.access_token, name: row.bot_name };
+}
+
+export type TokenResponse = {
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
+  refresh_token_expires_in?: number;
+  owner_id?: string;
+};
+
+/** POST the OAuth token endpoint with Basic auth using the BOT app credentials. */
+export async function exchangeBotToken(
+  creds: BotCredentials,
+  body: Record<string, string>,
+): Promise<TokenResponse | null> {
+  try {
+    const res = await fetch(`${creds.serverUrl}/restapi/oauth/token`, {
       method: "POST",
-      body: JSON.stringify({ text }),
+      headers: {
+        Authorization: `Basic ${btoa(`${creds.clientId}:${creds.clientSecret}`)}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams(body).toString(),
     });
+    if (!res.ok) {
+      console.warn("[ringcentral] bot token exchange failed", res.status);
+      return null;
+    }
+    const json = (await res.json()) as TokenResponse;
+    return json.access_token ? json : null;
+  } catch (error) {
+    console.warn("[ringcentral] bot token exchange threw", error);
+    return null;
+  }
+}
+
+/** Map a token response onto the stored columns. */
+export function tokenPatch(json: TokenResponse, now: number = Date.now()): Partial<BotAuthRow> {
+  return {
+    access_token: json.access_token,
+    refresh_token: json.refresh_token ?? null,
+    token_expires_at: new Date(now + (json.expires_in ?? 3600) * 1000).toISOString(),
+    refresh_expires_at: json.refresh_token_expires_in
+      ? new Date(now + json.refresh_token_expires_in * 1000).toISOString()
+      : null,
+    bot_extension_id: json.owner_id ?? null,
+  };
+}
+
+let botCache: { token: string; name: string | null; at: number } | null = null;
+const BOT_CACHE_MS = 60_000;
+
+/** Cached bot token for posting. Null when the bot is not installed. */
+export async function getBotToken(): Promise<BotToken | null> {
+  if (botCache && Date.now() - botCache.at < BOT_CACHE_MS) {
+    return { token: botCache.token, name: botCache.name };
+  }
+  const resolved = await resolveBotToken(supabaseBotStore());
+  botCache = resolved ? { ...resolved, at: Date.now() } : null;
+  return resolved;
+}
+
+/** Status for the admin screen. Never throws. */
+export async function botStatus(): Promise<{ connected: boolean; name: string | null }> {
+  try {
+    const token = await getBotToken();
+    return { connected: Boolean(token), name: token?.name ?? null };
+  } catch {
+    return { connected: false, name: null };
+  }
+}
+
+/**
+ * Post a plain-text message into a channel. Never throws.
+ *
+ * Posts as the CareConnect Alerts bot when it is installed, and falls back to
+ * the JWT user otherwise so alerts keep flowing before the bot goes live.
+ */
+export async function postToChat(chatId: string, text: string): Promise<boolean> {
+  const path = `/restapi/v1.0/glip/chats/${encodeURIComponent(chatId)}/posts`;
+  try {
+    const bot = await getBotToken();
+    let res: Response | null;
+    if (bot) {
+      const creds = botCredentials()!;
+      res = await fetch(`${creds.serverUrl}${path}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${bot.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+      });
+      if (res.status === 401) {
+        // Stale cache: drop it so the next attempt re-resolves.
+        botCache = null;
+      }
+    } else {
+      res = await call(path, { method: "POST", body: JSON.stringify({ text }) });
+    }
+    console.info("[ringcentral] post identity", bot ? "bot" : "jwt");
     if (!res || !res.ok) {
       if (res) console.warn("[ringcentral] post failed", res.status, await res.text());
       return false;

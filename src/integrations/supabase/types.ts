@@ -1980,6 +1980,45 @@ export type Database = {
           },
         ]
       }
+      ringcentral_bot_auth: {
+        Row: {
+          access_token: string | null
+          bot_extension_id: string | null
+          bot_name: string | null
+          created_at: string
+          id: string
+          refresh_expires_at: string | null
+          refresh_token: string | null
+          singleton: boolean
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          bot_extension_id?: string | null
+          bot_name?: string | null
+          created_at?: string
+          id?: string
+          refresh_expires_at?: string | null
+          refresh_token?: string | null
+          singleton?: boolean
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          bot_extension_id?: string | null
+          bot_name?: string | null
+          created_at?: string
+          id?: string
+          refresh_expires_at?: string | null
+          refresh_token?: string | null
+          singleton?: boolean
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       role_permissions: {
         Row: {
           created_at: string
