@@ -41,6 +41,10 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env["RINGCENTRAL_BOT_CLIENT_ID"];
   delete process.env["RINGCENTRAL_BOT_CLIENT_SECRET"];
+  delete process.env["RINGCENTRAL_BOT_TOKEN"];
+  delete process.env["RINGCENTRAL_CLIENT_ID"];
+  delete process.env["RINGCENTRAL_CLIENT_SECRET"];
+  delete process.env["RINGCENTRAL_JWT"];
   delete process.env["RINGCENTRAL_SERVER_URL"];
   vi.unstubAllGlobals();
 });
@@ -178,5 +182,54 @@ describe("dashboard bot token (env)", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 401 })));
     const mod = await freshModule();
     expect(await mod.getBotToken()).toBeNull();
+  });
+});
+
+describe("resilient posting", () => {
+  async function freshModule() {
+    vi.resetModules();
+    return import("@/lib/ringcentral.server");
+  }
+
+  beforeEach(() => {
+    process.env["RINGCENTRAL_BOT_TOKEN"] = "dashboard-token";
+    process.env["RINGCENTRAL_CLIENT_ID"] = "jwt-client";
+    process.env["RINGCENTRAL_CLIENT_SECRET"] = "jwt-secret";
+    process.env["RINGCENTRAL_JWT"] = "jwt-assertion";
+  });
+
+  it("retries with the JWT user when the bot post is rejected", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ name: "PHG Alert Bot" }))
+      .mockResolvedValueOnce(new Response('{"errorCode":"CMN-102"}', { status: 404 }))
+      .mockResolvedValueOnce(Response.json({ access_token: "jwt-access", expires_in: 3600 }))
+      .mockResolvedValueOnce(new Response(null, { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const mod = await freshModule();
+    await expect(mod.postToChat("channel-1", "Alert")).resolves.toBe(true);
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      headers: expect.objectContaining({ Authorization: "Bearer dashboard-token" }),
+    });
+    expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({
+      headers: expect.objectContaining({ Authorization: "Bearer jwt-access" }),
+    });
+  });
+
+  it("returns false only when both bot and JWT posts fail", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ name: "PHG Alert Bot" }))
+      .mockResolvedValueOnce(new Response("forbidden", { status: 403 }))
+      .mockResolvedValueOnce(Response.json({ access_token: "jwt-access", expires_in: 3600 }))
+      .mockResolvedValueOnce(new Response("also forbidden", { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const mod = await freshModule();
+    await expect(mod.postToChat("channel-1", "Alert")).resolves.toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 });

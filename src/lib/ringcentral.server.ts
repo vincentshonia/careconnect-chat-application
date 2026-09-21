@@ -357,30 +357,46 @@ export async function botStatus(): Promise<{ connected: boolean; name: string | 
  */
 export async function postToChat(chatId: string, text: string): Promise<boolean> {
   const path = `/restapi/v1.0/glip/chats/${encodeURIComponent(chatId)}/posts`;
+  const init: RequestInit = { method: "POST", body: JSON.stringify({ text }) };
   try {
-    const bot = await getBotToken();
-    let res: Response | null;
+    let bot: BotToken | null = null;
+    try {
+      bot = await getBotToken();
+    } catch (error) {
+      console.warn("[ringcentral] bot token resolution threw", error);
+    }
+
     if (bot) {
       const base = botCredentials()?.serverUrl ?? serverUrl();
-      res = await fetch(`${base}${path}`, {
-        method: "POST",
-
-        headers: {
-          Authorization: `Bearer ${bot.token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ text }),
-      });
-      if (res.status === 401) {
-        // Stale cache: drop it so the next attempt re-resolves.
-        botCache = null;
+      try {
+        const botRes = base
+          ? await fetch(`${base}${path}`, {
+              ...init,
+              headers: {
+                Authorization: `Bearer ${bot.token}`,
+                "Content-Type": "application/json",
+              },
+            })
+          : null;
+        console.info("[ringcentral] post attempt", "bot", botRes?.status ?? "unavailable");
+        if (botRes?.status === 401) {
+          // Stale cache: drop it so the next request re-resolves.
+          botCache = null;
+        }
+        if (botRes?.ok) return true;
+        if (botRes) {
+          console.warn("[ringcentral] bot post failed", botRes.status, await botRes.text());
+        }
+      } catch (error) {
+        console.warn("[ringcentral] bot post threw", error);
       }
-    } else {
-      res = await call(path, { method: "POST", body: JSON.stringify({ text }) });
     }
-    console.info("[ringcentral] post identity", bot ? "bot" : "jwt");
-    if (!res || !res.ok) {
-      if (res) console.warn("[ringcentral] post failed", res.status, await res.text());
+
+    // A missing, rejected, or unreachable bot must never silence the alert.
+    const jwtRes = await call(path, init);
+    console.info("[ringcentral] post attempt", "jwt", jwtRes?.status ?? "unavailable");
+    if (!jwtRes?.ok) {
+      if (jwtRes) console.warn("[ringcentral] jwt post failed", jwtRes.status, await jwtRes.text());
       return false;
     }
     return true;
