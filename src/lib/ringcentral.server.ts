@@ -291,15 +291,53 @@ export function tokenPatch(json: TokenResponse, now: number = Date.now()): Parti
 let botCache: { token: string; name: string | null; at: number } | null = null;
 const BOT_CACHE_MS = 60_000;
 
+/** Base platform URL, shared by the JWT and bot paths. */
+function serverUrl(): string | null {
+  const url = process.env["RINGCENTRAL_SERVER_URL"];
+  return url ? url.replace(/\/+$/, "") : null;
+}
+
+/** A bot token pasted straight from the RingCentral app dashboard, if configured. */
+function envBotToken(): string | null {
+  const token = process.env["RINGCENTRAL_BOT_TOKEN"];
+  return token && token.trim() ? token.trim() : null;
+}
+
+/** Best-effort display name for the dashboard bot token. Never throws. */
+async function fetchBotName(token: string): Promise<string> {
+  const base = serverUrl();
+  if (!base) return "PHG Alert Bot";
+  try {
+    const res = await fetch(`${base}/restapi/v1.0/account/~/extension/~`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return "PHG Alert Bot";
+    const json = (await res.json()) as { name?: string };
+    return json.name?.trim() || "PHG Alert Bot";
+  } catch {
+    return "PHG Alert Bot";
+  }
+}
+
 /** Cached bot token for posting. Null when the bot is not installed. */
 export async function getBotToken(): Promise<BotToken | null> {
   if (botCache && Date.now() - botCache.at < BOT_CACHE_MS) {
     return { token: botCache.token, name: botCache.name };
   }
+
+  // Highest priority: a long-lived token issued on the RingCentral dashboard.
+  const direct = envBotToken();
+  if (direct) {
+    const name = await fetchBotName(direct);
+    botCache = { token: direct, name, at: Date.now() };
+    return { token: direct, name };
+  }
+
   const resolved = await resolveBotToken(supabaseBotStore());
   botCache = resolved ? { ...resolved, at: Date.now() } : null;
   return resolved;
 }
+
 
 /** Status for the admin screen. Never throws. */
 export async function botStatus(): Promise<{ connected: boolean; name: string | null }> {
@@ -323,9 +361,10 @@ export async function postToChat(chatId: string, text: string): Promise<boolean>
     const bot = await getBotToken();
     let res: Response | null;
     if (bot) {
-      const creds = botCredentials()!;
-      res = await fetch(`${creds.serverUrl}${path}`, {
+      const base = botCredentials()?.serverUrl ?? serverUrl();
+      res = await fetch(`${base}${path}`, {
         method: "POST",
+
         headers: {
           Authorization: `Bearer ${bot.token}`,
           "Content-Type": "application/json",

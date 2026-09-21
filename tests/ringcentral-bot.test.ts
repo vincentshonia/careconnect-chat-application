@@ -140,3 +140,42 @@ describe("token response mapping", () => {
     });
   });
 });
+
+describe("dashboard bot token (env)", () => {
+  afterEach(() => {
+    delete process.env["RINGCENTRAL_BOT_TOKEN"];
+  });
+
+  async function freshModule() {
+    vi.resetModules();
+    return import("@/lib/ringcentral.server");
+  }
+
+  it("takes precedence over the DB-stored token and needs no refresh", async () => {
+    process.env["RINGCENTRAL_BOT_TOKEN"] = "dashboard-token";
+    const fetchMock = vi.fn(async () => Response.json({ name: "PHG Alert Bot" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const mod = await freshModule();
+    const result = await mod.getBotToken();
+
+    expect(result).toEqual({ token: "dashboard-token", name: "PHG Alert Bot" });
+    // Only the display-name lookup, never a token exchange.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/restapi/v1.0/account/~/extension/~");
+    expect(await mod.botStatus()).toEqual({ connected: true, name: "PHG Alert Bot" });
+  });
+
+  it("falls back to the default name when the lookup fails", async () => {
+    process.env["RINGCENTRAL_BOT_TOKEN"] = "dashboard-token";
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 401 })));
+    const mod = await freshModule();
+    expect((await mod.getBotToken())?.name).toBe("PHG Alert Bot");
+  });
+
+  it("ignores an empty env token so the DB path still applies", async () => {
+    process.env["RINGCENTRAL_BOT_TOKEN"] = "   ";
+    const mod = await freshModule();
+    expect(await mod.getBotToken()).toBeNull();
+  });
+});
