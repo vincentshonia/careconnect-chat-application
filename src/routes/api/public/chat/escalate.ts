@@ -279,7 +279,9 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               link: `/inbox?c=${conversation.id}`,
               recordType: "conversations",
               recordId: conversation.id,
+              visitorName: input.fullName,
             });
+
           }
 
           const { count } = await db
