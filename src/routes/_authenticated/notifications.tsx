@@ -1,16 +1,9 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useWaitingCount } from "@/hooks/use-waiting-count";
-import { pushStatus, requestPush, type PushStatus } from "@/lib/desktop-push";
-import { useSessionContext } from "@/hooks/use-session-context";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { formatInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/notifications")({
@@ -19,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/notifications")({
       { title: "Notifications — Pacific Health Group Support Console" },
       {
         name: "description",
-        content: "Escalation alerts, new intake notices, SLA warnings, and your alert preferences.",
+        content: "Escalation alerts, new intake notices and SLA warnings for your account.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -27,23 +20,8 @@ export const Route = createFileRoute("/_authenticated/notifications")({
   component: NotificationsPage,
 });
 
-const TOGGLES = [
-  { key: "escalations", label: "Live-agent escalations" },
-  { key: "new_intake", label: "New referrals & enrollments" },
-  { key: "sla_breach", label: "First-response SLA breaches" },
-  { key: "low_rating", label: "Low satisfaction ratings" },
-] as const;
-
-type Prefs = {
-  user_id: string;
-  organization_id: string | null;
-  sla_first_response_minutes: number;
-  [key: string]: unknown;
-};
-
 function NotificationsPage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   /**
    * Notification links are stored as plain strings ("/inbox?c=<id>"). The
@@ -55,68 +33,8 @@ function NotificationsPage() {
     const search = Object.fromEntries(new URLSearchParams(queryString ?? ""));
     void router.navigate({ to: pathname, search } as never);
   };
-  const session = useSessionContext();
   const { notifications, unread, markRead } = useNotifications();
   const { count: waitingCount } = useWaitingCount();
-  const [push, setPush] = useState<PushStatus>("default");
-  const [saved, setSaved] = useState<string | null>(null);
-  const [form, setForm] = useState<Record<string, boolean | number>>({});
-
-  useEffect(() => setPush(pushStatus()), []);
-
-  const prefs = useQuery({
-    queryKey: ["notification-preferences", session.data?.userId],
-    enabled: Boolean(session.data?.userId),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("notification_preferences")
-        .select("*")
-        .eq("user_id", session.data!.userId)
-        .maybeSingle();
-      if (error) throw error;
-      return (data ?? null) as Prefs | null;
-    },
-  });
-
-  // Keyed on the loaded record, not the query object, so a refetch cannot
-  // discard toggles the user has not saved yet.
-  useEffect(() => {
-    if (!prefs.isSuccess) return;
-    const p = prefs.data;
-    const next: Record<string, boolean | number> = {
-      sla_first_response_minutes: p?.sla_first_response_minutes ?? 15,
-    };
-    for (const t of TOGGLES) {
-      next[`inapp_${t.key}`] = (p?.[`inapp_${t.key}`] as boolean) ?? true;
-      // Chat-alert emails (escalations, and new intake) are on by default so a
-      // waiting visitor reaches the team without anyone configuring anything.
-      next[`email_${t.key}`] =
-        (p?.[`email_${t.key}`] as boolean) ?? (t.key === "escalations" || t.key === "new_intake");
-    }
-    setForm(next);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefs.isSuccess, prefs.data?.user_id]);
-
-  const save = useMutation({
-    mutationFn: async () => {
-      const userId = session.data?.userId;
-      if (!userId) return;
-      const { error } = await supabase.from("notification_preferences").upsert(
-        {
-          user_id: userId,
-          organization_id: session.data?.organizationId ?? null,
-          ...form,
-        } as never,
-        { onConflict: "user_id" },
-      );
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setSaved("Preferences saved.");
-      queryClient.invalidateQueries({ queryKey: ["notification-preferences"] });
-    },
-    onError: (e) => setSaved(e instanceof Error ? e.message : "Could not save"),
-  });
 
   return (
     <AdminShell
@@ -156,33 +74,15 @@ function NotificationsPage() {
         </Link>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
-        <div className="min-w-0">
-          <p className="text-sm font-medium">Desktop &amp; device alerts</p>
-          <p className="text-xs text-muted-foreground">
-            {push === "granted"
-              ? "Enabled — new escalations pop up even when this tab is in the background."
-              : push === "denied"
-                ? "Blocked by your browser. Re-enable notifications for this site in your browser settings."
-                : push === "open-in-new-tab"
-                  ? "Open the console in its own browser tab to turn on device notifications."
-                  : push === "unsupported"
-                    ? "This browser does not support desktop notifications."
-                    : "Get a system pop-up on your desktop or phone the moment a chat needs a human."}
-          </p>
-        </div>
-        <Button
-          className="ml-auto"
-          size="sm"
-          variant="outline"
-          disabled={push !== "default"}
-          onClick={async () => setPush(await requestPush())}
-        >
-          {push === "granted" ? "Enabled" : "Enable notifications"}
-        </Button>
-      </div>
+      <p className="mb-6 rounded-xl border border-border bg-card px-4 py-3 text-sm">
+        Manage alert preferences in{" "}
+        <Link to="/profile" className="font-medium text-primary hover:underline">
+          My settings
+        </Link>
+        .
+      </p>
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div>
         <section className="space-y-2">
           {notifications.map((n) => (
             <article
@@ -233,72 +133,6 @@ function NotificationsPage() {
           ) : null}
         </section>
 
-        <section className="h-fit rounded-xl border border-border bg-card p-5">
-          <h2 className="text-sm font-semibold">Alert preferences</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Choose what reaches you in the console and by email.
-          </p>
-
-          <div className="mt-4 space-y-3">
-            <div className="grid grid-cols-[1fr_auto_auto] items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
-              <span>Alert</span>
-              <span>In app</span>
-              <span>Email</span>
-            </div>
-            {TOGGLES.map((t) => (
-              <div
-                key={t.key}
-                className="grid grid-cols-[1fr_auto_auto] items-center gap-3 text-sm"
-              >
-                <span>{t.label}</span>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-[hsl(var(--primary))]"
-                  checked={Boolean(form[`inapp_${t.key}`])}
-                  onChange={(e) => setForm({ ...form, [`inapp_${t.key}`]: e.target.checked })}
-                />
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-[hsl(var(--primary))]"
-                  checked={Boolean(form[`email_${t.key}`])}
-                  onChange={(e) => setForm({ ...form, [`email_${t.key}`]: e.target.checked })}
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 space-y-2">
-            <Label htmlFor="sla">First-response target (minutes)</Label>
-            <Input
-              id="sla"
-              type="number"
-              min={1}
-              max={1440}
-              value={Number(form.sla_first_response_minutes ?? 15)}
-              onChange={(e) =>
-                setForm({ ...form, sla_first_response_minutes: Number(e.target.value) || 15 })
-              }
-            />
-            <p className="text-xs text-muted-foreground">
-              Waiting conversations older than this appear as SLA breaches on the dashboard.
-            </p>
-          </div>
-
-          {saved ? <p className="mt-4 text-sm text-muted-foreground">{saved}</p> : null}
-          <Button
-            className="mt-4 w-full"
-            onClick={() => {
-              setSaved(null);
-              save.mutate();
-            }}
-            disabled={save.isPending}
-          >
-            {save.isPending ? "Saving…" : "Save preferences"}
-          </Button>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Email delivery activates once a sending domain is verified for this workspace.
-          </p>
-        </section>
       </div>
     </AdminShell>
   );

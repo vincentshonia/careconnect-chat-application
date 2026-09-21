@@ -12,6 +12,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { StaffAvatar, useStaffAvatarUrl } from "@/components/admin/StaffAvatar";
 import { removeStaffAvatarFn, uploadStaffAvatarFn } from "@/lib/staff-avatar.functions";
 import { MAX_AVATAR_BYTES, sniffImage } from "@/lib/image-bytes";
+import { AlertPreferences } from "@/components/settings/AlertPreferences";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
@@ -218,6 +219,89 @@ function PersonalSettingsPage() {
           </p>
         )}
 
+        {/* Account */}
+        <form
+          className="space-y-4 rounded-xl border border-border bg-card p-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setNotice(null);
+            save.mutate();
+          }}
+        >
+          <div>
+            <h2 className="text-sm font-semibold text-card-foreground">Account</h2>
+            <p className="text-xs text-muted-foreground">
+              Your display name is what website visitors see during a live chat.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="full_name">Full name</Label>
+              <Input
+                id="full_name"
+                value={form.full_name}
+                onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="display_name">Display name (visitor-facing)</Label>
+              <Input
+                id="display_name"
+                placeholder="e.g. Maria from Pacific Health"
+                value={form.display_name}
+                onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="title">Job title</Label>
+              <Input
+                id="title"
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="languages">Languages spoken</Label>
+              <Input
+                id="languages"
+                placeholder="English, Spanish"
+                value={form.languages}
+                onChange={(e) => setForm((f) => ({ ...f, languages: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="timezone">Time zone</Label>
+              <Input
+                id="timezone"
+                placeholder="America/Los_Angeles"
+                value={form.timezone}
+                onChange={(e) => setForm((f) => ({ ...f, timezone: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Email</Label>
+              <Input value={session.data?.email ?? ""} disabled readOnly />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Your role, organization, departments and maximum simultaneous chats are managed by an
+            administrator.
+          </p>
+          <Button type="submit" disabled={save.isPending}>
+            {save.isPending ? "Saving…" : "Save changes"}
+          </Button>
+        </form>
+
         {/* Profile photo */}
         <section className="space-y-3 rounded-xl border border-border bg-card p-4">
           <div>
@@ -279,75 +363,18 @@ function PersonalSettingsPage() {
           </label>
         </section>
 
-        {/* Personal details */}
-        <form
-          className="space-y-4 rounded-xl border border-border bg-card p-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setNotice(null);
-            save.mutate();
-          }}
-        >
+        {/* Alert preferences */}
+        <AlertPreferences />
+
+        {/* Presence & capacity */}
+        <section className="space-y-3 rounded-xl border border-border bg-card p-4">
           <div>
-            <h2 className="text-sm font-semibold text-card-foreground">Personal details</h2>
+            <h2 className="text-sm font-semibold text-card-foreground">Presence &amp; capacity</h2>
             <p className="text-xs text-muted-foreground">
-              Your display name is what website visitors see during a live chat.
+              Your availability decides whether new chats can be routed to you.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="full_name">Full name</Label>
-              <Input
-                id="full_name"
-                value={form.full_name}
-                onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="display_name">Display name (visitor-facing)</Label>
-              <Input
-                id="display_name"
-                placeholder="e.g. Maria from Pacific Health"
-                value={form.display_name}
-                onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="title">Job title</Label>
-              <Input
-                id="title"
-                value={form.title}
-                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="languages">Languages spoken</Label>
-              <Input
-                id="languages"
-                placeholder="English, Spanish"
-                value={form.languages}
-                onChange={(e) => setForm((f) => ({ ...f, languages: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="timezone">Time zone</Label>
-              <Input
-                id="timezone"
-                placeholder="America/Los_Angeles"
-                value={form.timezone}
-                onChange={(e) => setForm((f) => ({ ...f, timezone: e.target.value }))}
-              />
-            </div>
             <div className="space-y-1.5">
               <Label htmlFor="presence">Availability</Label>
               <select
@@ -364,18 +391,20 @@ function PersonalSettingsPage() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Email</Label>
-              <Input value={session.data?.email ?? ""} disabled readOnly />
+              <Label>Maximum simultaneous chats</Label>
+              <Input
+                value={String(profile.data?.max_concurrent_chats ?? "")}
+                disabled
+                readOnly
+              />
+              <p className="text-xs text-muted-foreground">Set by an administrator.</p>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Your role, organization, departments and maximum simultaneous chats are managed by an
-            administrator.
-          </p>
-          <Button type="submit" disabled={save.isPending}>
-            {save.isPending ? "Saving…" : "Save changes"}
+          <Button type="button" disabled={save.isPending} onClick={() => save.mutate()}>
+            {save.isPending ? "Saving…" : "Save availability"}
           </Button>
-        </form>
+        </section>
+
 
         {/* Appearance */}
         <section className="space-y-3 rounded-xl border border-border bg-card p-4">
@@ -399,18 +428,15 @@ function PersonalSettingsPage() {
           </div>
         </section>
 
-        {/* Notifications + security */}
+        {/* Security */}
         <section className="space-y-3 rounded-xl border border-border bg-card p-4">
           <div>
-            <h2 className="text-sm font-semibold text-card-foreground">Notifications & security</h2>
+            <h2 className="text-sm font-semibold text-card-foreground">Security</h2>
             <p className="text-xs text-muted-foreground">
-              Alert channels and desktop notifications live on the Notifications page.
+              Password and two-step verification for your account.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link to="/notifications">Notification preferences</Link>
-            </Button>
             <Button asChild variant="outline">
               <Link to="/mfa">Two-step verification</Link>
             </Button>

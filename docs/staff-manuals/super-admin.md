@@ -1434,63 +1434,26 @@ _Keep every tenant configured correctly._
 
 ## 22. Notifications
 
-How CareConnect gets your attention, and how to tune it.
+How CareConnect gets your attention. Alert preferences live in My settings.
 
 ### 22.1 Reading your alerts
 
 _Clear the alert list efficiently._
 
-> **Interface illustration — Notifications and alert preferences**
+> **Interface illustration — Notifications**
 >
-> Notifications screen with a waiting-conversations banner, desktop alert card, alert feed and a preferences grid of in-app and email toggles.
+> Notifications screen with a waiting-conversations banner, a link to alert preferences in My settings and the alert feed.
 >
 > 1. Waiting banner — how many chats are unclaimed right now, with a link to the Inbox.
-> 2. Desktop & device alerts — turn on browser pop-ups so you hear about escalations in the background.
+> 2. Manage alert preferences in My settings.
 > 3. Alert feed. Unread items are highlighted; each has Open and Mark read.
-> 4. Alert preferences: in-app and email toggles for escalations, new referrals, SLA breaches and low ratings.
-> 5. First-response target in minutes — drives the SLA breach warnings you see.
 
 1. Open Notifications from the sidebar or the bell in the header.
 2. Unread alerts are highlighted. Critical alerts carry a red badge.
 3. Select Open on an alert to jump straight to the conversation or request it refers to.
 4. Select Mark read on an individual alert, or Mark all read to clear the list.
 
-At the top, a banner shows how many conversations are waiting for a human right now, with a link to the Inbox. It tracks the same number as the red badge on the Inbox menu item.
-
-### 22.2 Desktop and device alerts
-
-_Hear about escalations when the tab is in the background._
-
-1. On the Notifications screen, find Desktop & device alerts.
-2. Select Enable notifications and accept your browser's permission prompt.
-3. The card then reads “Enabled”, and new escalations pop up even when CareConnect is not the tab you are looking at.
-
-**If the button will not enable**
-
-- “Blocked by your browser” — you previously declined. Re-enable notifications for this site in your browser settings.
-- “Open the console in its own browser tab” — you are viewing an embedded preview; open CareConnect in a normal tab.
-- “This browser does not support desktop notifications” — use a current desktop browser.
-
-### 22.3 Choosing what reaches you
-
-_Set your alert preferences and response target._
-
-*Each alert can be delivered in the console, by email, or both*
-
-| Alert | Fires when |
-| --- | --- |
-| Live-agent escalations | A visitor asks for a human |
-| New referrals & enrollments | A new intake request arrives |
-| First-response SLA breaches | A waiting conversation passes your first-response target |
-| Low satisfaction ratings | A visitor leaves a poor rating |
-
-1. Tick the In app and Email boxes you want for each alert.
-2. Set First-response target (minutes) — the default is 15. Waiting conversations older than this show as SLA breaches on your dashboard.
-3. Select Save preferences.
-
-> **Note — Email delivery**
->
-> Email alerts activate once a sending domain has been verified for your workspace. Until then, rely on in-app and desktop alerts.
+At the top, a banner shows how many conversations are waiting for a human right now, with a link to the Inbox. Below it, a line links to My settings, where you choose which alerts reach you.
 
 ---
 
@@ -1504,14 +1467,14 @@ _Set what teammates and visitors see._
 
 > **Interface illustration — My settings**
 >
-> Personal settings page with profile photo controls, visitor visibility checkbox, personal detail fields, appearance buttons and security shortcuts.
+> Personal settings page with account fields, profile photo controls, alert preferences, presence and capacity, appearance buttons and security shortcuts.
 >
 > 1. Profile photo — PNG or JPG up to 5 MB, with Replace and Remove.
 > 2. Show my name and photo to website visitors — off by default.
 > 3. Display name is what visitors see during a live chat.
-> 4. Availability — the same status the dashboard header sets.
-> 5. Appearance: Match device, Light, Dark.
-> 6. Notification preferences, Two-step verification and Send password reset email.
+> 4. Alert preferences — desktop, in-app and email alerts plus your first-response target.
+> 5. Presence & capacity — availability, with maximum simultaneous chats set by an administrator.
+> 6. Appearance: Match device, Light, Dark. Two-step verification and Send password reset email.
 
 1. Open My settings from the sidebar.
 2. Upload a profile photo (PNG or JPG up to 5 MB). Use Replace photo to change it or Remove to delete it.
@@ -1543,11 +1506,45 @@ You can change availability here or from the dashboard header — it is the same
 2. Choose Light or Dark to fix it.
 3. The choice saves immediately and follows your account to any computer.
 
-### 23.3 Security shortcuts
+### 23.3 Desktop and device alerts
+
+_Hear about escalations when the tab is in the background._
+
+1. Open My settings from the sidebar and find Alert preferences.
+2. Select Enable notifications and accept your browser's permission prompt.
+3. The card then reads “Enabled”, and new escalations pop up even when CareConnect is not the tab you are looking at.
+
+**If the button will not enable**
+
+- “Blocked by your browser” — you previously declined. Re-enable notifications for this site in your browser settings.
+- “Open the console in its own browser tab” — you are viewing an embedded preview; open CareConnect in a normal tab.
+- “This browser does not support desktop notifications” — use a current desktop browser.
+
+### 23.4 Choosing what reaches you
+
+_Set your alert preferences and response target._
+
+*Each alert can be delivered in the console, by email, or both*
+
+| Alert | Fires when |
+| --- | --- |
+| Live-agent escalations | A visitor asks for a human |
+| New referrals & enrollments | A new intake request arrives |
+| First-response SLA breaches | A waiting conversation passes your first-response target |
+| Low satisfaction ratings | A visitor leaves a poor rating |
+
+1. In My settings, under Alert preferences, tick the In app and Email boxes you want for each alert.
+2. Set First-response target (minutes) — the default is 15. Waiting conversations older than this show as SLA breaches on your dashboard.
+3. Select Save preferences.
+
+> **Note — Email delivery**
+>
+> Email alerts activate once a sending domain has been verified for your workspace. Until then, rely on in-app and desktop alerts.
+
+### 23.5 Security shortcuts
 
 _Reach the security controls you own._
 
-- Notification preferences — opens the Notifications screen.
 - Two-step verification — opens the authenticator setup.
 - Send password reset email — emails you a reset link for your own account.
 

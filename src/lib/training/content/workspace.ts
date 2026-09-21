@@ -701,7 +701,7 @@ export const contactsChapter: Chapter = {
 export const notificationsChapter: Chapter = {
   id: "notifications",
   title: "Notifications",
-  intro: "How CareConnect gets your attention, and how to tune it.",
+  intro: "How CareConnect gets your attention. Alert preferences live in My settings.",
   sections: [
     {
       id: "notifications-feed",
@@ -720,66 +720,7 @@ export const notificationsChapter: Chapter = {
         },
         {
           kind: "p",
-          text: "At the top, a banner shows how many conversations are waiting for a human right now, with a link to the Inbox. It tracks the same number as the red badge on the Inbox menu item.",
-        },
-      ],
-    },
-    {
-      id: "notifications-desktop",
-      title: "Desktop and device alerts",
-      summary: "Hear about escalations when the tab is in the background.",
-      blocks: [
-        {
-          kind: "steps",
-          items: [
-            "On the Notifications screen, find Desktop & device alerts.",
-            "Select Enable notifications and accept your browser's permission prompt.",
-            "The card then reads “Enabled”, and new escalations pop up even when CareConnect is not the tab you are looking at.",
-          ],
-        },
-        {
-          kind: "bullets",
-          title: "If the button will not enable",
-          items: [
-            "“Blocked by your browser” — you previously declined. Re-enable notifications for this site in your browser settings.",
-            "“Open the console in its own browser tab” — you are viewing an embedded preview; open CareConnect in a normal tab.",
-            "“This browser does not support desktop notifications” — use a current desktop browser.",
-          ],
-        },
-      ],
-    },
-    {
-      id: "notifications-preferences",
-      title: "Choosing what reaches you",
-      summary: "Set your alert preferences and response target.",
-      blocks: [
-        {
-          kind: "table",
-          caption: "Each alert can be delivered in the console, by email, or both",
-          head: ["Alert", "Fires when"],
-          rows: [
-            ["Live-agent escalations", "A visitor asks for a human"],
-            ["New referrals & enrollments", "A new intake request arrives"],
-            [
-              "First-response SLA breaches",
-              "A waiting conversation passes your first-response target",
-            ],
-            ["Low satisfaction ratings", "A visitor leaves a poor rating"],
-          ],
-        },
-        {
-          kind: "steps",
-          items: [
-            "Tick the In app and Email boxes you want for each alert.",
-            "Set First-response target (minutes) — the default is 15. Waiting conversations older than this show as SLA breaches on your dashboard.",
-            "Select Save preferences.",
-          ],
-        },
-        {
-          kind: "callout",
-          tone: "note",
-          title: "Email delivery",
-          text: "Email alerts activate once a sending domain has been verified for your workspace. Until then, rely on in-app and desktop alerts.",
+          text: "At the top, a banner shows how many conversations are waiting for a human right now, with a link to the Inbox. Below it, a line links to My settings, where you choose which alerts reach you.",
         },
       ],
     },
@@ -849,6 +790,65 @@ export const profileChapter: Chapter = {
       ],
     },
     {
+      id: "profile-alerts-desktop",
+      title: "Desktop and device alerts",
+      summary: "Hear about escalations when the tab is in the background.",
+      blocks: [
+        {
+          kind: "steps",
+          items: [
+            "Open My settings from the sidebar and find Alert preferences.",
+            "Select Enable notifications and accept your browser's permission prompt.",
+            "The card then reads “Enabled”, and new escalations pop up even when CareConnect is not the tab you are looking at.",
+          ],
+        },
+        {
+          kind: "bullets",
+          title: "If the button will not enable",
+          items: [
+            "“Blocked by your browser” — you previously declined. Re-enable notifications for this site in your browser settings.",
+            "“Open the console in its own browser tab” — you are viewing an embedded preview; open CareConnect in a normal tab.",
+            "“This browser does not support desktop notifications” — use a current desktop browser.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "profile-alerts",
+      title: "Choosing what reaches you",
+      summary: "Set your alert preferences and response target.",
+      blocks: [
+        {
+          kind: "table",
+          caption: "Each alert can be delivered in the console, by email, or both",
+          head: ["Alert", "Fires when"],
+          rows: [
+            ["Live-agent escalations", "A visitor asks for a human"],
+            ["New referrals & enrollments", "A new intake request arrives"],
+            [
+              "First-response SLA breaches",
+              "A waiting conversation passes your first-response target",
+            ],
+            ["Low satisfaction ratings", "A visitor leaves a poor rating"],
+          ],
+        },
+        {
+          kind: "steps",
+          items: [
+            "In My settings, under Alert preferences, tick the In app and Email boxes you want for each alert.",
+            "Set First-response target (minutes) — the default is 15. Waiting conversations older than this show as SLA breaches on your dashboard.",
+            "Select Save preferences.",
+          ],
+        },
+        {
+          kind: "callout",
+          tone: "note",
+          title: "Email delivery",
+          text: "Email alerts activate once a sending domain has been verified for your workspace. Until then, rely on in-app and desktop alerts.",
+        },
+      ],
+    },
+    {
       id: "profile-security",
       title: "Security shortcuts",
       summary: "Reach the security controls you own.",
@@ -856,7 +856,6 @@ export const profileChapter: Chapter = {
         {
           kind: "bullets",
           items: [
-            "Notification preferences — opens the Notifications screen.",
             "Two-step verification — opens the authenticator setup.",
             "Send password reset email — emails you a reset link for your own account.",
           ],
