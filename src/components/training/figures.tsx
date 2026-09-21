@@ -697,7 +697,11 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
               Unclaimed chats in your queues. Open inbox →
             </p>
           </MockPanel>
-          <MockPanel title="Manage alert preferences in My settings" marker={2} />
+          <MockPanel title="Alert preferences" marker={2}>
+            <p className="text-[9px] text-muted-foreground">
+              Manage alert preferences in My settings →
+            </p>
+          </MockPanel>
           <MockList
             marker={3}
             items={[

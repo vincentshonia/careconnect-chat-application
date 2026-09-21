@@ -1109,15 +1109,13 @@ How CareConnect gets your attention. Alert preferences live in My settings.
 
 _Clear the alert list efficiently._
 
-> **Interface illustration — Notifications and alert preferences**
+> **Interface illustration — Notifications**
 >
-> Notifications screen with a waiting-conversations banner, desktop alert card, alert feed and a preferences grid of in-app and email toggles.
+> Notifications screen with a waiting-conversations banner, a link to alert preferences in My settings and the alert feed.
 >
 > 1. Waiting banner — how many chats are unclaimed right now, with a link to the Inbox.
-> 2. Desktop & device alerts — turn on browser pop-ups so you hear about escalations in the background.
+> 2. Manage alert preferences in My settings.
 > 3. Alert feed. Unread items are highlighted; each has Open and Mark read.
-> 4. Alert preferences: in-app and email toggles for escalations, new referrals, SLA breaches and low ratings.
-> 5. First-response target in minutes — drives the SLA breach warnings you see.
 
 1. Open Notifications from the sidebar or the bell in the header.
 2. Unread alerts are highlighted. Critical alerts carry a red badge.
@@ -1138,14 +1136,14 @@ _Set what teammates and visitors see._
 
 > **Interface illustration — My settings**
 >
-> Personal settings page with profile photo controls, visitor visibility checkbox, personal detail fields, appearance buttons and security shortcuts.
+> Personal settings page with account fields, profile photo controls, alert preferences, presence and capacity, appearance buttons and security shortcuts.
 >
 > 1. Profile photo — PNG or JPG up to 5 MB, with Replace and Remove.
 > 2. Show my name and photo to website visitors — off by default.
 > 3. Display name is what visitors see during a live chat.
-> 4. Availability — the same status the dashboard header sets.
-> 5. Appearance: Match device, Light, Dark.
-> 6. Notification preferences, Two-step verification and Send password reset email.
+> 4. Alert preferences — desktop, in-app and email alerts plus your first-response target.
+> 5. Presence & capacity — availability, with maximum simultaneous chats set by an administrator.
+> 6. Appearance: Match device, Light, Dark. Two-step verification and Send password reset email.
 
 1. Open My settings from the sidebar.
 2. Upload a profile photo (PNG or JPG up to 5 MB). Use Replace photo to change it or Remove to delete it.
