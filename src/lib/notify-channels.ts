@@ -34,15 +34,21 @@ export function consoleLink(recordType?: string | null, recordId?: string | null
   return `${CONSOLE_ORIGIN}/inbox`;
 }
 
-/** One-line RingCentral post. No PHI — department, reason and a link only. */
+/**
+ * RingCentral alert post. Name-only — department, who is waiting, the reason
+ * and a link. Never any other visitor detail.
+ */
 export function ringCentralText(input: {
   departmentName?: string | null;
   title: string;
   link: string;
+  visitorName?: string | null;
 }): string {
   const where = input.departmentName ? ` — ${input.departmentName}` : "";
-  return `🟢 New visitor waiting${where}. ${input.title}. Open: ${input.link}`;
+  const who = input.visitorName?.trim() || "a website visitor";
+  return `🔔 New live-support request${where}\nVisitor: ${who}\n${input.title}\nOpen: ${input.link}`;
 }
+
 
 /** Stable key so a retried fan-out never emails the same person twice. */
 export function emailIdempotencyKey(

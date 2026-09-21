@@ -22,6 +22,9 @@ type NotifyInput = {
   departmentId?: string | null;
   /** Explicit recipients (e.g. the agent a chat was just assigned to). */
   userIds?: string[];
+  /** Best-known visitor name, used in the RingCentral alert only. */
+  visitorName?: string | null;
+
 };
 
 const PREF_COLUMN: Record<NotifyInput["type"], string> = {
@@ -129,7 +132,16 @@ async function fanOutExternal(input: NotifyInput) {
     if (input.departmentId && !input.userIds?.length && ringChatId) {
       const { isRingCentralConfigured, postToChat } = await import("@/lib/ringcentral.server");
       if (isRingCentralConfigured()) {
-        await postToChat(ringChatId, ringCentralText({ departmentName, title: input.title, link }));
+        await postToChat(
+          ringChatId,
+          ringCentralText({
+            departmentName,
+            title: input.title,
+            link,
+            visitorName: input.visitorName ?? null,
+          }),
+        );
+
       }
     }
   } catch (error) {
