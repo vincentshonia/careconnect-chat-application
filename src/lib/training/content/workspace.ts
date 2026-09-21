@@ -701,7 +701,7 @@ export const contactsChapter: Chapter = {
 export const notificationsChapter: Chapter = {
   id: "notifications",
   title: "Notifications",
-  intro: "How CareConnect gets your attention. Alert preferences live in My settings."
+  intro: "How CareConnect gets your attention. Alert preferences live in My settings.",
   sections: [
     {
       id: "notifications-feed",
