@@ -18,17 +18,50 @@ function page(title: string, detail: string, status: number) {
   );
 }
 
+/** RingCentral pings the URL to validate it; echo any validation token it sends. */
+function validationResponse(request: Request): Response | null {
+  const url = new URL(request.url);
+  const headerToken = request.headers.get("validation-token");
+  const paramToken =
+    url.searchParams.get("validationToken") ?? url.searchParams.get("validation-token");
+  const token = headerToken ?? paramToken;
+  if (!token) return null;
+  const headers: Record<string, string> = {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "no-store",
+  };
+  if (headerToken) headers["Validation-Token"] = headerToken;
+  return new Response(token, { status: 200, headers });
+}
+
+const livePage = () =>
+  page("PHG Alert Bot callback is live", "This endpoint is ready to complete the bot install.", 200);
+
 export const Route = createFileRoute("/api/ringcentral/bot/oauth")({
   server: {
     handlers: {
+      HEAD: async ({ request }) => {
+        const validation = validationResponse(request);
+        if (validation) return new Response(null, { status: 200, headers: validation.headers });
+        return new Response(null, {
+          status: 200,
+          headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
+        });
+      },
       GET: async ({ request }) => {
         const url = new URL(request.url);
         const code = url.searchParams.get("code");
         const oauthError = url.searchParams.get("error");
+
+        const validation = validationResponse(request);
+        if (validation && !code && !oauthError) return validation;
+
         if (oauthError) {
           return page("Bot not connected", "RingCentral reported: " + oauthError, 400);
         }
-        if (!code) return page("Bot not connected", "No authorization code was provided.", 400);
+        // Bare validation ping — must be 200 or RingCentral refuses the install.
+        if (!code) return livePage();
+
 
         const rc = await import("@/lib/ringcentral.server");
         const creds = rc.botCredentials();
