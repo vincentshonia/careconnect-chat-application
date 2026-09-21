@@ -164,18 +164,34 @@ export function AdminShell({
       }`}
     >
       <div className="px-4 py-5">
-        {/* The organization name is always shown as text here — never the
-            uploaded logo image. "Support Console" sits underneath. */}
+        {/* The uploaded organization logo (white-on-transparent) reads directly
+            on the dark sidebar — never inverted. Text is the fallback. */}
         <Link to="/" className="flex min-w-0 flex-col gap-1.5">
           {collapsed ? (
-            <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
-              {initials || "PH"}
-            </span>
+            logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={orgName}
+                className="h-9 w-9 shrink-0 rounded-md object-contain"
+              />
+            ) : (
+              <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
+                {initials || "PH"}
+              </span>
+            )
           ) : (
             <>
-              <span className="block truncate text-base font-semibold tracking-tight">
-                {orgName}
-              </span>
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={orgName}
+                  className="block max-h-10 w-auto max-w-full self-start object-contain"
+                />
+              ) : (
+                <span className="block truncate text-base font-semibold tracking-tight">
+                  {orgName}
+                </span>
+              )}
               <span className="block truncate text-[11px] text-sidebar-foreground/60">
                 Support Console
               </span>
