@@ -148,6 +148,14 @@ test("visitor → AI chat → human hand-off → agent claim, reply and resoluti
   });
   await listItem.click();
 
+  // Selecting by row click (not by URL) must drive the same path as a
+  // notification link: the ?c= param updates and the thread renders.
+  await agent.waitForURL(new RegExp(`[?&]c=${waiting.id}`), { timeout: 30_000 });
+  await expect(
+    agent.getByText(waiting.reference).first(),
+    "clicking a conversation row must load its thread",
+  ).toBeVisible({ timeout: 30_000 });
+
   await agent.getByRole("button", { name: /Claim conversation/ }).click();
   await expect(agent.getByText("Assigned to you").first()).toBeVisible({ timeout: 30_000 });
 
