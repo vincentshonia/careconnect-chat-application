@@ -23,6 +23,8 @@ import { useSessionContext } from "@/hooks/use-session-context";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { QueryError } from "@/components/admin/QueryError";
+import { StaffAvatar } from "@/components/admin/StaffAvatar";
+import { Bot, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
