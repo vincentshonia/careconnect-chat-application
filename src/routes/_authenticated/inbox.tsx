@@ -23,6 +23,8 @@ import { useSessionContext } from "@/hooks/use-session-context";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { QueryError } from "@/components/admin/QueryError";
+import { StaffAvatar } from "@/components/admin/StaffAvatar";
+import { Bot, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -433,7 +435,7 @@ function InboxPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("messages")
-        .select("id, sender_type, sender_name, body, created_at, metadata")
+        .select("id, sender_type, sender_name, sender_user_id, body, created_at, metadata")
         .eq("conversation_id", activeId!)
         // Newest 200 first, then flipped for display: a very long chat still
         // shows its latest turns instead of truncating at the beginning.
@@ -960,27 +962,7 @@ function InboxPage() {
                   />
                 ) : null}
                 {(messagesQuery.data ?? []).map((m) => (
-                  <div
-                    key={m.id}
-                    className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                      m.sender_type === "visitor"
-                        ? "bg-muted text-foreground"
-                        : m.sender_type === "agent"
-                          ? "ml-auto bg-primary text-primary-foreground"
-                          : "border border-border bg-card text-foreground"
-                    }`}
-                  >
-                    <p className="mb-1 text-xs opacity-70">
-                      {m.sender_name ?? m.sender_type} · {formatTimeInZone(m.created_at)}
-                    </p>
-                    <p className="whitespace-pre-wrap">{m.body}</p>
-                    {(m.metadata as { attachment?: Attachment } | null)?.attachment ? (
-                      <AttachmentCard
-                        conversationId={active.id}
-                        attachment={(m.metadata as { attachment: Attachment }).attachment}
-                      />
-                    ) : null}
-                  </div>
+                  <ThreadMessage key={m.id} message={m} conversationId={active.id} />
                 ))}
                 <div ref={bottomRef} />
               </div>
@@ -1419,6 +1401,94 @@ function AttachmentCard({
         <Button size="sm" variant="outline" disabled={busy} onClick={() => open(true)}>
           Save
         </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------- chat thread presentation ---------------------- */
+
+type ThreadMessageRow = {
+  id: string;
+  sender_type: string;
+  sender_name: string | null;
+  sender_user_id: string | null;
+  body: string;
+  created_at: string;
+  metadata: unknown;
+};
+
+/**
+ * One line in the agent's thread: the visitor and the assistant on the left,
+ * the team's own replies on the right, and system notes centred without a
+ * bubble. Colours are soft tints so long threads stay easy to scan.
+ */
+function ThreadMessage({
+  message: m,
+  conversationId,
+}: {
+  message: ThreadMessageRow;
+  conversationId: string;
+}) {
+  if (m.sender_type === "system") {
+    return (
+      <p className="py-1 text-center text-xs text-muted-foreground">
+        {m.body} · {formatTimeInZone(m.created_at)}
+      </p>
+    );
+  }
+
+  const mine = m.sender_type === "agent";
+  const isAi = m.sender_type === "ai";
+  const attachment = (m.metadata as { attachment?: Attachment } | null)?.attachment;
+  const who = m.sender_name ?? (isAi ? "Assistant" : mine ? "You" : "Visitor");
+
+  return (
+    <div className={`flex items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}>
+      {mine ? (
+        <StaffAvatar
+          userId={m.sender_user_id}
+          name={m.sender_name}
+          className="h-8 w-8 shrink-0 text-[11px]"
+        />
+      ) : (
+        <div
+          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border ${
+            isAi ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
+          }`}
+          aria-hidden
+        >
+          {isAi ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
+        </div>
+      )}
+
+      <div
+        className={`max-w-[78%] rounded-2xl border px-3 py-2 text-sm text-foreground ${
+          mine
+            ? "border-primary/25 bg-primary/10"
+            : isAi
+              ? "border-border bg-accent/50"
+              : "border-border bg-muted/70"
+        }`}
+      >
+        <p
+          className={`mb-1 flex items-center gap-1.5 text-xs text-muted-foreground ${
+            mine ? "justify-end" : ""
+          }`}
+        >
+          {isAi ? (
+            <span className="rounded bg-background/70 px-1 text-[10px] font-semibold uppercase tracking-wide">
+              AI
+            </span>
+          ) : null}
+          <span>
+            {who} · {formatTimeInZone(m.created_at)}
+          </span>
+        </p>
+        <p className="whitespace-pre-wrap">{m.body}</p>
+        {attachment ? (
+          <AttachmentCard conversationId={conversationId} attachment={attachment} />
+        ) : null}
       </div>
     </div>
   );

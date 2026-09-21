@@ -237,7 +237,7 @@ function afterHoursNotice(config: Config): string {
 
 type Bubble = {
   id: string;
-  role: "visitor" | "bot" | "system";
+  role: "visitor" | "bot" | "agent" | "system";
   text: string;
   sources?: Array<{
     articleId?: string | null;
@@ -736,7 +736,7 @@ function WidgetPage() {
               .filter((m: any) => !known.has(m.id))
               .map((m: any) => ({
                 id: m.id,
-                role: "bot" as const,
+                role: (m.sender_type === "agent" ? "agent" : "bot") as "agent" | "bot",
                 text: m.body,
                 author: m.sender_name ?? "Representative",
               }));
@@ -1474,6 +1474,8 @@ function WidgetPage() {
                   key={m.id}
                   bubble={m}
                   brand={brand}
+                  agentName={agentName}
+                  agentAvatar={agentAvatar}
                   onRate={rateAnswer}
                   onAction={() => {}}
                 />
@@ -1510,6 +1512,8 @@ function WidgetPage() {
                 key={m.id}
                 bubble={m}
                 brand={brand}
+                agentName={agentName}
+                agentAvatar={agentAvatar}
                 onRate={rateAnswer}
                 onAction={(action) => {
                   if (action === "connect") {
@@ -1925,24 +1929,100 @@ function HomeView({
   );
 }
 
+/** Initials fallback when a representative has no photo on file. */
+function initialsFrom(name: string | null | undefined): string {
+  return (name || "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+/** Small round avatar shown beside every bubble. */
+function BubbleAvatar({
+  role,
+  name,
+  photo,
+}: {
+  role: "visitor" | "agent" | "bot";
+  name?: string | null;
+  photo?: string | null;
+}) {
+  const base =
+    "grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full border border-border text-[10px] font-semibold";
+  if (role === "agent") {
+    return (
+      <div className={`${base} bg-muted text-muted-foreground`}>
+        {photo ? (
+          <img
+            src={photo}
+            alt={name ? `${name}'s photo` : "Representative"}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span aria-hidden>{initialsFrom(name) || "PHG"}</span>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div
+      className={`${base} ${role === "bot" ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}`}
+      aria-hidden
+    >
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {role === "bot" ? (
+          <>
+            <rect x="4" y="8" width="16" height="12" rx="2" />
+            <path d="M12 8V4" />
+            <circle cx="9" cy="14" r="1" />
+            <circle cx="15" cy="14" r="1" />
+          </>
+        ) : (
+          <>
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" />
+          </>
+        )}
+      </svg>
+    </div>
+  );
+}
+
 function MessageBubble({
   bubble,
   brand,
   onRate,
   onAction,
+  agentName,
+  agentAvatar,
 }: {
   bubble: Bubble;
   brand: string;
   onRate: (id: string, helpful: boolean) => void;
   onAction: (action: "connect" | "message") => void;
+  agentName?: string | null;
+  agentAvatar?: string | null;
 }) {
+  if (bubble.role === "system") {
+    return <p className="text-center text-xs text-destructive">{bubble.text}</p>;
+  }
+
   if (bubble.role === "visitor") {
     return (
-      <div className="flex justify-end">
-        <div
-          className="max-w-[85%] rounded-2xl px-3 py-2 text-sm text-white"
-          style={{ background: brand }}
-        >
+      <div className="flex flex-row-reverse items-end gap-2">
+        <BubbleAvatar role="visitor" />
+        <div className="max-w-[78%] rounded-2xl border border-border bg-muted px-3 py-2 text-sm text-foreground">
           {bubble.text}
           {bubble.attachment?.url && bubble.attachment.type.startsWith("image/") ? (
             <img
@@ -1964,64 +2044,87 @@ function MessageBubble({
       </div>
     );
   }
-  if (bubble.role === "system") {
-    return <p className="text-center text-xs text-destructive">{bubble.text}</p>;
-  }
+
+  const isAgent = bubble.role === "agent";
+  const who = bubble.author ?? (isAgent ? (agentName ?? "Representative") : "Assistant");
+
   return (
-    <div className="space-y-2">
-      {bubble.author && (
-        <p className="text-[10px] font-semibold uppercase text-muted-foreground">{bubble.author}</p>
-      )}
-      <p className="whitespace-pre-wrap text-sm text-foreground">{bubble.text}</p>
-      {bubble.sources && bubble.sources.length > 0 && (
-        <div className="text-[11px] text-muted-foreground">
-          Based on:{" "}
-          {bubble.sources.map((s, i) => (
-            <span key={s.sourceId ?? s.articleId ?? `${s.title}-${i}`}>
-              {i > 0 && ", "}
-              {s.url ? (
-                <a className="underline" href={s.url} target="_blank" rel="noreferrer">
-                  {s.title}
-                </a>
-              ) : (
-                s.title
-              )}
-            </span>
-          ))}
-        </div>
-      )}
-      {(bubble.escalate || bubble.suggestHuman) && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => onAction("connect")}
-            className={
-              bubble.suggestHuman
-                ? "rounded-lg px-3 py-2 text-xs font-bold text-white"
-                : "rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white"
-            }
-            style={{ background: brand }}
-          >
-            {bubble.suggestHuman ? "Talk to a representative" : "Connect me"}
-          </button>
-          <button
-            onClick={() => onAction("message")}
-            className="rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-semibold"
-          >
-            Leave a message
-          </button>
-        </div>
-      )}
-      {bubble.aiResponseId && (
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          Was this helpful?
-          <button className="underline" onClick={() => onRate(bubble.aiResponseId!, true)}>
-            Yes
-          </button>
-          <button className="underline" onClick={() => onRate(bubble.aiResponseId!, false)}>
-            No
-          </button>
-        </div>
-      )}
+    <div className="flex items-end gap-2">
+      <BubbleAvatar
+        role={isAgent ? "agent" : "bot"}
+        name={bubble.author ?? agentName}
+        photo={isAgent ? agentAvatar : null}
+      />
+      <div
+        className={`max-w-[78%] space-y-2 rounded-2xl border px-3 py-2 ${
+          isAgent ? "" : "border-border bg-accent/50"
+        }`}
+        style={
+          isAgent
+            ? {
+                background: `color-mix(in srgb, ${brand} 12%, transparent)`,
+                borderColor: `color-mix(in srgb, ${brand} 30%, transparent)`,
+              }
+            : undefined
+        }
+      >
+        <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase text-muted-foreground">
+          {!isAgent && (
+            <span className="rounded bg-background/70 px-1 tracking-wide">AI</span>
+          )}
+          <span>{who}</span>
+        </p>
+        <p className="whitespace-pre-wrap text-sm text-foreground">{bubble.text}</p>
+        {bubble.sources && bubble.sources.length > 0 && (
+          <div className="text-[11px] text-muted-foreground">
+            Based on:{" "}
+            {bubble.sources.map((s, i) => (
+              <span key={s.sourceId ?? s.articleId ?? `${s.title}-${i}`}>
+                {i > 0 && ", "}
+                {s.url ? (
+                  <a className="underline" href={s.url} target="_blank" rel="noreferrer">
+                    {s.title}
+                  </a>
+                ) : (
+                  s.title
+                )}
+              </span>
+            ))}
+          </div>
+        )}
+        {(bubble.escalate || bubble.suggestHuman) && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => onAction("connect")}
+              className={
+                bubble.suggestHuman
+                  ? "rounded-lg px-3 py-2 text-xs font-bold text-white"
+                  : "rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white"
+              }
+              style={{ background: brand }}
+            >
+              {bubble.suggestHuman ? "Talk to a representative" : "Connect me"}
+            </button>
+            <button
+              onClick={() => onAction("message")}
+              className="rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-semibold"
+            >
+              Leave a message
+            </button>
+          </div>
+        )}
+        {bubble.aiResponseId && (
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            Was this helpful?
+            <button className="underline" onClick={() => onRate(bubble.aiResponseId!, true)}>
+              Yes
+            </button>
+            <button className="underline" onClick={() => onRate(bubble.aiResponseId!, false)}>
+              No
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

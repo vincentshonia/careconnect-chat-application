@@ -197,9 +197,13 @@ function DashboardPage() {
           <h1 className="text-xl font-semibold">
             {greeting()}, {firstName}
           </h1>
+          <p className="text-sm font-medium text-foreground">
+            {profile?.full_name || profile?.display_name || firstName}
+            <Badge variant="secondary" className="ml-2 align-middle">
+              {role ? ROLE_LABEL[role] : "Staff"}
+            </Badge>
+          </p>
           <p className="text-sm text-muted-foreground">
-            {role ? ROLE_LABEL[role] : "Staff"}
-            {" · "}
             {activeCount} active conversation{activeCount === 1 ? "" : "s"}
             {" · "}Here's your workload and performance.
           </p>
