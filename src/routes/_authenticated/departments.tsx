@@ -17,14 +17,80 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { ringCentralChatsFn, setDepartmentChatFn } from "@/lib/ringcentral.functions";
+
+/** Searchable channel picker — the account can have dozens of RingCentral teams. */
+function ChannelCombobox({
+  label,
+  value,
+  chats,
+  onSelect,
+}: {
+  label: string;
+  value: string | null;
+  chats: Array<{ id: string; name: string }>;
+  onSelect: (chatId: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = chats.find((c) => c.id === value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          aria-label={`RingCentral channel for ${label}`}
+          className="w-56 justify-between font-normal"
+        >
+          <span className="truncate">
+            {current?.name ?? (value ? "Unknown channel" : "No RingCentral channel")}
+          </span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search channels…" />
+          <CommandList>
+            <CommandEmpty>No channel found.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value="No RingCentral channel"
+                onSelect={() => {
+                  setOpen(false);
+                  onSelect(null);
+                }}
+              >
+                No RingCentral channel
+              </CommandItem>
+              {chats.map((c) => (
+                <CommandItem
+                  key={c.id}
+                  value={c.name}
+                  onSelect={() => {
+                    setOpen(false);
+                    onSelect(c.id);
+                  }}
+                >
+                  {c.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/departments")({
   // Moved into the Admin hub. The old address still works so existing links,
@@ -265,27 +331,12 @@ function DepartmentsTab() {
               ) : null}
               <Badge variant="outline">{d.status}</Badge>
               {ringCentral.data?.connected ? (
-                <Select
-                  value={d.ringcentral_chat_id ?? "none"}
-                  onValueChange={(value) =>
-                    mapChannel.mutate({
-                      departmentId: d.id,
-                      chatId: value === "none" ? null : value,
-                    })
-                  }
-                >
-                  <SelectTrigger className="w-56" aria-label={`RingCentral channel for ${d.name}`}>
-                    <SelectValue placeholder="RingCentral channel" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No RingCentral channel</SelectItem>
-                    {(ringCentral.data?.chats ?? []).map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ChannelCombobox
+                  label={d.name}
+                  value={d.ringcentral_chat_id ?? null}
+                  chats={ringCentral.data?.chats ?? []}
+                  onSelect={(chatId) => mapChannel.mutate({ departmentId: d.id, chatId })}
+                />
               ) : null}
               <div className="ml-auto flex gap-2">
                 <Button
