@@ -142,6 +142,7 @@ export function AdminShell({
     .filter((group) => group.items.length > 0);
 
   const orgName = branding.data?.name ?? "Pacific Health";
+  const logoUrl = branding.data?.logo_url ?? null;
 
   const initials = orgName
     .split(/\s+/)
@@ -164,18 +165,34 @@ export function AdminShell({
       }`}
     >
       <div className="px-4 py-5">
-        {/* The organization name is always shown as text here — never the
-            uploaded logo image. "Support Console" sits underneath. */}
+        {/* The uploaded organization logo (white-on-transparent) reads directly
+            on the dark sidebar — never inverted. Text is the fallback. */}
         <Link to="/" className="flex min-w-0 flex-col gap-1.5">
           {collapsed ? (
-            <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
-              {initials || "PH"}
-            </span>
+            logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={orgName}
+                className="h-9 w-9 shrink-0 rounded-md object-contain"
+              />
+            ) : (
+              <span className="gradient-brand grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-bold text-sidebar-primary-foreground shadow-glow">
+                {initials || "PH"}
+              </span>
+            )
           ) : (
             <>
-              <span className="block truncate text-base font-semibold tracking-tight">
-                {orgName}
-              </span>
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={orgName}
+                  className="block max-h-10 w-auto max-w-full self-start object-contain"
+                />
+              ) : (
+                <span className="block truncate text-base font-semibold tracking-tight">
+                  {orgName}
+                </span>
+              )}
               <span className="block truncate text-[11px] text-sidebar-foreground/60">
                 Support Console
               </span>
@@ -218,7 +235,7 @@ export function AdminShell({
                       activeOptions={{ includeSearch: false }}
                       activeProps={{
                         className:
-                          "gradient-brand text-sidebar-primary-foreground font-semibold shadow-glow hover:text-sidebar-primary-foreground",
+                          "sidebar-active font-semibold shadow-glow hover:text-white",
                       }}
                     >
                       <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
