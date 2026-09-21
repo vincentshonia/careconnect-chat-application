@@ -676,14 +676,12 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
   },
 
   notifications: {
-    title: "Notifications and alert preferences",
-    alt: "Notifications screen with a waiting-conversations banner, desktop alert card, alert feed and a preferences grid of in-app and email toggles.",
+    title: "Notifications",
+    alt: "Notifications screen with a waiting-conversations banner, a link to alert preferences in My settings and the alert feed.",
     markers: [
       "Waiting banner — how many chats are unclaimed right now, with a link to the Inbox.",
-      "Desktop & device alerts — turn on browser pop-ups so you hear about escalations in the background.",
+      "Manage alert preferences in My settings.",
       "Alert feed. Unread items are highlighted; each has Open and Mark read.",
-      "Alert preferences: in-app and email toggles for escalations, new referrals, SLA breaches and low ratings.",
-      "First-response target in minutes — drives the SLA breach warnings you see.",
     ],
     render: () => (
       <MockFrame label="chat.mypacifichealth.com/notifications">
@@ -699,9 +697,7 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
               Unclaimed chats in your queues. Open inbox →
             </p>
           </MockPanel>
-          <MockPanel title="Desktop &amp; device alerts" marker={2}>
-            <MockButton tone="outline">Enable notifications</MockButton>
-          </MockPanel>
+          <MockPanel title="Manage alert preferences in My settings" marker={2} />
           <MockList
             marker={3}
             items={[
@@ -709,19 +705,6 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
               { title: "New referral — INT-1042", meta: "18 minutes ago", badge: "new intake" },
             ]}
           />
-          <MockPanel title="Alert preferences" marker={4}>
-            <MockTable
-              head={["Alert", "In app", "Email"]}
-              rows={[
-                ["Live-agent escalations", "on", "on"],
-                ["New referrals & enrollments", "on", "off"],
-                ["First-response SLA breaches", "on", "off"],
-              ]}
-            />
-            <div className="mt-1.5">
-              <MockField label="First-response target (minutes)" value="15" marker={5} />
-            </div>
-          </MockPanel>
         </MockScreen>
       </MockFrame>
     ),
@@ -729,14 +712,14 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
 
   profile: {
     title: "My settings",
-    alt: "Personal settings page with profile photo controls, visitor visibility checkbox, personal detail fields, appearance buttons and security shortcuts.",
+    alt: "Personal settings page with account fields, profile photo controls, alert preferences, presence and capacity, appearance buttons and security shortcuts.",
     markers: [
       "Profile photo — PNG or JPG up to 5 MB, with Replace and Remove.",
       "Show my name and photo to website visitors — off by default.",
       "Display name is what visitors see during a live chat.",
-      "Availability — the same status the dashboard header sets.",
-      "Appearance: Match device, Light, Dark.",
-      "Notification preferences, Two-step verification and Send password reset email.",
+      "Alert preferences — desktop, in-app and email alerts plus your first-response target.",
+      "Presence & capacity — availability, with maximum simultaneous chats set by an administrator.",
+      "Appearance: Match device, Light, Dark. Two-step verification and Send password reset email.",
     ],
     render: () => (
       <MockFrame label="chat.mypacifichealth.com/profile">
@@ -758,26 +741,43 @@ export const FIGURES: Record<FigureId, TrainingFigure> = {
                 <Marker n={2} /> Show my name and photo to website visitors
               </p>
             </MockPanel>
-            <MockPanel title="Personal details">
+            <MockPanel title="Account">
               <div className="space-y-1">
                 <MockField
                   label="Display name (visitor-facing)"
                   value="Maria from Pacific Health"
                   marker={3}
                 />
-                <MockField label="Availability" value="Available" marker={4} />
                 <MockField label="Languages spoken" value="English, Spanish" />
               </div>
             </MockPanel>
           </MockColumns>
           <MockColumns>
-            <MockPanel title="Appearance" marker={5}>
+            <MockPanel title="Alert preferences" marker={4}>
+              <MockTable
+                head={["Alert", "In app", "Email"]}
+                rows={[
+                  ["Live-agent escalations", "on", "on"],
+                  ["New referrals & enrollments", "on", "on"],
+                ]}
+              />
+              <div className="mt-1.5">
+                <MockField label="First-response target (minutes)" value="15" />
+              </div>
+            </MockPanel>
+            <MockPanel title="Presence &amp; capacity" marker={5}>
+              <MockField label="Availability" value="Available" />
+              <MockField label="Maximum simultaneous chats" value="3" />
+            </MockPanel>
+          </MockColumns>
+          <MockColumns>
+            <MockPanel title="Appearance" marker={6}>
               <MockPills items={["Match device", "Light", "Dark"]} active="Match device" />
             </MockPanel>
-            <MockPanel title="Notifications &amp; security" marker={6}>
+            <MockPanel title="Security">
               <span className="flex flex-wrap gap-1">
-                <MockButton tone="outline">Notification preferences</MockButton>
                 <MockButton tone="outline">Two-step verification</MockButton>
+                <MockButton tone="outline">Send password reset email</MockButton>
               </span>
             </MockPanel>
           </MockColumns>

@@ -188,7 +188,7 @@ const AGENT_GUIDE: Guide = {
         "Claim, answer and resolve a conversation end to end",
         "Handle an intake request from new through to a later stage",
         "Update a contact record and write a useful staff note",
-        "Enable desktop alerts and set your notification preferences",
+        "Enable desktop alerts and set your alert preferences in My settings",
         "Know who your team lead is and how to escalate",
       ],
     }),
