@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { template as staffWelcomeTemplate } from "./staff-welcome";
 import { template as requestReceivedTemplate } from "./request-received";
+import { template as staffChatAlertTemplate } from "./staff-chat-alert";
 
 export interface TemplateEntry {
   component: ComponentType<any>;
@@ -22,4 +23,5 @@ export interface TemplateEntry {
 export const TEMPLATES: Record<string, TemplateEntry> = {
   "staff-welcome": staffWelcomeTemplate,
   "request-received": requestReceivedTemplate,
+  "staff-chat-alert": staffChatAlertTemplate,
 };
