@@ -58,65 +58,6 @@ function NotificationsPage() {
   const session = useSessionContext();
   const { notifications, unread, markRead } = useNotifications();
   const { count: waitingCount } = useWaitingCount();
-  const [push, setPush] = useState<PushStatus>("default");
-  const [saved, setSaved] = useState<string | null>(null);
-  const [form, setForm] = useState<Record<string, boolean | number>>({});
-
-  useEffect(() => setPush(pushStatus()), []);
-
-  const prefs = useQuery({
-    queryKey: ["notification-preferences", session.data?.userId],
-    enabled: Boolean(session.data?.userId),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("notification_preferences")
-        .select("*")
-        .eq("user_id", session.data!.userId)
-        .maybeSingle();
-      if (error) throw error;
-      return (data ?? null) as Prefs | null;
-    },
-  });
-
-  // Keyed on the loaded record, not the query object, so a refetch cannot
-  // discard toggles the user has not saved yet.
-  useEffect(() => {
-    if (!prefs.isSuccess) return;
-    const p = prefs.data;
-    const next: Record<string, boolean | number> = {
-      sla_first_response_minutes: p?.sla_first_response_minutes ?? 15,
-    };
-    for (const t of TOGGLES) {
-      next[`inapp_${t.key}`] = (p?.[`inapp_${t.key}`] as boolean) ?? true;
-      // Chat-alert emails (escalations, and new intake) are on by default so a
-      // waiting visitor reaches the team without anyone configuring anything.
-      next[`email_${t.key}`] =
-        (p?.[`email_${t.key}`] as boolean) ?? (t.key === "escalations" || t.key === "new_intake");
-    }
-    setForm(next);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefs.isSuccess, prefs.data?.user_id]);
-
-  const save = useMutation({
-    mutationFn: async () => {
-      const userId = session.data?.userId;
-      if (!userId) return;
-      const { error } = await supabase.from("notification_preferences").upsert(
-        {
-          user_id: userId,
-          organization_id: session.data?.organizationId ?? null,
-          ...form,
-        } as never,
-        { onConflict: "user_id" },
-      );
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setSaved("Preferences saved.");
-      queryClient.invalidateQueries({ queryKey: ["notification-preferences"] });
-    },
-    onError: (e) => setSaved(e instanceof Error ? e.message : "Could not save"),
-  });
 
   return (
     <AdminShell
