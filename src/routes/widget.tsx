@@ -1474,6 +1474,8 @@ function WidgetPage() {
                   key={m.id}
                   bubble={m}
                   brand={brand}
+                  agentName={agentName}
+                  agentAvatar={agentAvatar}
                   onRate={rateAnswer}
                   onAction={() => {}}
                 />
@@ -1510,6 +1512,8 @@ function WidgetPage() {
                 key={m.id}
                 bubble={m}
                 brand={brand}
+                agentName={agentName}
+                agentAvatar={agentAvatar}
                 onRate={rateAnswer}
                 onAction={(action) => {
                   if (action === "connect") {
@@ -2052,7 +2056,9 @@ function MessageBubble({
         photo={isAgent ? agentAvatar : null}
       />
       <div
-        className="max-w-[78%] space-y-2 rounded-2xl border px-3 py-2"
+        className={`max-w-[78%] space-y-2 rounded-2xl border px-3 py-2 ${
+          isAgent ? "" : "border-border bg-accent/50"
+        }`}
         style={
           isAgent
             ? {
