@@ -237,7 +237,7 @@ function afterHoursNotice(config: Config): string {
 
 type Bubble = {
   id: string;
-  role: "visitor" | "bot" | "system";
+  role: "visitor" | "bot" | "agent" | "system";
   text: string;
   sources?: Array<{
     articleId?: string | null;
@@ -736,7 +736,7 @@ function WidgetPage() {
               .filter((m: any) => !known.has(m.id))
               .map((m: any) => ({
                 id: m.id,
-                role: "bot" as const,
+                role: (m.sender_type === "agent" ? "agent" : "bot") as "agent" | "bot",
                 text: m.body,
                 author: m.sender_name ?? "Representative",
               }));
