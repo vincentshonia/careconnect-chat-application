@@ -230,6 +230,13 @@
   background-image: linear-gradient(180deg, #14304a 0%, #1d4363 100%);
 }
 
+/* Active sidebar item: fixed brand blue against the navy wash. */
+@utility sidebar-active {
+  background-color: #3d85c6;
+  background-image: none;
+  color: #ffffff;
+}
+
 /* Soft tinted page canvas — keeps large admin screens from feeling flat. */
 @utility app-canvas {
   background-color: var(--color-background);
