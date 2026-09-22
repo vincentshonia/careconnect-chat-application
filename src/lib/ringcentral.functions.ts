@@ -30,17 +30,43 @@ async function authorize(context: Ctx): Promise<{ actor: Actor; organizationId: 
 export const ringCentralChatsFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await authorize(context as Ctx);
-    const { isRingCentralConfigured, listChats, botStatus } = await import(
+    const { organizationId } = await authorize(context as Ctx);
+    const { isRingCentralConfigured, listChats, botStatus, fetchChat } = await import(
       "@/lib/ringcentral.server"
     );
     const bot = await botStatus();
-    if (!isRingCentralConfigured()) {
-      return { connected: false as const, chats: [] as Array<{ id: string; name: string }>, bot };
+    const configured = isRingCentralConfigured() || bot.connected;
+    if (!configured) {
+      return {
+        connected: false as const,
+        chats: [] as Array<{ id: string; name: string }>,
+        unlisted: [] as Array<{ id: string; name: string }>,
+        bot,
+      };
     }
     const chats = await listChats();
-    return { connected: true as const, chats, bot };
+
+    // Saved mappings the alert identity cannot see: resolve the real name so the
+    // picker can warn instead of showing "Unknown channel".
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: depts } = await supabaseAdmin
+      .from("departments")
+      .select("ringcentral_chat_id")
+      .eq("organization_id", organizationId)
+      .not("ringcentral_chat_id", "is", null);
+    const known = new Set(chats.map((c) => c.id));
+    const missing = [
+      ...new Set((depts ?? []).map((d) => d.ringcentral_chat_id!).filter((id) => !known.has(id))),
+    ];
+    const unlisted: Array<{ id: string; name: string }> = [];
+    for (const id of missing.slice(0, 20)) {
+      const chat = await fetchChat(id);
+      unlisted.push({ id, name: chat?.name ?? `Channel ${id}` });
+    }
+
+    return { connected: true as const, chats, unlisted, bot };
   });
+
 
 const mapInput = z.object({
   departmentId: z.string().uuid(),
