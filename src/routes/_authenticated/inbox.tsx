@@ -850,6 +850,16 @@ function InboxPage() {
     return (staffQuery.data ?? []).find((s) => s.id === id)?.full_name ?? "A team member";
   };
 
+  /** Who finished a conversation, for the "Resolved 4:36 PM by …" line. */
+  const finishedByName = (c: Conversation) => {
+    const id = c.resolved_by ?? c.closed_by ?? null;
+    if (!id) return null;
+    if (id === userId) return "you";
+    return (staffQuery.data ?? []).find((s) => s.id === id)?.full_name ?? null;
+  };
+
+
+
   return (
     <AdminShell
       fill
@@ -974,7 +984,9 @@ function InboxPage() {
                       now={nowTick}
                       slaMinutes={slaMinutes}
                       departmentName={departmentName(c.department_id)}
+                      finishedByName={finishedByName(c)}
                     />
+
                   </button>
                 </li>
               ))}
