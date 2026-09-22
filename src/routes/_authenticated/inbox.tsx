@@ -997,7 +997,7 @@ function InboxPage() {
                 <div className="ml-auto flex flex-wrap items-center gap-2">
                   {can("conversation.transfer") ? (
                     <TransferDialog
-                      key={active.id}
+                      key={`transfer-${active.id}`}
                       departments={departmentsQuery.data ?? []}
                       currentDepartmentId={active.department_id}
                       busy={transfer.isPending}
@@ -1007,7 +1007,7 @@ function InboxPage() {
 
                   {isSupervisor && !isClosed ? (
                     <ReassignDialog
-                      key={active.id}
+                      key={`reassign-${active.id}`}
                       conversationId={active.id}
                       currentAssignee={active.assigned_to}
                       onDone={invalidate}
