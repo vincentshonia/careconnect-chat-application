@@ -22,3 +22,9 @@
 ## Misc
 - [x] Remove seed auth user dana.reyes@pacifichealthgroup.com
 - [x] Gate green, publish, report
+
+# P7 — Inbox layout + correctness
+- [x] Full-height console: AdminShell owns the viewport, each inbox pane scrolls on its own; same pattern on Contacts (Intake/Notifications/Admin inherit it)
+- [x] Wait/SLA timer only while a chat is open and unanswered; finished rows show "Resolved <time> by <name>" / "Abandoned <time>"
+- [x] Landing tab never Closed: Waiting > Active > All; a stale ?c= for a finished chat no longer moves the tab; unit tests for the four cases
+- [x] Escalation-only threads show the captured request as a visitor bubble; a repeat escalation adds no new system line and no second alert
