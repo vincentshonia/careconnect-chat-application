@@ -1141,7 +1141,7 @@ function InboxPage() {
                 </div>
               </div>
 
-              <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
                 {messagesQuery.error ? (
                   <QueryError
                     error={messagesQuery.error}
@@ -1149,11 +1149,13 @@ function InboxPage() {
                     busy={messagesQuery.isFetching}
                   />
                 ) : null}
+                {intake ? <IntakeRequestBubble intake={intake} /> : null}
                 {(messagesQuery.data ?? []).map((m) => (
                   <ThreadMessage key={m.id} message={m} conversationId={active.id} />
                 ))}
                 <div ref={bottomRef} />
               </div>
+
 
               {canReply ? (
                 <form
