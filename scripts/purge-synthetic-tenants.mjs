@@ -102,7 +102,7 @@ function printSnapshot(label, snap, orgIdsPresent) {
   }
   if (orgIdsPresent === 0) console.log("(no target organizations present)");
   console.log(
-    `\nuser rows — profiles: ${snap.profiles}, memberships: ${snap.memberships}, roles: ${snap.userRoles}, platform admins: ${snap.platformAdmins}`,
+    `\nuser rows — profiles: ${snap.profiles}, memberships: ${snap.memberships}, platform admins: ${snap.platformAdmins}`,
   );
 }
 
