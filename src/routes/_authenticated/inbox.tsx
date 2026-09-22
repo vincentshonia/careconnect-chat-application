@@ -923,8 +923,9 @@ function InboxPage() {
         </div>
       }
     >
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)_260px]">
-        <aside className="flex min-h-0 flex-col overflow-y-auto rounded-xl border border-border">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+        <aside className="flex min-h-0 flex-col overflow-y-auto rounded-xl border border-border lg:w-[320px] lg:shrink-0">
+
 
           {conversationsQuery.error ? (
             <QueryError
@@ -1021,7 +1022,7 @@ function InboxPage() {
           ) : null}
         </aside>
 
-        <section className="flex min-h-0 flex-col rounded-xl border border-border">
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-border">
           {!active ? (
             <p className="p-6 text-sm text-muted-foreground">Select a conversation.</p>
           ) : (
@@ -1257,7 +1258,7 @@ function InboxPage() {
           )}
         </section>
 
-        <aside className="min-h-0 overflow-y-auto rounded-xl border border-border p-4">
+        <aside className="min-h-0 overflow-y-auto rounded-xl border border-border p-4 lg:w-[clamp(280px,26vw,420px)] lg:shrink-0">
           <VisitorDetailsPanel conversationId={activeId} />
 
 
