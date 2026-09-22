@@ -1277,6 +1277,7 @@ function InboxPage() {
                   onChange={(e) => setNoteDraft(e.target.value)}
                   placeholder="Add a note for the team…"
                   rows={2}
+                  className="min-h-[3.5rem] resize-none transition-[height] focus:min-h-[7rem]"
                 />
                 <Button
                   type="submit"
