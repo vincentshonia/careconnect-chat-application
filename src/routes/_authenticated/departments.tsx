@@ -366,9 +366,39 @@ function DepartmentsTab() {
                   label={d.name}
                   value={d.ringcentral_chat_id ?? null}
                   chats={ringCentral.data?.chats ?? []}
+                  unlisted={ringCentral.data?.unlisted ?? []}
                   onSelect={(chatId) => mapChannel.mutate({ departmentId: d.id, chatId })}
                 />
               ) : null}
+              {ringCentral.data?.connected && canManageIntegrations ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!d.ringcentral_chat_id || sendTest.isPending}
+                    title={
+                      d.ringcentral_chat_id
+                        ? "Post a test alert to this channel"
+                        : "Map a channel first"
+                    }
+                    onClick={() => sendTest.mutate(d.id)}
+                  >
+                    Send test alert
+                  </Button>
+                  {testResult?.id === d.id ? (
+                    <span
+                      className={
+                        testResult.ok
+                          ? "text-xs text-muted-foreground"
+                          : "text-xs text-destructive"
+                      }
+                    >
+                      {testResult.message}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+
               <div className="ml-auto flex gap-2">
                 <Button
                   size="sm"
