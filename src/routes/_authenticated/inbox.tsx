@@ -772,8 +772,30 @@ function InboxPage() {
     { key: "department", label: "Department" },
     { key: "active", label: "Active" },
     { key: "closed", label: "Closed" },
-    ...(can("conversation.view_all") ? [{ key: "all" as Tab, label: "All conversations" }] : []),
+    ...(canViewAll ? [{ key: "all" as Tab, label: "All conversations" }] : []),
   ];
+
+  /**
+   * An empty tab must explain itself and offer somewhere to go — an empty list
+   * with no words is what made staff believe the inbox was broken.
+   */
+  const EMPTY_COPY: Record<Tab, string> = {
+    waiting: "No visitors are waiting for a human right now.",
+    mine: "You have no conversations assigned to you.",
+    department: "Nothing is open in your departments right now.",
+    active: "No conversations are being handled right now.",
+    closed: "No finished conversations match this view.",
+    all: "There are no conversations to show yet.",
+  };
+  const emptySummary = counts
+    ? [
+        `${counts.active} active`,
+        `${counts.waiting} waiting`,
+        `${counts.mine} assigned to you`,
+        `${counts.closed} closed`,
+      ].join(" · ")
+    : null;
+  const emptyShortcuts = tabs.filter((t) => t.key !== tab && (counts?.[t.key] ?? 0) > 0);
 
   const departmentName = (id: string | null) =>
     id ? ((departmentsQuery.data ?? []).find((d) => d.id === id)?.name ?? null) : null;
