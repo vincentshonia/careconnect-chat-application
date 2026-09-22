@@ -509,7 +509,10 @@ export async function postToChat(chatId: string, text: string): Promise<boolean>
           // Stale cache: drop it so the next request re-resolves.
           botCache = null;
         }
-        if (botRes?.ok) return true;
+        if (botRes?.ok) {
+          void recordPost();
+          return true;
+        }
         if (botRes) {
           console.warn("[ringcentral] bot post failed", botRes.status, await botRes.text());
         }
