@@ -855,8 +855,18 @@ function InboxPage() {
               variant={tab === t.key ? "default" : "outline"}
               size="sm"
               onClick={() => setTab(t.key)}
+              data-testid={`inbox-tab-${t.key}`}
             >
               {t.label}
+              {counts ? (
+                <span
+                  className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
+                    tab === t.key ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {counts[t.key]}
+                </span>
+              ) : null}
             </Button>
           ))}
         </div>
