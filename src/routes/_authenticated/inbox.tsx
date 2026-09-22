@@ -301,10 +301,8 @@ function InboxPage() {
     queryFn: async () => {
       let q = supabase
         .from("conversations")
-        .select(
-          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id, unread_agent_count, first_human_requested_at",
-          { count: "exact" },
-        );
+        .select(CONVERSATION_COLUMNS, { count: "exact" });
+
 
       switch (tab) {
         case "waiting":
@@ -415,9 +413,8 @@ function InboxPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("conversations")
-        .select(
-          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id, unread_agent_count, first_human_requested_at",
-        )
+        .select(CONVERSATION_COLUMNS)
+
         .eq("id", activeId!)
         .maybeSingle();
       if (error) throw error;
