@@ -310,7 +310,7 @@ export function AdminShell({
   );
 
   return (
-    <div className="app-canvas flex min-h-screen w-full text-foreground">
+    <div className="app-canvas flex h-dvh w-full overflow-hidden text-foreground print:h-auto print:overflow-visible">
       <div className="sticky top-0 hidden h-screen shrink-0 md:block print:hidden">{sidebar}</div>
 
       {mobileOpen && (
