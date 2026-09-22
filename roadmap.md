@@ -28,3 +28,7 @@
 - [x] Wait/SLA timer only while a chat is open and unanswered; finished rows show "Resolved <time> by <name>" / "Abandoned <time>"
 - [x] Landing tab never Closed: Waiting > Active > All; a stale ?c= for a finished chat no longer moves the tab; unit tests for the four cases
 - [x] Escalation-only threads show the captured request as a visitor bubble; a repeat escalation adds no new system line and no second alert
+
+## P8 — Visitor details panel (done)
+- Shared VisitorDetailsView/Panel across Inbox, Contacts, Intake, Notifications, Quality
+- escalate.ts persists metadata.page_url + after_hours
