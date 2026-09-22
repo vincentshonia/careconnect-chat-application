@@ -328,8 +328,19 @@ function DepartmentsTab() {
             <>
               <Badge>Connected</Badge>
               <p className="text-xs text-muted-foreground">
-                Alerts post as {ringCentral.data.bot.name ?? "the CareConnect Alerts bot"}. The bot
-                must be added to each channel it posts into.
+                Alerts post as {ringCentral.data.bot.name ?? "the CareConnect Alerts bot"}
+                {ringCentral.data.bot.extensionId
+                  ? ` (extension ${ringCentral.data.bot.extensionId})`
+                  : ""}
+                {ringCentral.data.bot.source === "dashboard"
+                  ? " · dashboard token"
+                  : ringCentral.data.bot.source === "oauth"
+                    ? " · OAuth install"
+                    : ""}
+                {ringCentral.data.bot.lastPostAt
+                  ? ` · last post ${new Date(ringCentral.data.bot.lastPostAt).toLocaleString()}`
+                  : " · no posts yet"}
+                . The bot must be added to each channel it posts into.
               </p>
             </>
           ) : (
@@ -341,6 +352,7 @@ function DepartmentsTab() {
               </p>
             </>
           )}
+
         </div>
       </div>
 
