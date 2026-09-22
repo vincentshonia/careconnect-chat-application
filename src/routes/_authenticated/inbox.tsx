@@ -428,11 +428,18 @@ function InboxPage() {
    * A conversation opened from a notification link is often not in the tab the
    * page happens to be showing, which used to look like an empty inbox beside
    * an open chat. Switch to the tab that actually lists it.
+   *
+   * Two exceptions, both of which used to land staff on Closed for no reason:
+   * a conversation the page picked by itself never moves the tab, and a
+   * finished conversation left over in the address bar from a previous visit
+   * does not either — the landing rule is Waiting, then Active, then All.
    */
   useEffect(() => {
     if (!active || conversationsQuery.isLoading) return;
     if (conversations.some((c) => c.id === active.id)) return;
+    if (active.id === autoSelectedRef.current) return;
     const target = tabForConversation(active, { userId, departmentIds, canViewAll });
+    if (target === "closed" && active.id === initialActiveIdRef.current) return;
     if (target !== tab) {
       setChosenTab(target);
       setPage(0);
@@ -441,27 +448,38 @@ function InboxPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active?.id, conversationsQuery.isLoading]);
 
-  // Was the request behind this chat left outside operating hours? Agents see
-  // it in the header so a delayed first reply reads as expected, not missed.
-  const afterHoursQuery = useQuery({
-    queryKey: ["conversation-after-hours", activeId],
+  /**
+   * The intake captured when a visitor asked for help. It tells the agent both
+   * whether the request arrived outside operating hours and — for a chat that
+   * began with "Speak to a live agent" and has no visitor messages at all —
+   * what the visitor actually asked for.
+   */
+  const intakeQuery = useQuery({
+    queryKey: ["conversation-intake", activeId],
     enabled: Boolean(activeId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("intake_requests")
-        .select("id")
+        .select(
+          "id, full_name, email, phone, notes, request_type, after_hours, service_interest, county, created_at",
+        )
         .eq("conversation_id", activeId!)
-        .eq("after_hours", true)
+        .order("created_at", { ascending: true })
         .limit(1);
       if (error) throw error;
-      return (data ?? []).length > 0;
+      return (data ?? [])[0] ?? null;
     },
   });
-  const afterHours = afterHoursQuery.data === true;
+  const intake = intakeQuery.data ?? null;
+  const afterHours = intake?.after_hours === true;
 
   useEffect(() => {
-    if (conversations.length && !activeId) setActiveId(conversations[0].id);
+    if (conversations.length && !activeId) {
+      autoSelectedRef.current = conversations[0].id;
+      setActiveId(conversations[0].id);
+    }
   }, [conversations, activeId]);
+
 
   // Changing queue or filters always restarts at the first page.
   useEffect(() => {
