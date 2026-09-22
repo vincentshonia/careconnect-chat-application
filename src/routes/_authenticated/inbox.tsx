@@ -411,6 +411,23 @@ function InboxPage() {
 
   const active = activeQuery.data ?? null;
 
+  /**
+   * A conversation opened from a notification link is often not in the tab the
+   * page happens to be showing, which used to look like an empty inbox beside
+   * an open chat. Switch to the tab that actually lists it.
+   */
+  useEffect(() => {
+    if (!active || conversationsQuery.isLoading) return;
+    if (conversations.some((c) => c.id === active.id)) return;
+    const target = tabForConversation(active, { userId, departmentIds, canViewAll });
+    if (target !== tab) {
+      setChosenTab(target);
+      setPage(0);
+    }
+    // Only react to a newly opened conversation, not to every list refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.id, conversationsQuery.isLoading]);
+
   // Was the request behind this chat left outside operating hours? Agents see
   // it in the header so a delayed first reply reads as expected, not missed.
   const afterHoursQuery = useQuery({
