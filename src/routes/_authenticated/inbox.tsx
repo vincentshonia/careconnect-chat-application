@@ -106,6 +106,7 @@ type Conversation = {
   contact_id: string | null;
   unread_agent_count: number;
   first_human_requested_at: string | null;
+  first_agent_response_at: string | null;
   resolved_at: string | null;
   resolved_by: string | null;
   closed_at: string | null;
@@ -114,7 +115,7 @@ type Conversation = {
 
 /** The columns every conversation query needs, in one place. */
 const CONVERSATION_COLUMNS =
-  "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id, unread_agent_count, first_human_requested_at, resolved_at, resolved_by, closed_at, closed_by";
+  "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id, unread_agent_count, first_human_requested_at, first_agent_response_at, resolved_at, resolved_by, closed_at, closed_by";
 
 
 type Tab = InboxTab;
@@ -1354,7 +1355,10 @@ function QueueMeta({
   finishedByName?: string | null;
 }) {
   const stillOpen = (OPEN_STATUSES as readonly string[]).includes(conversation.status);
-  const waited = stillOpen ? waitingMinutes(conversation, now) : null;
+  // The clock stops the moment a person replies, and never runs on a chat that
+  // has already finished.
+  const stillWaiting = stillOpen && !conversation.first_agent_response_at;
+  const waited = stillWaiting ? waitingMinutes(conversation, now) : null;
   const remaining = waited === null ? null : Math.round(slaMinutes - waited);
   const tone =
     remaining === null
