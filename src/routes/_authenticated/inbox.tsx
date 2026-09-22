@@ -1259,11 +1259,8 @@ function InboxPage() {
         </section>
 
         <aside className="min-h-0 overflow-y-auto rounded-xl border border-border p-4 lg:w-[clamp(280px,26vw,420px)] lg:shrink-0">
-          <VisitorDetailsPanel conversationId={activeId} />
-
-
           {active ? (
-            <div className="mt-6 border-t border-border pt-4">
+            <div>
               <h2 className="text-sm font-semibold">Internal notes</h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Only your team can see these — the visitor never does.
