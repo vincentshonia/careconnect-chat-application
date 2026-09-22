@@ -371,7 +371,12 @@ export function tokenPatch(json: TokenResponse, now: number = Date.now()): Parti
   };
 }
 
-let botCache: { token: string; name: string | null; at: number } | null = null;
+let botCache: {
+  token: string;
+  name: string | null;
+  extensionId: string | null;
+  at: number;
+} | null = null;
 const BOT_CACHE_MS = 60_000;
 
 /** Base platform URL, shared by the JWT and bot paths. */
@@ -386,19 +391,23 @@ function envBotToken(): string | null {
   return token && token.trim() ? token.trim() : null;
 }
 
-/** Best-effort display name for the dashboard bot token. Never throws. */
-async function fetchBotName(token: string): Promise<string> {
+/** Best-effort display name and extension for the dashboard bot token. Never throws. */
+async function fetchBotIdentity(token: string): Promise<{ name: string; extensionId: string | null }> {
   const base = serverUrl();
-  if (!base) return "PHG Alert Bot";
+  const fallback = { name: "PHG Alert Bot", extensionId: null };
+  if (!base) return fallback;
   try {
     const res = await fetch(`${base}/restapi/v1.0/account/~/extension/~`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) return "PHG Alert Bot";
-    const json = (await res.json()) as { name?: string };
-    return json.name?.trim() || "PHG Alert Bot";
+    if (!res.ok) return fallback;
+    const json = (await res.json()) as { name?: string; id?: string | number };
+    return {
+      name: json.name?.trim() || "PHG Alert Bot",
+      extensionId: json.id != null ? String(json.id) : null,
+    };
   } catch {
-    return "PHG Alert Bot";
+    return fallback;
   }
 }
 
@@ -411,26 +420,60 @@ export async function getBotToken(): Promise<BotToken | null> {
   // Highest priority: a long-lived token issued on the RingCentral dashboard.
   const direct = envBotToken();
   if (direct) {
-    const name = await fetchBotName(direct);
-    botCache = { token: direct, name, at: Date.now() };
-    return { token: direct, name };
+    const identity = await fetchBotIdentity(direct);
+    botCache = { token: direct, name: identity.name, extensionId: identity.extensionId, at: Date.now() };
+    return { token: direct, name: identity.name };
   }
 
   const resolved = await resolveBotToken(supabaseBotStore());
-  botCache = resolved ? { ...resolved, at: Date.now() } : null;
+  botCache = resolved ? { ...resolved, extensionId: null, at: Date.now() } : null;
   return resolved;
 }
 
+export type BotStatus = {
+  connected: boolean;
+  name: string | null;
+  extensionId: string | null;
+  /** Where the credential came from: the dashboard token or the OAuth install. */
+  source: "dashboard" | "oauth" | null;
+  lastPostAt: string | null;
+};
 
 /** Status for the admin screen. Never throws. */
-export async function botStatus(): Promise<{ connected: boolean; name: string | null }> {
+export async function botStatus(): Promise<BotStatus> {
   try {
     const token = await getBotToken();
-    return { connected: Boolean(token), name: token?.name ?? null };
+    if (!token) return { connected: false, name: null, extensionId: null, source: null, lastPostAt: null };
+    const source = envBotToken() ? ("dashboard" as const) : ("oauth" as const);
+    let extensionId = botCache?.extensionId ?? null;
+    let lastPostAt: string | null = null;
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data } = await supabaseAdmin
+        .from("ringcentral_bot_auth")
+        .select("bot_extension_id, last_post_at")
+        .limit(1)
+        .maybeSingle();
+      lastPostAt = (data as { last_post_at?: string | null } | null)?.last_post_at ?? null;
+      extensionId = extensionId ?? data?.bot_extension_id ?? null;
+    } catch {
+      /* status is best-effort */
+    }
+    return { connected: true, name: token.name, extensionId, source, lastPostAt };
   } catch {
-    return { connected: false, name: null };
+    return { connected: false, name: null, extensionId: null, source: null, lastPostAt: null };
   }
 }
+
+/** Remember the last successful bot post, for the admin screen. Best-effort. */
+async function recordPost(): Promise<void> {
+  try {
+    await supabaseBotStore().save({ last_post_at: new Date().toISOString() } as Partial<BotAuthRow>);
+  } catch {
+    /* never block alerting */
+  }
+}
+
 
 /**
  * Post a plain-text message into a channel. Never throws.
