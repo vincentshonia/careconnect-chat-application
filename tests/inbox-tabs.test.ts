@@ -17,6 +17,19 @@ describe("inbox landing tab", () => {
     expect(defaultInboxTab(null)).toBe("all");
   });
 
+  it("never lands on Closed, however many finished conversations there are", () => {
+    expect(
+      defaultInboxTab({ waiting: 0, mine: 0, department: 0, active: 0, closed: 23, all: 26 }),
+    ).toBe("all");
+  });
+
+  it("prefers Active over Closed when both have items", () => {
+    expect(
+      defaultInboxTab({ waiting: 0, mine: 0, department: 0, active: 2, closed: 23, all: 26 }),
+    ).toBe("active");
+  });
+
+
   it("recognises only real tab names", () => {
     expect(isInboxTab("waiting")).toBe(true);
     expect(isInboxTab("nonsense")).toBe(false);

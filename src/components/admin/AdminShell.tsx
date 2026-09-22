@@ -102,13 +102,21 @@ export function AdminShell({
   title,
   description,
   actions,
+  fill,
   children,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
+  /**
+   * `fill` turns the content area into a flex column that owns the remaining
+   * viewport height, so a page like the Inbox can hand each of its panes its
+   * own scrollbar instead of leaving a dead band under a short body.
+   */
+  fill?: boolean;
   children: ReactNode;
 }) {
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
@@ -302,7 +310,7 @@ export function AdminShell({
   );
 
   return (
-    <div className="app-canvas flex min-h-screen w-full text-foreground">
+    <div className="app-canvas flex h-dvh w-full overflow-hidden text-foreground print:h-auto print:overflow-visible">
       <div className="sticky top-0 hidden h-screen shrink-0 md:block print:hidden">{sidebar}</div>
 
       {mobileOpen && (
@@ -316,7 +324,7 @@ export function AdminShell({
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col print:min-h-0">
         <header className="sticky top-0 z-30 border-b border-border surface-glass print:hidden">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-4 sm:px-8">
             <div className="flex min-w-0 items-center gap-3">
@@ -361,7 +369,16 @@ export function AdminShell({
 
         <DesktopAlertBar />
 
-        <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 print:px-0 print:py-0">{children}</main>
+        <main
+          className={`min-w-0 flex-1 px-5 py-6 sm:px-8 print:h-auto print:overflow-visible print:px-0 print:py-0 ${
+            fill
+              ? "flex min-h-0 flex-col overflow-hidden"
+              : "min-h-0 overflow-y-auto"
+          }`}
+        >
+          {children}
+        </main>
+
       </div>
     </div>
   );

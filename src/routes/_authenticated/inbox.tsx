@@ -106,7 +106,17 @@ type Conversation = {
   contact_id: string | null;
   unread_agent_count: number;
   first_human_requested_at: string | null;
+  first_agent_response_at: string | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  closed_at: string | null;
+  closed_by: string | null;
 };
+
+/** The columns every conversation query needs, in one place. */
+const CONVERSATION_COLUMNS =
+  "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id, unread_agent_count, first_human_requested_at, first_agent_response_at, resolved_at, resolved_by, closed_at, closed_by";
+
 
 type Tab = InboxTab;
 
@@ -166,8 +176,14 @@ function InboxPage() {
     });
   };
   const [page, setPage] = useState(0);
+  /** The conversation the address bar already carried when the page opened. */
+  const initialActiveIdRef = useRef<string | null>(activeId);
+  /** The conversation the page selected by itself, not one a person opened. */
+  const autoSelectedRef = useRef<string | null>(null);
+
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
+
   const [noteDraft, setNoteDraft] = useState("");
   const [resolveOpen, setResolveOpen] = useState(false);
   const [dispositionId, setDispositionId] = useState("");
@@ -292,10 +308,8 @@ function InboxPage() {
     queryFn: async () => {
       let q = supabase
         .from("conversations")
-        .select(
-          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id, unread_agent_count, first_human_requested_at",
-          { count: "exact" },
-        );
+        .select(CONVERSATION_COLUMNS, { count: "exact" });
+
 
       switch (tab) {
         case "waiting":
@@ -406,9 +420,8 @@ function InboxPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("conversations")
-        .select(
-          "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id, unread_agent_count, first_human_requested_at",
-        )
+        .select(CONVERSATION_COLUMNS)
+
         .eq("id", activeId!)
         .maybeSingle();
       if (error) throw error;
@@ -422,11 +435,18 @@ function InboxPage() {
    * A conversation opened from a notification link is often not in the tab the
    * page happens to be showing, which used to look like an empty inbox beside
    * an open chat. Switch to the tab that actually lists it.
+   *
+   * Two exceptions, both of which used to land staff on Closed for no reason:
+   * a conversation the page picked by itself never moves the tab, and a
+   * finished conversation left over in the address bar from a previous visit
+   * does not either — the landing rule is Waiting, then Active, then All.
    */
   useEffect(() => {
     if (!active || conversationsQuery.isLoading) return;
     if (conversations.some((c) => c.id === active.id)) return;
+    if (active.id === autoSelectedRef.current) return;
     const target = tabForConversation(active, { userId, departmentIds, canViewAll });
+    if (target === "closed" && active.id === initialActiveIdRef.current) return;
     if (target !== tab) {
       setChosenTab(target);
       setPage(0);
@@ -435,27 +455,38 @@ function InboxPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active?.id, conversationsQuery.isLoading]);
 
-  // Was the request behind this chat left outside operating hours? Agents see
-  // it in the header so a delayed first reply reads as expected, not missed.
-  const afterHoursQuery = useQuery({
-    queryKey: ["conversation-after-hours", activeId],
+  /**
+   * The intake captured when a visitor asked for help. It tells the agent both
+   * whether the request arrived outside operating hours and — for a chat that
+   * began with "Speak to a live agent" and has no visitor messages at all —
+   * what the visitor actually asked for.
+   */
+  const intakeQuery = useQuery({
+    queryKey: ["conversation-intake", activeId],
     enabled: Boolean(activeId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("intake_requests")
-        .select("id")
+        .select(
+          "id, full_name, email, phone, notes, request_type, after_hours, service_interest, county, created_at",
+        )
         .eq("conversation_id", activeId!)
-        .eq("after_hours", true)
+        .order("created_at", { ascending: true })
         .limit(1);
       if (error) throw error;
-      return (data ?? []).length > 0;
+      return (data ?? [])[0] ?? null;
     },
   });
-  const afterHours = afterHoursQuery.data === true;
+  const intake = intakeQuery.data ?? null;
+  const afterHours = intake?.after_hours === true;
 
   useEffect(() => {
-    if (conversations.length && !activeId) setActiveId(conversations[0].id);
+    if (conversations.length && !activeId) {
+      autoSelectedRef.current = conversations[0].id;
+      setActiveId(conversations[0].id);
+    }
   }, [conversations, activeId]);
+
 
   // Changing queue or filters always restarts at the first page.
   useEffect(() => {
@@ -820,8 +851,20 @@ function InboxPage() {
     return (staffQuery.data ?? []).find((s) => s.id === id)?.full_name ?? "A team member";
   };
 
+  /** Who finished a conversation, for the "Resolved 4:36 PM by …" line. */
+  const finishedByName = (c: Conversation) => {
+    const id = c.resolved_by ?? c.closed_by ?? null;
+    if (!id) return null;
+    if (id === userId) return "you";
+    return (staffQuery.data ?? []).find((s) => s.id === id)?.full_name ?? null;
+  };
+
+
+
   return (
     <AdminShell
+      fill
+
       title="Inbox"
       description="Website chat conversations, AI answers, and live agent replies."
       actions={
@@ -879,8 +922,9 @@ function InboxPage() {
         </div>
       }
     >
-      <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)_260px]">
-        <aside className="max-h-[70vh] overflow-y-auto rounded-xl border border-border">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)_260px]">
+        <aside className="flex min-h-0 flex-col overflow-y-auto rounded-xl border border-border">
+
           {conversationsQuery.error ? (
             <QueryError
               className="m-3"
@@ -941,7 +985,9 @@ function InboxPage() {
                       now={nowTick}
                       slaMinutes={slaMinutes}
                       departmentName={departmentName(c.department_id)}
+                      finishedByName={finishedByName(c)}
                     />
+
                   </button>
                 </li>
               ))}
@@ -974,7 +1020,7 @@ function InboxPage() {
           ) : null}
         </aside>
 
-        <section className="flex max-h-[70vh] flex-col rounded-xl border border-border">
+        <section className="flex min-h-0 flex-col rounded-xl border border-border">
           {!active ? (
             <p className="p-6 text-sm text-muted-foreground">Select a conversation.</p>
           ) : (
@@ -1096,7 +1142,7 @@ function InboxPage() {
                 </div>
               </div>
 
-              <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
                 {messagesQuery.error ? (
                   <QueryError
                     error={messagesQuery.error}
@@ -1104,11 +1150,13 @@ function InboxPage() {
                     busy={messagesQuery.isFetching}
                   />
                 ) : null}
+                {intake ? <IntakeRequestBubble intake={intake} /> : null}
                 {(messagesQuery.data ?? []).map((m) => (
                   <ThreadMessage key={m.id} message={m} conversationId={active.id} />
                 ))}
                 <div ref={bottomRef} />
               </div>
+
 
               {canReply ? (
                 <form
@@ -1208,7 +1256,7 @@ function InboxPage() {
           )}
         </section>
 
-        <aside className="rounded-xl border border-border p-4">
+        <aside className="min-h-0 overflow-y-auto rounded-xl border border-border p-4">
           <h2 className="text-sm font-semibold">Visitor details</h2>
           {contactQuery.data ? (
             <dl className="mt-3 space-y-2 text-sm">
@@ -1286,19 +1334,31 @@ function InboxPage() {
   );
 }
 
-/** Wait time, SLA countdown, priority, department and unread marker for a row. */
+/**
+ * Wait time, SLA countdown, priority, department and unread marker for a row.
+ *
+ * A wait timer only means something while someone is still waiting, so a
+ * finished conversation shows how it ended instead of a red clock that keeps
+ * running for ever.
+ */
 function QueueMeta({
   conversation,
   now,
   slaMinutes,
   departmentName,
+  finishedByName,
 }: {
   conversation: Conversation;
   now: number;
   slaMinutes: number;
   departmentName: string | null;
+  finishedByName?: string | null;
 }) {
-  const waited = waitingMinutes(conversation, now);
+  const stillOpen = (OPEN_STATUSES as readonly string[]).includes(conversation.status);
+  // The clock stops the moment a person replies, and never runs on a chat that
+  // has already finished.
+  const stillWaiting = stillOpen && !conversation.first_agent_response_at;
+  const waited = stillWaiting ? waitingMinutes(conversation, now) : null;
   const remaining = waited === null ? null : Math.round(slaMinutes - waited);
   const tone =
     remaining === null
@@ -1308,6 +1368,17 @@ function QueueMeta({
         : remaining <= 5
           ? "text-amber-600 dark:text-amber-500"
           : "text-muted-foreground";
+
+  const finishedAt = conversation.resolved_at ?? conversation.closed_at ?? null;
+  const finishedLabel = stillOpen
+    ? null
+    : conversation.status === "abandoned"
+      ? `Abandoned${finishedAt ? ` ${formatTimeInZone(finishedAt)}` : ""}`
+      : conversation.status === "resolved" || conversation.status === "closed"
+        ? `${conversation.status === "resolved" ? "Resolved" : "Closed"}${
+            finishedAt ? ` ${formatTimeInZone(finishedAt)}` : ""
+          }${finishedByName ? ` by ${finishedByName}` : ""}`
+        : null;
 
   return (
     <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
@@ -1322,6 +1393,8 @@ function QueueMeta({
           {remaining < 0 ? `${Math.abs(remaining)} min over target` : `${remaining} min left`}
         </span>
       ) : null}
+      {finishedLabel ? <span className="text-muted-foreground">{finishedLabel}</span> : null}
+
       <span className="text-muted-foreground">{conversation.priority}</span>
       {departmentName ? <span className="text-muted-foreground">{departmentName}</span> : null}
       {conversation.unread_agent_count > 0 ? (
@@ -1626,3 +1699,56 @@ function ThreadMessage({
     </div>
   );
 }
+
+const REQUEST_TYPE_LABEL: Record<string, string> = {
+  callback: "asked to speak with a live agent",
+  referral: "asked about a referral",
+  enrollment: "asked about enrollment",
+  general: "sent a request",
+};
+
+/**
+ * When a visitor clicks "Speak to a live agent" without chatting first, the
+ * thread holds nothing but grey system lines and reads as blank. The details
+ * they filled in are the message they meant to send, so they open the thread.
+ */
+function IntakeRequestBubble({
+  intake,
+}: {
+  intake: {
+    full_name: string | null;
+    email: string | null;
+    phone: string | null;
+    notes: string | null;
+    request_type: string | null;
+    created_at: string;
+  };
+}) {
+  const who = intake.full_name ?? "Visitor";
+  const what = REQUEST_TYPE_LABEL[intake.request_type ?? "general"] ?? "sent a request";
+  const reach = [intake.phone, intake.email].filter(Boolean).join(" · ");
+
+  return (
+    <div className={threadRowClass("visitor")}>
+      <div
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border bg-muted text-muted-foreground"
+        aria-hidden
+      >
+        <User className="h-4 w-4" />
+      </div>
+      <div className={threadBubbleClass("visitor")}>
+        <p className={threadMetaClass("visitor")}>
+          <span>
+            {who} · {formatTimeInZone(intake.created_at)}
+          </span>
+        </p>
+        <p className="whitespace-pre-wrap">
+          {who} {what}.
+        </p>
+        {intake.notes ? <p className="mt-1 whitespace-pre-wrap">{intake.notes}</p> : null}
+        {reach ? <p className="mt-1 text-xs opacity-80">{reach}</p> : null}
+      </div>
+    </div>
+  );
+}
+

@@ -156,14 +156,33 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             })
             .eq("id", conversation.id);
 
-          await mod.insertMessage(
-            conversation,
-            "system",
-            // The transcript is visitor-visible, so contact details stay in the
-            // contact and intake records rather than in the chat itself.
-            `${input.fullName} requested ${input.kind.replace("_", " ")}. Contact details captured.${input.reason ? ` Reason: ${input.reason}` : ""}`,
-            "System",
-          );
+          /**
+           * One request for a person per conversation. A visitor who submits
+           * the form again — or whose widget retries — must not stack up a
+           * second "requested a live agent" line in the transcript, and must
+           * not alert the team twice for the same chat.
+           */
+          const alreadyEscalated =
+            conversation.escalation_requested === true &&
+            !["resolved", "closed", "abandoned"].includes(String(conversation.status));
+
+          if (alreadyEscalated) {
+            if (!conversation.requested_agent_at) {
+              await db
+                .from("conversations")
+                .update({ requested_agent_at: now })
+                .eq("id", conversation.id);
+            }
+          } else {
+            await mod.insertMessage(
+              conversation,
+              "system",
+              // The transcript is visitor-visible, so contact details stay in the
+              // contact and intake records rather than in the chat itself.
+              `${input.fullName} requested ${input.kind.replace("_", " ")}. Contact details captured.${input.reason ? ` Reason: ${input.reason}` : ""}`,
+              "System",
+            );
+          }
           // The hand-off itself records the "escalation_requested" event, so
           // nothing is written here. A finished chat is reopened first,
           // otherwise the hand-off would be an illegal transition.
@@ -176,6 +195,7 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               db,
             });
           }
+
 
           const typeMap: Record<string, string> = {
             referral: "referral",
