@@ -89,47 +89,130 @@ async function call(path: string, init: RequestInit = {}): Promise<Response | nu
 export type RingCentralChat = { id: string; name: string };
 
 /**
- * Teams and private channels the authenticated app can post into (no 1:1 DMs).
+ * Teams and private channels visible to one access token (no 1:1 DMs).
  *
  * RingCentral rejects a comma-joined `type` filter here (400 CMN-101), so we ask
  * for every conversation and keep only Team/Private ourselves, following
  * pagination tokens so later pages of teams are not lost.
  */
-export async function listChats(): Promise<RingCentralChat[]> {
-  try {
-    const out: RingCentralChat[] = [];
-    const seen = new Set<string>();
-    let pageToken: string | undefined;
+export async function listChatsForToken(token: string, base: string): Promise<RingCentralChat[]> {
+  const out: RingCentralChat[] = [];
+  const seen = new Set<string>();
+  let pageToken: string | undefined;
 
-    for (let page = 0; page < 20; page++) {
-      const query = new URLSearchParams({ recordCount: "250" });
-      if (pageToken) query.set("pageToken", pageToken);
-      const res = await call(`/restapi/v1.0/glip/chats?${query.toString()}`);
-      if (!res || !res.ok) {
-        if (res) console.warn("[ringcentral] chat list failed", res.status);
-        break;
-      }
-      const json = (await res.json()) as {
-        records?: Array<{ id?: string; name?: string; type?: string }>;
-        navigation?: { nextPageToken?: string };
-      };
-      for (const r of json.records ?? []) {
-        if (!r.id || (r.type !== "Team" && r.type !== "Private")) continue;
-        const id = String(r.id);
-        if (seen.has(id)) continue;
-        seen.add(id);
-        out.push({ id, name: r.name?.trim() || `Channel ${id}` });
-      }
-      pageToken = json.navigation?.nextPageToken;
-      if (!pageToken) break;
+  for (let page = 0; page < 20; page++) {
+    const query = new URLSearchParams({ recordCount: "250" });
+    if (pageToken) query.set("pageToken", pageToken);
+    const res = await fetch(`${base}/restapi/v1.0/glip/chats?${query.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      console.warn("[ringcentral] chat list failed", res.status);
+      break;
     }
+    const json = (await res.json()) as {
+      records?: Array<{ id?: string; name?: string; type?: string }>;
+      navigation?: { nextPageToken?: string };
+    };
+    for (const r of json.records ?? []) {
+      if (!r.id || (r.type !== "Team" && r.type !== "Private")) continue;
+      const id = String(r.id);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push({ id, name: r.name?.trim() || `Channel ${id}` });
+    }
+    pageToken = json.navigation?.nextPageToken;
+    if (!pageToken) break;
+  }
+  return out;
+}
 
-    return out.sort((a, b) => a.name.localeCompare(b.name));
+/** Merge chat lists in priority order, first occurrence winning, sorted by name. */
+export function mergeChats(...lists: RingCentralChat[][]): RingCentralChat[] {
+  const seen = new Map<string, RingCentralChat>();
+  for (const list of lists) {
+    for (const chat of list) if (!seen.has(chat.id)) seen.set(chat.id, chat);
+  }
+  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export type ListChatsDeps = {
+  /** Bot identity, when one is configured. */
+  bot: () => Promise<BotToken | null>;
+  /** Chats visible to a given raw token. */
+  forToken: (token: string) => Promise<RingCentralChat[]>;
+  /** Chats visible to the JWT staff user, or null when no JWT is configured. */
+  viaJwt: () => Promise<RingCentralChat[] | null>;
+};
+
+/**
+ * Channels the alert can actually be delivered to.
+ *
+ * The bot identity comes first because `postToChat()` posts as the bot; the JWT
+ * staff user is merged in only as the fallback identity that same function uses.
+ */
+export async function listChats(deps: ListChatsDeps = defaultListDeps()): Promise<
+  RingCentralChat[]
+> {
+  try {
+    const lists: RingCentralChat[][] = [];
+    let bot: BotToken | null = null;
+    try {
+      bot = await deps.bot();
+    } catch (error) {
+      console.warn("[ringcentral] bot token resolution threw", error);
+    }
+    if (bot) lists.push(await deps.forToken(bot.token));
+    const jwt = await deps.viaJwt();
+    if (jwt) lists.push(jwt);
+    return mergeChats(...lists);
   } catch (error) {
     console.warn("[ringcentral] chat list threw", error);
     return [];
   }
 }
+
+function defaultListDeps(): ListChatsDeps {
+  return {
+    bot: () => getBotToken(),
+    forToken: (token) => listChatsForToken(token, serverUrl() ?? ""),
+    viaJwt: async () => {
+      const creds = ringCentralCredentials();
+      if (!creds) return null;
+      const token = await accessToken(creds);
+      if (!token) return null;
+      return listChatsForToken(token, creds.serverUrl);
+    },
+  };
+}
+
+/** Look one channel up by id, preferring the bot identity. Null when unknown. */
+export async function fetchChat(
+  chatId: string,
+): Promise<{ id: string; name: string; type: string | null } | null> {
+  const path = `/restapi/v1.0/glip/chats/${encodeURIComponent(chatId)}`;
+  try {
+    const bot = await getBotToken();
+    const base = serverUrl();
+    if (bot && base) {
+      const res = await fetch(`${base}${path}`, {
+        headers: { Authorization: `Bearer ${bot.token}` },
+      });
+      if (res.ok) {
+        const json = (await res.json()) as { id?: string; name?: string; type?: string };
+        return { id: chatId, name: json.name?.trim() || `Channel ${chatId}`, type: json.type ?? null };
+      }
+    }
+    const res = await call(path);
+    if (!res?.ok) return null;
+    const json = (await res.json()) as { name?: string; type?: string };
+    return { id: chatId, name: json.name?.trim() || `Channel ${chatId}`, type: json.type ?? null };
+  } catch (error) {
+    console.warn("[ringcentral] chat lookup threw", error);
+    return null;
+  }
+}
+
 
 /* ------------------------------------------------------------------ *
  * Bot identity
