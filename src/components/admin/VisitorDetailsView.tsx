@@ -9,7 +9,6 @@
  * and Quality screens alike.
  */
 import type { ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatInZone } from "@/lib/org-time";
@@ -272,13 +271,12 @@ export function VisitorDetailsView({
           <Badge variant="outline">{contact.lead_status ?? "new"}</Badge>
         )}
         <div className="pt-1">
-          <Link
-            to="/contacts"
-            search={{ id: contact.id } as never}
+          <a
+            href={`/contacts?id=${contact.id}`}
             className="text-sm font-medium text-primary hover:underline"
           >
             Contact record
-          </Link>
+          </a>
         </div>
       </Group>
     </div>
