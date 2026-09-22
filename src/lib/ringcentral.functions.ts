@@ -108,3 +108,58 @@ export const setDepartmentChatFn = createServerFn({ method: "POST" })
     });
     return { ok: true };
   });
+
+const testInput = z.object({ departmentId: z.string().uuid() });
+
+/**
+ * Post a harmless test alert into the department's mapped channel, so an admin
+ * can confirm delivery without waiting for a real escalation.
+ */
+export const sendRingCentralTestFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => testInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const actor = await resolveActor(
+      (context as Ctx).supabase,
+      (context as Ctx).userId,
+      (context as Ctx).claims,
+    );
+    requirePermission(actor, "integration.manage", "Only administrators can send a test alert");
+    const organizationId = requireOrganization(actor);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: dept } = await supabaseAdmin
+      .from("departments")
+      .select("id, organization_id, name, ringcentral_chat_id")
+      .eq("id", data.departmentId)
+      .maybeSingle();
+    if (!dept || (dept.organization_id !== organizationId && !actor.isPlatformAdmin)) {
+      throw new ForbiddenError("That department belongs to another organization");
+    }
+    if (!dept.ringcentral_chat_id) {
+      return { ok: false as const, message: "No RingCentral channel is mapped to this department" };
+    }
+
+    const { postToChat } = await import("@/lib/ringcentral.server");
+    const timestamp = new Date().toISOString();
+    const ok = await postToChat(
+      dept.ringcentral_chat_id,
+      `CareConnect test alert — ${dept.name} — ${timestamp}`,
+    );
+
+    await writeAudit(supabaseAdmin, {
+      actor,
+      organizationId: dept.organization_id,
+      action: "department.ringcentral_test_alert",
+      recordType: "departments",
+      recordId: dept.id,
+      newValue: { chat_id: dept.ringcentral_chat_id, delivered: ok, at: timestamp },
+    });
+
+    return ok
+      ? { ok: true as const, message: "Test alert posted" }
+      : {
+          ok: false as const,
+          message: "RingCentral rejected the post — check the bot is a member of that channel",
+        };
+  });
