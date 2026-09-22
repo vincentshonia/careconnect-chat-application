@@ -1695,3 +1695,56 @@ function ThreadMessage({
     </div>
   );
 }
+
+const REQUEST_TYPE_LABEL: Record<string, string> = {
+  callback: "asked to speak with a live agent",
+  referral: "asked about a referral",
+  enrollment: "asked about enrollment",
+  general: "sent a request",
+};
+
+/**
+ * When a visitor clicks "Speak to a live agent" without chatting first, the
+ * thread holds nothing but grey system lines and reads as blank. The details
+ * they filled in are the message they meant to send, so they open the thread.
+ */
+function IntakeRequestBubble({
+  intake,
+}: {
+  intake: {
+    full_name: string | null;
+    email: string | null;
+    phone: string | null;
+    notes: string | null;
+    request_type: string | null;
+    created_at: string;
+  };
+}) {
+  const who = intake.full_name ?? "Visitor";
+  const what = REQUEST_TYPE_LABEL[intake.request_type ?? "general"] ?? "sent a request";
+  const reach = [intake.phone, intake.email].filter(Boolean).join(" · ");
+
+  return (
+    <div className={threadRowClass("visitor")}>
+      <div
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border bg-muted text-muted-foreground"
+        aria-hidden
+      >
+        <User className="h-4 w-4" />
+      </div>
+      <div className={threadBubbleClass("visitor")}>
+        <p className={threadMetaClass("visitor")}>
+          <span>
+            {who} · {formatTimeInZone(intake.created_at)}
+          </span>
+        </p>
+        <p className="whitespace-pre-wrap">
+          {who} {what}.
+        </p>
+        {intake.notes ? <p className="mt-1 whitespace-pre-wrap">{intake.notes}</p> : null}
+        {reach ? <p className="mt-1 text-xs opacity-80">{reach}</p> : null}
+      </div>
+    </div>
+  );
+}
+
