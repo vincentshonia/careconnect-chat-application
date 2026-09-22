@@ -132,15 +132,19 @@ function InboxPage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
   const search = Route.useSearch();
-  const [tab, setTab] = useState<Tab>(
-    (["waiting", "mine", "department", "active", "closed", "all"] as const).includes(
-      search.tab as Tab,
-    )
-      ? (search.tab as Tab)
-      : search.c
-        ? "all"
-        : "waiting",
-  );
+  /**
+   * The landing tab is only decided automatically when the URL did not ask for
+   * one and the person has not clicked a tab yet — an explicit `?tab=` and a
+   * manual choice always win.
+   */
+  const urlTab = isInboxTab(search.tab) ? (search.tab as Tab) : null;
+  const [chosenTab, setChosenTab] = useState<Tab | null>(urlTab);
+  const [autoTab, setAutoTab] = useState<Tab | null>(null);
+  const tab: Tab = chosenTab ?? autoTab ?? "waiting";
+  const setTab = (next: Tab) => {
+    setChosenTab(next);
+    setPage(0);
+  };
   const statusFilter = search.status ?? null;
 
   // Selection lives in the URL so row clicks and notification links
