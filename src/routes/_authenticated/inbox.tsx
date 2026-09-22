@@ -1319,19 +1319,28 @@ function InboxPage() {
   );
 }
 
-/** Wait time, SLA countdown, priority, department and unread marker for a row. */
+/**
+ * Wait time, SLA countdown, priority, department and unread marker for a row.
+ *
+ * A wait timer only means something while someone is still waiting, so a
+ * finished conversation shows how it ended instead of a red clock that keeps
+ * running for ever.
+ */
 function QueueMeta({
   conversation,
   now,
   slaMinutes,
   departmentName,
+  finishedByName,
 }: {
   conversation: Conversation;
   now: number;
   slaMinutes: number;
   departmentName: string | null;
+  finishedByName?: string | null;
 }) {
-  const waited = waitingMinutes(conversation, now);
+  const stillOpen = (OPEN_STATUSES as readonly string[]).includes(conversation.status);
+  const waited = stillOpen ? waitingMinutes(conversation, now) : null;
   const remaining = waited === null ? null : Math.round(slaMinutes - waited);
   const tone =
     remaining === null
@@ -1341,6 +1350,17 @@ function QueueMeta({
         : remaining <= 5
           ? "text-amber-600 dark:text-amber-500"
           : "text-muted-foreground";
+
+  const finishedAt = conversation.resolved_at ?? conversation.closed_at ?? null;
+  const finishedLabel = stillOpen
+    ? null
+    : conversation.status === "abandoned"
+      ? `Abandoned${finishedAt ? ` ${formatTimeInZone(finishedAt)}` : ""}`
+      : conversation.status === "resolved" || conversation.status === "closed"
+        ? `${conversation.status === "resolved" ? "Resolved" : "Closed"}${
+            finishedAt ? ` ${formatTimeInZone(finishedAt)}` : ""
+          }${finishedByName ? ` by ${finishedByName}` : ""}`
+        : null;
 
   return (
     <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
@@ -1355,6 +1375,8 @@ function QueueMeta({
           {remaining < 0 ? `${Math.abs(remaining)} min over target` : `${remaining} min left`}
         </span>
       ) : null}
+      {finishedLabel ? <span className="text-muted-foreground">{finishedLabel}</span> : null}
+
       <span className="text-muted-foreground">{conversation.priority}</span>
       {departmentName ? <span className="text-muted-foreground">{departmentName}</span> : null}
       {conversation.unread_agent_count > 0 ? (
