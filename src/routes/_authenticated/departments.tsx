@@ -33,64 +33,75 @@ function ChannelCombobox({
   label,
   value,
   chats,
+  unlisted,
   onSelect,
 }: {
   label: string;
   value: string | null;
   chats: Array<{ id: string; name: string }>;
+  unlisted: Array<{ id: string; name: string }>;
   onSelect: (chatId: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const current = chats.find((c) => c.id === value);
+  const orphan = current ? null : (unlisted.find((c) => c.id === value) ?? null);
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          aria-label={`RingCentral channel for ${label}`}
-          className="w-56 justify-between font-normal"
-        >
-          <span className="truncate">
-            {current?.name ?? (value ? "Unknown channel" : "No RingCentral channel")}
-          </span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Search channels…" />
-          <CommandList>
-            <CommandEmpty>No channel found.</CommandEmpty>
-            <CommandGroup>
-              <CommandItem
-                value="No RingCentral channel"
-                onSelect={() => {
-                  setOpen(false);
-                  onSelect(null);
-                }}
-              >
-                No RingCentral channel
-              </CommandItem>
-              {chats.map((c) => (
+    <div className="flex flex-wrap items-center gap-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            aria-label={`RingCentral channel for ${label}`}
+            className="w-56 justify-between font-normal"
+          >
+            <span className="truncate">
+              {current?.name ?? orphan?.name ?? (value ? "Unknown channel" : "No RingCentral channel")}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search channels…" />
+            <CommandList>
+              <CommandEmpty>No channel found.</CommandEmpty>
+              <CommandGroup>
                 <CommandItem
-                  key={c.id}
-                  value={c.name}
+                  value="No RingCentral channel"
                   onSelect={() => {
                     setOpen(false);
-                    onSelect(c.id);
+                    onSelect(null);
                   }}
                 >
-                  {c.name}
+                  No RingCentral channel
                 </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+                {chats.map((c) => (
+                  <CommandItem
+                    key={c.id}
+                    value={c.name}
+                    onSelect={() => {
+                      setOpen(false);
+                      onSelect(c.id);
+                    }}
+                  >
+                    {c.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {orphan ? (
+        <Badge variant="destructive" className="whitespace-normal text-left">
+          Bot not a member — add PHG Alert Bot to this team
+        </Badge>
+      ) : null}
+    </div>
   );
 }
+
 
 export const Route = createFileRoute("/_authenticated/departments")({
   // Moved into the Admin hub. The old address still works so existing links,
