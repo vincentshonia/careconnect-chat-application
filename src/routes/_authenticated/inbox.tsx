@@ -30,6 +30,7 @@ import { useSessionContext } from "@/hooks/use-session-context";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { QueryError } from "@/components/admin/QueryError";
+import { VisitorDetailsPanel } from "@/components/admin/VisitorDetailsPanel";
 import { StaffAvatar } from "@/components/admin/StaffAvatar";
 import { Bot, User } from "lucide-react";
 
