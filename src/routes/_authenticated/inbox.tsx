@@ -11,6 +11,13 @@ import {
   QUEUE_STATUSES,
   waitLabel,
 } from "@/lib/conversation-status";
+import {
+  defaultInboxTab,
+  isInboxTab,
+  tabForConversation,
+  type InboxCounts,
+  type InboxTab,
+} from "@/lib/inbox-tabs";
 import { transferConversationFn } from "@/lib/routing.functions";
 import {
   attachmentUrlFn,
