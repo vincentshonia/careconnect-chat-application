@@ -192,6 +192,30 @@ function DepartmentsTab() {
       toast.error(error instanceof Error ? error.message : "Could not save that channel"),
   });
 
+  const canManageIntegrations = Boolean(session.data?.permissions.has("integration.manage"));
+  const [testResult, setTestResult] = useState<{
+    id: string;
+    ok: boolean;
+    message: string;
+  } | null>(null);
+  const runTest = useServerFn(sendRingCentralTestFn);
+  const sendTest = useMutation({
+    mutationFn: async (departmentId: string) => {
+      const result = await runTest({ data: { departmentId } });
+      return { departmentId, ...result };
+    },
+    onSuccess: (result) => {
+      setTestResult({ id: result.departmentId, ok: result.ok, message: result.message });
+      if (result.ok) toast.success(result.message);
+      else toast.error(result.message);
+    },
+    onError: (error: unknown, departmentId) => {
+      const message = error instanceof Error ? error.message : "Could not send that test alert";
+      setTestResult({ id: departmentId, ok: false, message });
+      toast.error(message);
+    },
+  });
+
   // Department changes run server-side behind a permission check with audit rows.
   const saveDepartment = useServerFn(manageDepartmentFn);
 
