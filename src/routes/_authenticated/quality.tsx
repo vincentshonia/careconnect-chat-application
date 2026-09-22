@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { QueryError } from "@/components/admin/QueryError";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { VisitorDetailsPanel } from "@/components/admin/VisitorDetailsPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -349,6 +350,12 @@ function QualityPage() {
               )}
             </div>
           </div>
+
+          {selected ? (
+            <div className="rounded-xl border border-border p-4">
+              <VisitorDetailsPanel conversationId={selected} editable={false} />
+            </div>
+          ) : null}
 
           <div className="rounded-xl border border-border p-4">
             <h2 className="text-sm font-semibold">Score this conversation</h2>

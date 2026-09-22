@@ -12,6 +12,7 @@ import { updateIntakeFn, addIntakeNoteFn } from "@/lib/intake.functions";
 import { saveCsv } from "@/lib/csv";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { VisitorDetailsPanel } from "@/components/admin/VisitorDetailsPanel";
 import { useSessionContext } from "@/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -394,14 +395,23 @@ function IntakePage() {
                 <p className="font-mono text-xs text-muted-foreground">{active.reference}</p>
               </div>
 
-              <dl className="grid grid-cols-2 gap-2 text-sm">
-                <Detail term="Email" value={active.email} />
-                <Detail term="Phone" value={active.phone} />
-                <Detail term="County" value={active.county} />
-                <Detail term="Health plan" value={active.health_plan} />
-                <Detail term="Interest" value={active.service_interest} />
-                <Detail term="Language" value={active.preferred_language} />
-              </dl>
+              {active.conversation_id ? (
+                // The same panel the Inbox shows, so the full "speak to a live
+                // agent" form is here too.
+                <VisitorDetailsPanel
+                  conversationId={active.conversation_id}
+                  heading="Visitor details"
+                />
+              ) : (
+                <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <Detail term="Email" value={active.email} />
+                  <Detail term="Phone" value={active.phone} />
+                  <Detail term="County" value={active.county} />
+                  <Detail term="Health plan" value={active.health_plan} />
+                  <Detail term="Interest" value={active.service_interest} />
+                  <Detail term="Language" value={active.preferred_language} />
+                </dl>
+              )}
 
               <div className="space-y-2">
                 <Label>Stage</Label>
