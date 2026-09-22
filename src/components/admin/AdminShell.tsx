@@ -102,13 +102,21 @@ export function AdminShell({
   title,
   description,
   actions,
+  fill,
   children,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
+  /**
+   * `fill` turns the content area into a flex column that owns the remaining
+   * viewport height, so a page like the Inbox can hand each of its panes its
+   * own scrollbar instead of leaving a dead band under a short body.
+   */
+  fill?: boolean;
   children: ReactNode;
 }) {
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
