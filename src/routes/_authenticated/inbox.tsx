@@ -101,7 +101,7 @@ type Conversation = {
   first_human_requested_at: string | null;
 };
 
-type Tab = "waiting" | "mine" | "department" | "active" | "closed" | "all";
+type Tab = InboxTab;
 
 const STATUS_LABEL: Record<string, string> = {
   new: "AI handling",
