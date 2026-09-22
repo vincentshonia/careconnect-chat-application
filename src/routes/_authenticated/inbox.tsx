@@ -1450,11 +1450,12 @@ function ThreadMessage({
 
   const mine = m.sender_type === "agent";
   const isAi = m.sender_type === "ai";
+  const outbound = isOutboundSender(m.sender_type);
   const attachment = (m.metadata as { attachment?: Attachment } | null)?.attachment;
   const who = m.sender_name ?? (isAi ? "Assistant" : mine ? "You" : "Visitor");
 
   return (
-    <div className={`flex items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}>
+    <div className={threadRowClass(m.sender_type)}>
       {mine ? (
         <StaffAvatar
           userId={m.sender_user_id}
@@ -1464,7 +1465,7 @@ function ThreadMessage({
       ) : (
         <div
           className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border ${
-            isAi ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
+            isAi ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
           }`}
           aria-hidden
         >
@@ -1472,20 +1473,8 @@ function ThreadMessage({
         </div>
       )}
 
-      <div
-        className={`max-w-[78%] rounded-2xl border px-3 py-2 text-sm text-foreground ${
-          mine
-            ? "border-primary/25 bg-primary/10"
-            : isAi
-              ? "border-border bg-accent/50"
-              : "border-border bg-muted/70"
-        }`}
-      >
-        <p
-          className={`mb-1 flex items-center gap-1.5 text-xs text-muted-foreground ${
-            mine ? "justify-end" : ""
-          }`}
-        >
+      <div className={threadBubbleClass(m.sender_type)}>
+        <p className={threadMetaClass(m.sender_type)}>
           {isAi ? (
             <span className="rounded bg-background/70 px-1 text-[10px] font-semibold uppercase tracking-wide">
               AI
@@ -1495,6 +1484,7 @@ function ThreadMessage({
             {who} · {formatTimeInZone(m.created_at)}
           </span>
         </p>
+
         <p className="whitespace-pre-wrap">{m.body}</p>
         {attachment ? (
           <AttachmentCard conversationId={conversationId} attachment={attachment} />
