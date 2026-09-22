@@ -662,15 +662,24 @@ function WidgetPage() {
         height: Math.max(WIDGET_MIN_H, Math.min(WIDGET_MAX_H, height)),
       });
     };
+    // Measure once immediately, then coalesce bursts of layout changes so the
+    // host frame animates once instead of on every intermediate frame.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(measure, 50);
+    };
     measure();
-    const ro = new ResizeObserver(() => measure());
+    const ro = new ResizeObserver(schedule);
     if (contentRef.current) ro.observe(contentRef.current);
-    window.addEventListener("resize", measure);
+    window.addEventListener("resize", schedule);
     return () => {
+      if (timer) clearTimeout(timer);
       ro.disconnect();
-      window.removeEventListener("resize", measure);
+      window.removeEventListener("resize", schedule);
     };
   }, [open, view, config, messages, error, ended]);
+
 
   // On phones the on-screen keyboard shrinks the visual viewport. The panel is
   // sized in dvh so the header and tabs stay put; we only need to bring the

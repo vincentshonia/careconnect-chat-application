@@ -30,15 +30,23 @@ export function LiveWidgetPreview({
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
+      if (frame.current && event.source !== frame.current.contentWindow) return;
       const d = event.data as { source?: string; type?: string; height?: number } | null;
-      if (!d || d.source !== "lovable-chat-widget" || d.type !== "resize") return;
+      if (!d) return;
+      const isResize =
+        (d.source === "lovable-chat-widget" && d.type === "resize") ||
+        d.type === "careconnect:resize";
+      if (!isResize) return;
       if (typeof d.height === "number" && d.height > 0) {
-        setHeight(Math.min(720, Math.max(280, d.height)));
+        // Same clamp the embedded loader script applies on a real site, so the
+        // console preview matches the live panel exactly.
+        setHeight(Math.min(720, Math.max(420, d.height)));
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
+
   const mintProof = useServerFn(widgetPreviewProofFn);
   const proofQuery = useQuery({
     queryKey: ["widget-preview-proof", websiteId],
