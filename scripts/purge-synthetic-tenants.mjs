@@ -87,7 +87,6 @@ async function snapshot(orgs, userIds) {
     orgs: rows,
     profiles: await countIn("profiles", "id", userIds),
     memberships: await countIn("organization_memberships", "user_id", userIds),
-    userRoles: await countIn("user_roles", "user_id", userIds),
     platformAdmins: await countIn("platform_admins", "user_id", userIds),
   };
 }
@@ -157,7 +156,6 @@ async function del(table, column, values) {
 
 // 1. user-scoped rows
 await del("platform_admins", "user_id", targetUserIds);
-await del("user_roles", "user_id", targetUserIds);
 await del("organization_memberships", "user_id", targetUserIds);
 await del("profiles", "id", targetUserIds);
 

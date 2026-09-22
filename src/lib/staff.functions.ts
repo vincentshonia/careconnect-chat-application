@@ -257,9 +257,8 @@ export const setStaffAccessFn = createServerFn({ method: "POST" })
         .eq("id", data.userId);
 
       if (data.action === "remove") {
-        // Strip permissions and routing membership; conversations stay assigned
+        // Strip routing membership; conversations stay assigned
         // so the communication history remains intact and attributable.
-        await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId);
         await supabaseAdmin.from("department_members").delete().eq("user_id", data.userId);
       }
     }

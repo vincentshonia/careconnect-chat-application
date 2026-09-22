@@ -188,7 +188,6 @@ const ORG_SCOPED_TABLES = [
   "department_members",
   "departments",
   "websites",
-  "user_roles",
   "organization_memberships",
   "profiles",
   "workspaces",
