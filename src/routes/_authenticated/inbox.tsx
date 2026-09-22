@@ -852,6 +852,8 @@ function InboxPage() {
 
   return (
     <AdminShell
+      fill
+
       title="Inbox"
       description="Website chat conversations, AI answers, and live agent replies."
       actions={
@@ -909,8 +911,9 @@ function InboxPage() {
         </div>
       }
     >
-      <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)_260px]">
-        <aside className="max-h-[70vh] overflow-y-auto rounded-xl border border-border">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)_260px]">
+        <aside className="flex min-h-0 flex-col overflow-y-auto rounded-xl border border-border">
+
           {conversationsQuery.error ? (
             <QueryError
               className="m-3"
@@ -1004,7 +1007,7 @@ function InboxPage() {
           ) : null}
         </aside>
 
-        <section className="flex max-h-[70vh] flex-col rounded-xl border border-border">
+        <section className="flex min-h-0 flex-col rounded-xl border border-border">
           {!active ? (
             <p className="p-6 text-sm text-muted-foreground">Select a conversation.</p>
           ) : (
@@ -1238,7 +1241,7 @@ function InboxPage() {
           )}
         </section>
 
-        <aside className="rounded-xl border border-border p-4">
+        <aside className="min-h-0 overflow-y-auto rounded-xl border border-border p-4">
           <h2 className="text-sm font-semibold">Visitor details</h2>
           {contactQuery.data ? (
             <dl className="mt-3 space-y-2 text-sm">
