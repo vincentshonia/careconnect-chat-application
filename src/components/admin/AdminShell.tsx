@@ -369,7 +369,16 @@ export function AdminShell({
 
         <DesktopAlertBar />
 
-        <main className="min-w-0 flex-1 px-5 py-6 sm:px-8 print:px-0 print:py-0">{children}</main>
+        <main
+          className={`min-w-0 flex-1 px-5 py-6 sm:px-8 print:h-auto print:overflow-visible print:px-0 print:py-0 ${
+            fill
+              ? "flex min-h-0 flex-col overflow-hidden"
+              : "min-h-0 overflow-y-auto"
+          }`}
+        >
+          {children}
+        </main>
+
       </div>
     </div>
   );
