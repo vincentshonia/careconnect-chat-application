@@ -1311,6 +1311,10 @@ function InboxPage() {
               )}
             </div>
           ) : null}
+
+          <div className={active ? "mt-6 border-t border-border pt-4" : ""}>
+            <VisitorDetailsPanel conversationId={activeId} />
+          </div>
         </aside>
       </div>
     </AdminShell>
