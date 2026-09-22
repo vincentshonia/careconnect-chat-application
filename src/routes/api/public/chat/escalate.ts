@@ -146,6 +146,17 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             currentDepartmentId: conversation.department_id ?? null,
           });
 
+          // Where the visitor was standing when they asked, and whether we were
+          // open at that moment — staff see both in the conversation panel.
+          const pageUrl =
+            (ctx.visitor?.["current_page"] as string | null) ??
+            (ctx.visitor?.["landing_page"] as string | null) ??
+            null;
+          const existingMeta =
+            conversation.metadata && typeof conversation.metadata === "object"
+              ? (conversation.metadata as Record<string, unknown>)
+              : {};
+
           await db
             .from("conversations")
             .update({
@@ -153,6 +164,11 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               visitor_type: "prospect",
               priority: input.kind === "live_agent" ? "high" : "normal",
               subject: `${input.kind.replace("_", " ")} — ${input.fullName}`,
+              metadata: {
+                ...existingMeta,
+                page_url: existingMeta["page_url"] ?? pageUrl,
+                after_hours: afterHours,
+              },
             })
             .eq("id", conversation.id);
 
