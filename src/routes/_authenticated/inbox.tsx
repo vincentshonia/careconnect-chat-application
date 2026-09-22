@@ -342,6 +342,53 @@ function InboxPage() {
   const conversations = conversationsQuery.data?.rows ?? [];
   const total = conversationsQuery.data?.total ?? 0;
 
+  /**
+   * Tab counts. One hook, six head-only count requests: no rows cross the
+   * wire, so the pills stay cheap enough to refresh with the queue.
+   */
+  const canViewAll = can("conversation.view_all");
+  const countsQuery = useQuery({
+    queryKey: ["conversation-counts", userId, departmentIds.join(","), canViewAll],
+    enabled: Boolean(organizationId),
+    refetchInterval: 60_000,
+    placeholderData: (prev) => prev,
+    queryFn: async (): Promise<InboxCounts> => {
+      const base = () =>
+        supabase.from("conversations").select("id", { count: "exact", head: true });
+      const open = [...OPEN_STATUSES] as never[];
+      const closed = [...CLOSED_STATUSES] as never[];
+
+      const [waiting, mine, department, active, closedCount, all] = await Promise.all([
+        applyQueueFilter(base()),
+        base()
+          .eq("assigned_to", userId ?? "")
+          .not("status", "in", `(${CLOSED_STATUSES.join(",")})`),
+        base()
+          .in("department_id", departmentIds.length ? departmentIds : [NO_DEPARTMENT])
+          .not("status", "in", `(${CLOSED_STATUSES.join(",")})`),
+        base().in("status", ["active", "assigned"] as never[]),
+        base().in("status", closed),
+        canViewAll ? base() : base().in("status", open),
+      ]);
+
+      return {
+        waiting: waiting.count ?? 0,
+        mine: mine.count ?? 0,
+        department: department.count ?? 0,
+        active: active.count ?? 0,
+        closed: closedCount.count ?? 0,
+        all: all.count ?? 0,
+      };
+    },
+  });
+  const counts = countsQuery.data ?? null;
+
+  // Land on a tab that actually has something in it.
+  useEffect(() => {
+    if (chosenTab || autoTab || !counts) return;
+    setAutoTab(defaultInboxTab(counts));
+  }, [counts, chosenTab, autoTab]);
+
   // The open conversation is fetched by id so it survives paging and filtering.
   const activeQuery = useQuery({
     queryKey: ["conversation", activeId],
