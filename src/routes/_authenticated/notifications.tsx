@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useWaitingCount } from "@/hooks/use-waiting-count";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { VisitorDetailsPanel } from "@/components/admin/VisitorDetailsPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatInZone } from "@/lib/org-time";
@@ -20,8 +22,16 @@ export const Route = createFileRoute("/_authenticated/notifications")({
   component: NotificationsPage,
 });
 
+/** The conversation an alert points at, e.g. "/inbox?c=<uuid>". */
+function conversationFromLink(link: string | null): string | null {
+  if (!link) return null;
+  const id = new URLSearchParams(link.split("?")[1] ?? "").get("c");
+  return id && /^[0-9a-f-]{36}$/i.test(id) ? id : null;
+}
+
 function NotificationsPage() {
   const router = useRouter();
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   /**
    * Notification links are stored as plain strings ("/inbox?c=<id>"). The
@@ -114,6 +124,15 @@ function NotificationsPage() {
                     Open
                   </button>
                 ) : null}
+                {conversationFromLink(n.link) ? (
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:underline"
+                    onClick={() => setExpanded(expanded === n.id ? null : n.id)}
+                  >
+                    {expanded === n.id ? "Hide visitor details" : "Visitor details"}
+                  </button>
+                ) : null}
                 {!n.read_at ? (
                   <button
                     type="button"
@@ -124,6 +143,11 @@ function NotificationsPage() {
                   </button>
                 ) : null}
               </div>
+              {expanded === n.id ? (
+                <div className="mt-3 rounded-lg border border-border p-3">
+                  <VisitorDetailsPanel conversationId={conversationFromLink(n.link)} />
+                </div>
+              ) : null}
             </article>
           ))}
           {notifications.length === 0 ? (
