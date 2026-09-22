@@ -10,6 +10,7 @@ import { useDebounced } from "@/hooks/use-debounced";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { VisitorDetailsPanel } from "@/components/admin/VisitorDetailsPanel";
 import { Pager } from "@/components/admin/Pager";
 import { QueryError } from "@/components/admin/QueryError";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatDateInZone } from "@/lib/org-time";
 
 export const Route = createFileRoute("/_authenticated/contacts")({
+  // Other screens link straight to a record: /contacts?id=<contact id>.
+  validateSearch: (search: Record<string, unknown>) => ({
+    id: typeof search["id"] === "string" ? search["id"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Contacts — Pacific Health Group Support Console" },
@@ -47,10 +52,12 @@ const sanitize = (term: string) =>
 
 function ContactsPage() {
   const queryClient = useQueryClient();
+  const { id: linkedId } = Route.useSearch();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(0);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(linkedId ?? null);
+  const [openConversation, setOpenConversation] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const debouncedSearch = useDebounced(search, 300);
 
@@ -59,6 +66,11 @@ function ContactsPage() {
   useEffect(() => {
     setPage(0);
   }, [debouncedSearch, status]);
+
+  // Arriving from a "Contact record" link opens that record straight away.
+  useEffect(() => {
+    if (linkedId) setActiveId(linkedId);
+  }, [linkedId]);
 
   /**
    * One page at a time, filtered and counted by the database. RLS decides
@@ -345,9 +357,19 @@ function ContactsPage() {
                   <h3 className="text-sm font-semibold">Conversations</h3>
                   <ul className="mt-2 space-y-2 text-sm">
                     {(history.data?.conversations ?? []).map((c) => (
-                      <li key={c.id} className="flex items-center justify-between gap-2">
-                        <span className="truncate">{c.subject ?? c.reference}</span>
-                        <Badge variant="outline">{c.status}</Badge>
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setOpenConversation(openConversation === c.id ? null : c.id)
+                          }
+                          className={`flex w-full items-center justify-between gap-2 rounded px-1 py-0.5 text-left hover:bg-accent ${
+                            openConversation === c.id ? "bg-accent" : ""
+                          }`}
+                        >
+                          <span className="truncate">{c.subject ?? c.reference}</span>
+                          <Badge variant="outline">{c.status}</Badge>
+                        </button>
                       </li>
                     ))}
                     {(history.data?.conversations ?? []).length === 0 ? (
@@ -372,6 +394,15 @@ function ContactsPage() {
                   </ul>
                 </div>
               </div>
+
+              {openConversation ? (
+                <div className="rounded-lg border border-border p-3">
+                  <VisitorDetailsPanel
+                    conversationId={openConversation}
+                    heading="Visitor details for this conversation"
+                  />
+                </div>
+              ) : null}
             </div>
           )}
         </section>

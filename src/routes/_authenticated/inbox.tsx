@@ -30,6 +30,7 @@ import { useSessionContext } from "@/hooks/use-session-context";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { QueryError } from "@/components/admin/QueryError";
+import { VisitorDetailsPanel } from "@/components/admin/VisitorDetailsPanel";
 import { StaffAvatar } from "@/components/admin/StaffAvatar";
 import { Bot, User } from "lucide-react";
 
@@ -1257,25 +1258,8 @@ function InboxPage() {
         </section>
 
         <aside className="min-h-0 overflow-y-auto rounded-xl border border-border p-4">
-          <h2 className="text-sm font-semibold">Visitor details</h2>
-          {contactQuery.data ? (
-            <dl className="mt-3 space-y-2 text-sm">
-              {Object.entries(contactQuery.data)
-                .filter(([, v]) => v)
-                .map(([k, v]) => (
-                  <div key={k}>
-                    <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {k.replace(/_/g, " ")}
-                    </dt>
-                    <dd>{String(v)}</dd>
-                  </div>
-                ))}
-            </dl>
-          ) : (
-            <p className="mt-3 text-sm text-muted-foreground">
-              No contact record captured for this conversation yet.
-            </p>
-          )}
+          <VisitorDetailsPanel conversationId={activeId} />
+
 
           {active ? (
             <div className="mt-6 border-t border-border pt-4">
