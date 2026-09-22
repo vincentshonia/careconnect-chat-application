@@ -75,20 +75,26 @@ export const Route = createFileRoute("/api/public/widget.js")({
   }
 
   window.addEventListener('message', function (e) {
-    if (e.origin !== widgetOrigin || !e.data || e.data.source !== 'lovable-chat-widget') return;
+    if (e.origin !== widgetOrigin || e.source !== frame.contentWindow || !e.data) return;
     var d = e.data;
-    if (d.type === 'resize') {
-      state.open = !!d.open;
-      state.bubble = !!d.bubble;
-      if (typeof d.height === 'number' && d.height > 0) state.height = d.height;
+    var isResize = (d.source === 'lovable-chat-widget' && d.type === 'resize') || d.type === 'careconnect:resize';
+    if (isResize) {
+      if (typeof d.open === 'boolean') state.open = d.open;
+      if (typeof d.bubble === 'boolean') state.bubble = d.bubble;
+      if (typeof d.height === 'number' && d.height > 0) {
+        state.height = Math.max(420, Math.min(720, d.height));
+      }
       apply();
+      return;
     }
+    if (d.source !== 'lovable-chat-widget') return;
     if (d.type === 'position') {
       state.position = d.value === 'bottom-left' ? 'bottom-left' : 'bottom-right';
       apply();
     }
     if (d.type === 'hide') { frame.style.display = 'none'; }
   });
+
   window.addEventListener('resize', apply);
   window.addEventListener('orientationchange', apply);
   if (window.visualViewport) { window.visualViewport.addEventListener('resize', apply); }
