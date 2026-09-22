@@ -324,7 +324,7 @@ export function AdminShell({
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col print:min-h-0">
         <header className="sticky top-0 z-30 border-b border-border surface-glass print:hidden">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-4 sm:px-8">
             <div className="flex min-w-0 items-center gap-3">
