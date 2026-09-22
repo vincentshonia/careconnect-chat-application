@@ -175,7 +175,11 @@ function InboxPage() {
     });
   };
   const [page, setPage] = useState(0);
-  const [query, setQuery] = useState("");
+  /** The conversation the address bar already carried when the page opened. */
+  const initialActiveIdRef = useRef<string | null>(activeId);
+  /** The conversation the page selected by itself, not one a person opened. */
+  const autoSelectedRef = useRef<string | null>(null);
+
   const [draft, setDraft] = useState("");
   const [noteDraft, setNoteDraft] = useState("");
   const [resolveOpen, setResolveOpen] = useState(false);
