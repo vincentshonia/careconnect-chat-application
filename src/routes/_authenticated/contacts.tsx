@@ -186,6 +186,7 @@ function ContactsPage() {
 
   return (
     <AdminShell
+      fill
       title="Contacts"
       description="People captured through chat, referrals and enrollment forms."
       actions={
@@ -220,9 +221,9 @@ function ContactsPage() {
         </>
       }
     >
-      <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="rounded-xl border border-border">
-          <div className="max-h-[64vh] overflow-y-auto">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+        <aside className="flex min-h-0 flex-col rounded-xl border border-border">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {listQuery.error ? (
               <QueryError
                 className="m-3"
@@ -272,7 +273,7 @@ function ContactsPage() {
           </div>
         </aside>
 
-        <section className="rounded-xl border border-border p-4">
+        <section className="min-h-0 overflow-y-auto rounded-xl border border-border p-4">
           {!active ? (
             <p className="text-sm text-muted-foreground">Select a contact to view their record.</p>
           ) : (
