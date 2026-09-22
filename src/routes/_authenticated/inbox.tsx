@@ -180,7 +180,9 @@ function InboxPage() {
   /** The conversation the page selected by itself, not one a person opened. */
   const autoSelectedRef = useRef<string | null>(null);
 
+  const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
+
   const [noteDraft, setNoteDraft] = useState("");
   const [resolveOpen, setResolveOpen] = useState(false);
   const [dispositionId, setDispositionId] = useState("");
