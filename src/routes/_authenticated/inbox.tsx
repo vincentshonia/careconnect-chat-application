@@ -884,7 +884,26 @@ function InboxPage() {
           ) : conversationsQuery.isLoading ? (
             <p className="p-4 text-sm text-muted-foreground">Loading conversations…</p>
           ) : conversations.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">Nothing in this queue right now.</p>
+            <div className="space-y-3 p-4" data-testid="inbox-empty-state">
+              <p className="text-sm font-medium">{EMPTY_COPY[tab]}</p>
+              {emptySummary ? (
+                <p className="text-xs text-muted-foreground">{emptySummary}</p>
+              ) : null}
+              {emptyShortcuts.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {emptyShortcuts.map((t) => (
+                    <Button
+                      key={t.key}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTab(t.key)}
+                    >
+                      {t.label} ({counts?.[t.key] ?? 0})
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           ) : (
             <ul className="divide-y divide-border">
               {conversations.map((c) => (
