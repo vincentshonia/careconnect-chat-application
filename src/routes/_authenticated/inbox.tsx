@@ -1259,11 +1259,8 @@ function InboxPage() {
         </section>
 
         <aside className="min-h-0 overflow-y-auto rounded-xl border border-border p-4 lg:w-[clamp(280px,26vw,420px)] lg:shrink-0">
-          <VisitorDetailsPanel conversationId={activeId} />
-
-
           {active ? (
-            <div className="mt-6 border-t border-border pt-4">
+            <div>
               <h2 className="text-sm font-semibold">Internal notes</h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Only your team can see these — the visitor never does.
@@ -1280,6 +1277,7 @@ function InboxPage() {
                   onChange={(e) => setNoteDraft(e.target.value)}
                   placeholder="Add a note for the team…"
                   rows={2}
+                  className="min-h-[3.5rem] resize-none transition-[height] focus:min-h-[7rem]"
                 />
                 <Button
                   type="submit"
@@ -1313,6 +1311,10 @@ function InboxPage() {
               )}
             </div>
           ) : null}
+
+          <div className={active ? "mt-6 border-t border-border pt-4" : ""}>
+            <VisitorDetailsPanel conversationId={activeId} />
+          </div>
         </aside>
       </div>
     </AdminShell>
