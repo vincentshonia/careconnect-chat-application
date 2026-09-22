@@ -31,6 +31,13 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ReassignDialog } from "@/components/admin/ReassignDialog";
 import { formatInZone, formatTimeInZone } from "@/lib/org-time";
+import {
+  isOutboundSender,
+  threadBubbleClass,
+  threadMetaClass,
+  threadRowClass,
+} from "@/lib/thread-layout";
+
 import { useDebounced } from "@/hooks/use-debounced";
 import { DEFAULT_SLA_MINUTES, waitingMinutes } from "@/lib/sla";
 import { claimBlockReason } from "@/lib/claim-eligibility";
