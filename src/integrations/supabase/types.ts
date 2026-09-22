@@ -2017,6 +2017,7 @@ export type Database = {
           bot_name: string | null
           created_at: string
           id: string
+          last_post_at: string | null
           refresh_expires_at: string | null
           refresh_token: string | null
           singleton: boolean
@@ -2029,6 +2030,7 @@ export type Database = {
           bot_name?: string | null
           created_at?: string
           id?: string
+          last_post_at?: string | null
           refresh_expires_at?: string | null
           refresh_token?: string | null
           singleton?: boolean
@@ -2041,6 +2043,7 @@ export type Database = {
           bot_name?: string | null
           created_at?: string
           id?: string
+          last_post_at?: string | null
           refresh_expires_at?: string | null
           refresh_token?: string | null
           singleton?: boolean

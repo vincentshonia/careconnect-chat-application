@@ -167,7 +167,11 @@ describe("dashboard bot token (env)", () => {
     // Only the display-name lookup, never a token exchange.
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/restapi/v1.0/account/~/extension/~");
-    expect(await mod.botStatus()).toEqual({ connected: true, name: "PHG Alert Bot" });
+    expect(await mod.botStatus()).toMatchObject({
+      connected: true,
+      name: "PHG Alert Bot",
+      source: "dashboard",
+    });
   });
 
   it("falls back to the default name when the lookup fails", async () => {

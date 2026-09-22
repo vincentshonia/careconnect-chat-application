@@ -26,71 +26,86 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { ringCentralChatsFn, setDepartmentChatFn } from "@/lib/ringcentral.functions";
+import {
+  ringCentralChatsFn,
+  sendRingCentralTestFn,
+  setDepartmentChatFn,
+} from "@/lib/ringcentral.functions";
 
 /** Searchable channel picker — the account can have dozens of RingCentral teams. */
 function ChannelCombobox({
   label,
   value,
   chats,
+  unlisted,
   onSelect,
 }: {
   label: string;
   value: string | null;
   chats: Array<{ id: string; name: string }>;
+  unlisted: Array<{ id: string; name: string }>;
   onSelect: (chatId: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const current = chats.find((c) => c.id === value);
+  const orphan = current ? null : (unlisted.find((c) => c.id === value) ?? null);
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          aria-label={`RingCentral channel for ${label}`}
-          className="w-56 justify-between font-normal"
-        >
-          <span className="truncate">
-            {current?.name ?? (value ? "Unknown channel" : "No RingCentral channel")}
-          </span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Search channels…" />
-          <CommandList>
-            <CommandEmpty>No channel found.</CommandEmpty>
-            <CommandGroup>
-              <CommandItem
-                value="No RingCentral channel"
-                onSelect={() => {
-                  setOpen(false);
-                  onSelect(null);
-                }}
-              >
-                No RingCentral channel
-              </CommandItem>
-              {chats.map((c) => (
+    <div className="flex flex-wrap items-center gap-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            aria-label={`RingCentral channel for ${label}`}
+            className="w-56 justify-between font-normal"
+          >
+            <span className="truncate">
+              {current?.name ?? orphan?.name ?? (value ? "Unknown channel" : "No RingCentral channel")}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search channels…" />
+            <CommandList>
+              <CommandEmpty>No channel found.</CommandEmpty>
+              <CommandGroup>
                 <CommandItem
-                  key={c.id}
-                  value={c.name}
+                  value="No RingCentral channel"
                   onSelect={() => {
                     setOpen(false);
-                    onSelect(c.id);
+                    onSelect(null);
                   }}
                 >
-                  {c.name}
+                  No RingCentral channel
                 </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+                {chats.map((c) => (
+                  <CommandItem
+                    key={c.id}
+                    value={c.name}
+                    onSelect={() => {
+                      setOpen(false);
+                      onSelect(c.id);
+                    }}
+                  >
+                    {c.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {orphan ? (
+        <Badge variant="destructive" className="whitespace-normal text-left">
+          Bot not a member — add PHG Alert Bot to this team
+        </Badge>
+      ) : null}
+    </div>
   );
 }
+
 
 export const Route = createFileRoute("/_authenticated/departments")({
   // Moved into the Admin hub. The old address still works so existing links,
@@ -179,6 +194,30 @@ function DepartmentsTab() {
     },
     onError: (error: unknown) =>
       toast.error(error instanceof Error ? error.message : "Could not save that channel"),
+  });
+
+  const canManageIntegrations = Boolean(session.data?.permissions.has("integration.manage"));
+  const [testResult, setTestResult] = useState<{
+    id: string;
+    ok: boolean;
+    message: string;
+  } | null>(null);
+  const runTest = useServerFn(sendRingCentralTestFn);
+  const sendTest = useMutation({
+    mutationFn: async (departmentId: string) => {
+      const result = await runTest({ data: { departmentId } });
+      return { departmentId, ...result };
+    },
+    onSuccess: (result) => {
+      setTestResult({ id: result.departmentId, ok: result.ok, message: result.message });
+      if (result.ok) toast.success(result.message);
+      else toast.error(result.message);
+    },
+    onError: (error: unknown, departmentId) => {
+      const message = error instanceof Error ? error.message : "Could not send that test alert";
+      setTestResult({ id: departmentId, ok: false, message });
+      toast.error(message);
+    },
   });
 
   // Department changes run server-side behind a permission check with audit rows.
@@ -317,8 +356,19 @@ function DepartmentsTab() {
             <>
               <Badge>Connected</Badge>
               <p className="text-xs text-muted-foreground">
-                Alerts post as {ringCentral.data.bot.name ?? "the CareConnect Alerts bot"}. The bot
-                must be added to each channel it posts into.
+                Alerts post as {ringCentral.data.bot.name ?? "the CareConnect Alerts bot"}
+                {ringCentral.data.bot.extensionId
+                  ? ` (extension ${ringCentral.data.bot.extensionId})`
+                  : ""}
+                {ringCentral.data.bot.source === "dashboard"
+                  ? " · dashboard token"
+                  : ringCentral.data.bot.source === "oauth"
+                    ? " · OAuth install"
+                    : ""}
+                {ringCentral.data.bot.lastPostAt
+                  ? ` · last post ${new Date(ringCentral.data.bot.lastPostAt).toLocaleString()}`
+                  : " · no posts yet"}
+                . The bot must be added to each channel it posts into.
               </p>
             </>
           ) : (
@@ -330,6 +380,7 @@ function DepartmentsTab() {
               </p>
             </>
           )}
+
         </div>
       </div>
 
@@ -355,9 +406,39 @@ function DepartmentsTab() {
                   label={d.name}
                   value={d.ringcentral_chat_id ?? null}
                   chats={ringCentral.data?.chats ?? []}
+                  unlisted={ringCentral.data?.unlisted ?? []}
                   onSelect={(chatId) => mapChannel.mutate({ departmentId: d.id, chatId })}
                 />
               ) : null}
+              {ringCentral.data?.connected && canManageIntegrations ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!d.ringcentral_chat_id || sendTest.isPending}
+                    title={
+                      d.ringcentral_chat_id
+                        ? "Post a test alert to this channel"
+                        : "Map a channel first"
+                    }
+                    onClick={() => sendTest.mutate(d.id)}
+                  >
+                    Send test alert
+                  </Button>
+                  {testResult?.id === d.id ? (
+                    <span
+                      className={
+                        testResult.ok
+                          ? "text-xs text-muted-foreground"
+                          : "text-xs text-destructive"
+                      }
+                    >
+                      {testResult.message}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+
               <div className="ml-auto flex gap-2">
                 <Button
                   size="sm"

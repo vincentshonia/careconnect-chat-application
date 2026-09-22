@@ -1,0 +1,1 @@
+ALTER TABLE public.ringcentral_bot_auth ADD COLUMN IF NOT EXISTS last_post_at timestamp with time zone;
