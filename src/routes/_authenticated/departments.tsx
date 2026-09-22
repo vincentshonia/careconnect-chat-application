@@ -26,7 +26,11 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { ringCentralChatsFn, setDepartmentChatFn } from "@/lib/ringcentral.functions";
+import {
+  ringCentralChatsFn,
+  sendRingCentralTestFn,
+  setDepartmentChatFn,
+} from "@/lib/ringcentral.functions";
 
 /** Searchable channel picker — the account can have dozens of RingCentral teams. */
 function ChannelCombobox({
