@@ -372,13 +372,53 @@ describe("authenticated RBAC boundaries", () => {
       expect(error).not.toBeNull();
     });
 
-    it("a Standard User cannot grant themselves a role row", async () => {
-      const { error } = await clients["userA"]!.from("user_roles").insert({
-        user_id: ctx.users["userA"]!.id,
-        role: "administrator",
-        organization_id: ctx.orgA,
-      } as never);
-      expect(error).not.toBeNull();
+    it("a Standard User cannot grant themselves a membership role", async () => {
+      const { error } = await clients["userA"]!.from("organization_memberships")
+        .update({ role: "administrator" } as never)
+        .eq("user_id", ctx.users["userA"]!.id);
+      const { data: after } = await admin
+        .from("organization_memberships")
+        .select("role")
+        .eq("user_id", ctx.users["userA"]!.id)
+        .maybeSingle();
+      expect(error !== null || (after as { role: string } | null)?.role === "agent").toBe(true);
+    });
+  });
+
+  /**
+   * Organization roles — super_admin included — are scoped to their own
+   * tenant. Only a platform administrator may cross organizations, and there
+   * are none in production.
+   */
+  describe("organization super admin is tenant-scoped", () => {
+    it("cannot read another organization's departments", async () => {
+      const { data } = await clients["superA"]!.from("departments")
+        .select("id")
+        .eq("organization_id", ctx.orgB);
+      expect(data ?? []).toHaveLength(0);
+    });
+
+    it("cannot read another organization's conversations", async () => {
+      const seen = await visibleConversations("superA", [ctx.convB]);
+      expect(seen).toHaveLength(0);
+    });
+
+    it("cannot read another organization's staff", async () => {
+      const { data: memberships } = await clients["superA"]!.from("organization_memberships")
+        .select("user_id")
+        .eq("organization_id", ctx.orgB);
+      expect(memberships ?? []).toHaveLength(0);
+
+      const { data: profiles } = await clients["superA"]!.from("profiles")
+        .select("id")
+        .eq("id", ctx.users["agentB"]!.id);
+      expect(profiles ?? []).toHaveLength(0);
+    });
+
+    it("only sees its own organization's departments", async () => {
+      const { data } = await clients["superA"]!.from("departments").select("organization_id");
+      expect((data ?? []).every((row) => row.organization_id === ctx.orgA)).toBe(true);
+      expect((data ?? []).length).toBeGreaterThan(0);
     });
   });
 
