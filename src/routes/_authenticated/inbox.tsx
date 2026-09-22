@@ -106,7 +106,16 @@ type Conversation = {
   contact_id: string | null;
   unread_agent_count: number;
   first_human_requested_at: string | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  closed_at: string | null;
+  closed_by: string | null;
 };
+
+/** The columns every conversation query needs, in one place. */
+const CONVERSATION_COLUMNS =
+  "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id, unread_agent_count, first_human_requested_at, resolved_at, resolved_by, closed_at, closed_by";
+
 
 type Tab = InboxTab;
 
