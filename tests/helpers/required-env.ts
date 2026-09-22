@@ -188,7 +188,6 @@ const ORG_SCOPED_TABLES = [
   "department_members",
   "departments",
   "websites",
-  "user_roles",
   "organization_memberships",
   "profiles",
   "workspaces",
@@ -274,6 +273,23 @@ export async function purgeSyntheticUsers(
  * fixture's own cleanup list). Only prefixed addresses are ever deleted, so a
  * real account can never be caught by this sweep.
  */
+/**
+ * Final sweep for tenants: removes any synthetic organization a suite created
+ * but did not tear down. Only prefixed names are ever deleted.
+ */
+export async function purgeOrphanSyntheticOrganizations(db: AnyClient): Promise<number> {
+  const ids: string[] = [];
+  for (const prefix of SYNTHETIC_PREFIXES) {
+    const { data, error } = await db.from("organizations").select("id, name").like("name", `${prefix}%`);
+    if (error) throw new Error(`orphan org sweep failed: ${error.message}`);
+    for (const org of (data ?? []) as { id: string; name: string }[]) {
+      if (org.name?.startsWith(prefix)) ids.push(org.id);
+    }
+  }
+  if (ids.length === 0) return 0;
+  return purgeSyntheticOrganizations(db, ids);
+}
+
 export async function purgeOrphanSyntheticUsers(db: AnyClient): Promise<number> {
   const orphans: { id: string; email: string }[] = [];
   for (let page = 1; page <= 50; page += 1) {

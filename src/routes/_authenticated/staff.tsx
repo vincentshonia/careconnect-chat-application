@@ -119,12 +119,17 @@ export function StaffPanel() {
       }),
   });
 
+  // Department chips are always scoped to the signed-in organization: a role
+  // inside one tenant must never surface another tenant's departments.
+  const organizationId = session.data?.organizationId ?? null;
   const departmentsQuery = useQuery({
-    queryKey: ["departments-lite"],
+    queryKey: ["departments-lite", organizationId],
+    enabled: Boolean(organizationId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("departments")
         .select("id, name")
+        .eq("organization_id", organizationId!)
         .order("name")
         .range(0, 199);
       if (error) throw error;

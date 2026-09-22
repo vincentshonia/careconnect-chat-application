@@ -80,7 +80,7 @@ export type E2EStaff = {
  * teardown never trips a foreign key. Kept explicit (not derived) so a new
  * table must be consciously added rather than silently leaking rows.
  */
-const ORG_SCOPED_TABLES = [
+export const ORG_SCOPED_TABLES = [
   "qa_reviews",
   "conversation_ratings",
   "ai_responses",
@@ -111,7 +111,6 @@ const ORG_SCOPED_TABLES = [
   "department_members",
   "departments",
   "websites",
-  "user_roles",
   "organization_memberships",
   "profiles",
   "workspaces",

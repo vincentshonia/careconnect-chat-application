@@ -41,6 +41,8 @@ const CHROMIUM_PATH = resolveChromium();
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // Final safety net: removes any synthetic tenant/account a spec left behind.
+  globalTeardown: "./tests/e2e/helpers/global-teardown.ts",
   testMatch: /.*\.spec\.ts$/,
   fullyParallel: false,
   workers: 1,

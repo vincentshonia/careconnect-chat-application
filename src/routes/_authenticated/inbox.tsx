@@ -11,6 +11,13 @@ import {
   QUEUE_STATUSES,
   waitLabel,
 } from "@/lib/conversation-status";
+import {
+  defaultInboxTab,
+  isInboxTab,
+  tabForConversation,
+  type InboxCounts,
+  type InboxTab,
+} from "@/lib/inbox-tabs";
 import { transferConversationFn } from "@/lib/routing.functions";
 import {
   attachmentUrlFn,
@@ -101,7 +108,7 @@ type Conversation = {
   first_human_requested_at: string | null;
 };
 
-type Tab = "waiting" | "mine" | "department" | "active" | "closed" | "all";
+type Tab = InboxTab;
 
 const STATUS_LABEL: Record<string, string> = {
   new: "AI handling",
@@ -132,15 +139,19 @@ function InboxPage() {
   const queryClient = useQueryClient();
   const session = useSessionContext();
   const search = Route.useSearch();
-  const [tab, setTab] = useState<Tab>(
-    (["waiting", "mine", "department", "active", "closed", "all"] as const).includes(
-      search.tab as Tab,
-    )
-      ? (search.tab as Tab)
-      : search.c
-        ? "all"
-        : "waiting",
-  );
+  /**
+   * The landing tab is only decided automatically when the URL did not ask for
+   * one and the person has not clicked a tab yet — an explicit `?tab=` and a
+   * manual choice always win.
+   */
+  const urlTab = isInboxTab(search.tab) ? (search.tab as Tab) : null;
+  const [chosenTab, setChosenTab] = useState<Tab | null>(urlTab);
+  const [autoTab, setAutoTab] = useState<Tab | null>(null);
+  const tab: Tab = chosenTab ?? autoTab ?? "waiting";
+  const setTab = (next: Tab) => {
+    setChosenTab(next);
+    setPage(0);
+  };
   const statusFilter = search.status ?? null;
 
   // Selection lives in the URL so row clicks and notification links
@@ -338,6 +349,53 @@ function InboxPage() {
   const conversations = conversationsQuery.data?.rows ?? [];
   const total = conversationsQuery.data?.total ?? 0;
 
+  /**
+   * Tab counts. One hook, six head-only count requests: no rows cross the
+   * wire, so the pills stay cheap enough to refresh with the queue.
+   */
+  const canViewAll = can("conversation.view_all");
+  const countsQuery = useQuery({
+    queryKey: ["conversation-counts", userId, departmentIds.join(","), canViewAll],
+    enabled: Boolean(organizationId),
+    refetchInterval: 60_000,
+    placeholderData: (prev) => prev,
+    queryFn: async (): Promise<InboxCounts> => {
+      const base = () =>
+        supabase.from("conversations").select("id", { count: "exact", head: true });
+      const open = [...OPEN_STATUSES] as never[];
+      const closed = [...CLOSED_STATUSES] as never[];
+
+      const [waiting, mine, department, active, closedCount, all] = await Promise.all([
+        applyQueueFilter(base()),
+        base()
+          .eq("assigned_to", userId ?? "")
+          .not("status", "in", `(${CLOSED_STATUSES.join(",")})`),
+        base()
+          .in("department_id", departmentIds.length ? departmentIds : [NO_DEPARTMENT])
+          .not("status", "in", `(${CLOSED_STATUSES.join(",")})`),
+        base().in("status", ["active", "assigned"] as never[]),
+        base().in("status", closed),
+        canViewAll ? base() : base().in("status", open),
+      ]);
+
+      return {
+        waiting: waiting.count ?? 0,
+        mine: mine.count ?? 0,
+        department: department.count ?? 0,
+        active: active.count ?? 0,
+        closed: closedCount.count ?? 0,
+        all: all.count ?? 0,
+      };
+    },
+  });
+  const counts = countsQuery.data ?? null;
+
+  // Land on a tab that actually has something in it.
+  useEffect(() => {
+    if (chosenTab || autoTab || !counts) return;
+    setAutoTab(defaultInboxTab(counts));
+  }, [counts, chosenTab, autoTab]);
+
   // The open conversation is fetched by id so it survives paging and filtering.
   const activeQuery = useQuery({
     queryKey: ["conversation", activeId],
@@ -359,6 +417,23 @@ function InboxPage() {
   });
 
   const active = activeQuery.data ?? null;
+
+  /**
+   * A conversation opened from a notification link is often not in the tab the
+   * page happens to be showing, which used to look like an empty inbox beside
+   * an open chat. Switch to the tab that actually lists it.
+   */
+  useEffect(() => {
+    if (!active || conversationsQuery.isLoading) return;
+    if (conversations.some((c) => c.id === active.id)) return;
+    const target = tabForConversation(active, { userId, departmentIds, canViewAll });
+    if (target !== tab) {
+      setChosenTab(target);
+      setPage(0);
+    }
+    // Only react to a newly opened conversation, not to every list refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.id, conversationsQuery.isLoading]);
 
   // Was the request behind this chat left outside operating hours? Agents see
   // it in the header so a delayed first reply reads as expected, not missed.
@@ -704,8 +779,30 @@ function InboxPage() {
     { key: "department", label: "Department" },
     { key: "active", label: "Active" },
     { key: "closed", label: "Closed" },
-    ...(can("conversation.view_all") ? [{ key: "all" as Tab, label: "All conversations" }] : []),
+    ...(canViewAll ? [{ key: "all" as Tab, label: "All conversations" }] : []),
   ];
+
+  /**
+   * An empty tab must explain itself and offer somewhere to go — an empty list
+   * with no words is what made staff believe the inbox was broken.
+   */
+  const EMPTY_COPY: Record<Tab, string> = {
+    waiting: "No visitors are waiting for a human right now.",
+    mine: "You have no conversations assigned to you.",
+    department: "Nothing is open in your departments right now.",
+    active: "No conversations are being handled right now.",
+    closed: "No finished conversations match this view.",
+    all: "There are no conversations to show yet.",
+  };
+  const emptySummary = counts
+    ? [
+        `${counts.active} active`,
+        `${counts.waiting} waiting`,
+        `${counts.mine} assigned to you`,
+        `${counts.closed} closed`,
+      ].join(" · ")
+    : null;
+  const emptyShortcuts = tabs.filter((t) => t.key !== tab && (counts?.[t.key] ?? 0) > 0);
 
   const departmentName = (id: string | null) =>
     id ? ((departmentsQuery.data ?? []).find((d) => d.id === id)?.name ?? null) : null;
@@ -765,8 +862,18 @@ function InboxPage() {
               variant={tab === t.key ? "default" : "outline"}
               size="sm"
               onClick={() => setTab(t.key)}
+              data-testid={`inbox-tab-${t.key}`}
             >
               {t.label}
+              {counts ? (
+                <span
+                  className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
+                    tab === t.key ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {counts[t.key]}
+                </span>
+              ) : null}
             </Button>
           ))}
         </div>
@@ -784,7 +891,26 @@ function InboxPage() {
           ) : conversationsQuery.isLoading ? (
             <p className="p-4 text-sm text-muted-foreground">Loading conversations…</p>
           ) : conversations.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">Nothing in this queue right now.</p>
+            <div className="space-y-3 p-4" data-testid="inbox-empty-state">
+              <p className="text-sm font-medium">{EMPTY_COPY[tab]}</p>
+              {emptySummary ? (
+                <p className="text-xs text-muted-foreground">{emptySummary}</p>
+              ) : null}
+              {emptyShortcuts.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {emptyShortcuts.map((t) => (
+                    <Button
+                      key={t.key}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTab(t.key)}
+                    >
+                      {t.label} ({counts?.[t.key] ?? 0})
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           ) : (
             <ul className="divide-y divide-border">
               {conversations.map((c) => (
@@ -871,7 +997,7 @@ function InboxPage() {
                 <div className="ml-auto flex flex-wrap items-center gap-2">
                   {can("conversation.transfer") ? (
                     <TransferDialog
-                      key={active.id}
+                      key={`transfer-${active.id}`}
                       departments={departmentsQuery.data ?? []}
                       currentDepartmentId={active.department_id}
                       busy={transfer.isPending}
@@ -881,7 +1007,7 @@ function InboxPage() {
 
                   {isSupervisor && !isClosed ? (
                     <ReassignDialog
-                      key={active.id}
+                      key={`reassign-${active.id}`}
                       conversationId={active.id}
                       currentAssignee={active.assigned_to}
                       onDone={invalidate}

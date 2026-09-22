@@ -55,6 +55,21 @@ async function stage(name, command, args, env) {
   return exitCode;
 }
 
+/*
+ * Final hygiene stage: purge any synthetic tenant/account the suites left
+ * behind AND fail the gate when there was anything to purge — a leak means a
+ * spec did not clean up after itself, which is a release defect in its own
+ * right, not something the gate may quietly repair.
+ */
+const CLEANUP_ARGS = ["scripts/e2e-cleanup-verify.mjs", "--purge", "--fail-on-leak"];
+
+if ((process.env["ALLOW_INTEGRATION_TESTS_ON_PRIMARY"] ?? "").trim().toLowerCase() === "true") {
+  const line = "!".repeat(78);
+  console.warn(
+    `\n${line}\n!! ALLOW_INTEGRATION_TESTS_ON_PRIMARY=true — integration and E2E suites will\n!! CREATE AND DELETE synthetic tenants inside the LIVE project. Every artefact\n!! must carry the __test_/__e2e_ prefix; the final cleanup stage fails the gate\n!! if a single synthetic row survives the run.\n${line}\n`,
+  );
+}
+
 await stage("Preflight", "node", ["scripts/release-preflight.mjs"]);
 await stage("Lint", "bunx", ["eslint", "."]);
 await stage("Typecheck", "bunx", ["tsgo", "--noEmit"]);
@@ -159,15 +174,15 @@ if (runtimeBlocked) {
 }
 if (runtimeBlocked) {
   // The blocked runtime says nothing about tenant hygiene, so still verify it.
-  const cleanupCode = await run("node", ["scripts/e2e-cleanup-verify.mjs"]);
+  const cleanupCode = await run("node", CLEANUP_ARGS);
   stages.push({
     name: "E2E cleanup verification",
-    command: "node scripts/e2e-cleanup-verify.mjs",
+    command: `node ${CLEANUP_ARGS.join(" ")}`,
     exitCode: cleanupCode,
     status: cleanupCode === 0 ? "PASS" : "FAIL",
   });
 } else {
-  await stage("E2E cleanup verification", "node", ["scripts/e2e-cleanup-verify.mjs"]);
+  await stage("E2E cleanup verification", "node", CLEANUP_ARGS);
 }
 
 /* ------------------------------------------------------------------ *

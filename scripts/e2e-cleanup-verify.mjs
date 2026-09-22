@@ -109,6 +109,13 @@ async function sweep(backend) {
  * delete, so real data can never be caught by this sweep.
  */
 const purge = process.argv.includes("--purge");
+/**
+ * With `--fail-on-leak` the run fails when the purge had to remove anything:
+ * a suite that leaves synthetic data behind is a defect, even though this
+ * script can clean it up.
+ */
+const failOnLeak = process.argv.includes("--fail-on-leak");
+let leaked = 0;
 
 /** Org-scoped tables, children before parents. */
 const ORG_SCOPED_TABLES = [
@@ -143,7 +150,6 @@ const ORG_SCOPED_TABLES = [
   "department_members",
   "departments",
   "websites",
-  "user_roles",
   "organization_memberships",
   "profiles",
   "workspaces",
@@ -178,6 +184,7 @@ async function purgeLeakedOrganizations(backend) {
       removed += 1;
     }
   }
+  leaked += removed;
   console.log(`[${backend.label}] purged ${removed} synthetic organization(s).`);
 }
 
@@ -195,12 +202,13 @@ async function purgeLeakedAccounts(backend) {
     if (users.length < 200) break;
   }
 
-  const leaked = all.filter((u) => PREFIXES.some((p) => (u.email ?? "").startsWith(p)));
+  const leakedAccounts = all.filter((u) => PREFIXES.some((p) => (u.email ?? "").startsWith(p)));
   console.log(
-    `\n[${backend.label}] before purge: ${all.length} account(s) total, ${leaked.length} synthetic, ${all.length - leaked.length} real.`,
+    `\n[${backend.label}] before purge: ${all.length} account(s) total, ${leakedAccounts.length} synthetic, ${all.length - leakedAccounts.length} real.`,
   );
 
-  for (const user of leaked) {
+  leaked += leakedAccounts.length;
+  for (const user of leakedAccounts) {
     assertSynthetic(user.email, "account");
     await db.from("profiles").delete().eq("id", user.id);
     const { error } = await db.auth.admin.deleteUser(user.id);
@@ -249,6 +257,13 @@ for (const f of findings) {
 
 if (failed) {
   console.error("\nCLEANUP VERIFICATION FAILED — synthetic data survived the run.");
+  process.exit(1);
+}
+if (failOnLeak && leaked > 0) {
+  console.error(
+    `\nCLEANUP VERIFICATION FAILED — ${leaked} synthetic artefact(s) were left behind by the` +
+      " test run and had to be purged here. Fix the suite's own teardown.",
+  );
   process.exit(1);
 }
 console.log("\nCLEANUP VERIFICATION PASSED — no synthetic data remains.");

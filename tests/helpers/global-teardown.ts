@@ -9,7 +9,7 @@
  * integration opt-in and the service-role key are both present.
  */
 import { createClient } from "@supabase/supabase-js";
-import { purgeOrphanSyntheticUsers } from "./required-env";
+import { purgeOrphanSyntheticOrganizations, purgeOrphanSyntheticUsers } from "./required-env";
 
 export async function teardown(): Promise<void> {
   const allow = (process.env["ALLOW_INTEGRATION_TESTS_ON_PRIMARY"] ?? "").trim().toLowerCase();
@@ -18,8 +18,12 @@ export async function teardown(): Promise<void> {
   if (allow !== "true" || !url || !serviceKey) return;
 
   const db = createClient(url, serviceKey, { auth: { persistSession: false } });
+  // Organizations first: their rows reference the accounts.
+  const removedOrgs = await purgeOrphanSyntheticOrganizations(db);
   const removed = await purgeOrphanSyntheticUsers(db);
-  if (removed > 0) {
-    console.warn(`[global teardown] removed ${removed} residual synthetic account(s)`);
+  if (removedOrgs > 0 || removed > 0) {
+    console.warn(
+      `[global teardown] removed ${removedOrgs} residual synthetic organization(s) and ${removed} account(s)`,
+    );
   }
 }
