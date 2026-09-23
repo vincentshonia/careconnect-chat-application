@@ -140,6 +140,11 @@ async function fanOutExternal(input: NotifyInput) {
             link,
             visitorName: input.visitorName ?? null,
           }),
+          {
+            organizationId: input.organizationId,
+            departmentId: input.departmentId,
+            departmentName,
+          },
         );
 
       }

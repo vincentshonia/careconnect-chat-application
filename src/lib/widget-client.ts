@@ -47,7 +47,25 @@ export function shouldShowRating(opts: {
   return isConversationEnded(opts.status) || opts.agentReplied;
 }
 
+/* ------------------------- stored conversation ------------------------- */
+
+/** How long a remembered conversation stays usable on the visitor's device. */
+export const THREAD_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * A conversation id kept from an old visit is far more likely to be gone from
+ * the server than useful, so anything older than a week is discarded on boot.
+ */
+export function isStoredThreadFresh(
+  updatedAt: number | null | undefined,
+  now: number = Date.now(),
+): boolean {
+  if (!updatedAt || !Number.isFinite(updatedAt)) return false;
+  return now - updatedAt <= THREAD_MAX_AGE_MS;
+}
+
 /* ------------------------------- storage ------------------------------- */
+
 
 /**
  * localStorage that cannot throw. Safari with storage blocked (Lockdown mode,

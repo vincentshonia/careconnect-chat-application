@@ -145,6 +145,11 @@ export const sendRingCentralTestFn = createServerFn({ method: "POST" })
     const ok = await postToChat(
       dept.ringcentral_chat_id,
       `CareConnect test alert — ${dept.name} — ${timestamp}`,
+      {
+        organizationId: dept.organization_id,
+        departmentId: dept.id,
+        departmentName: dept.name,
+      },
     );
 
     await writeAudit(supabaseAdmin, {
@@ -162,4 +167,37 @@ export const sendRingCentralTestFn = createServerFn({ method: "POST" })
           ok: false as const,
           message: "RingCentral rejected the post — check the bot is a member of that channel",
         };
+  });
+
+/**
+ * The most recent alert delivery attempts, so an administrator can confirm
+ * alerts are firing without asking an engineer.
+ */
+export const alertDeliveriesFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const actor = await resolveActor(
+      (context as Ctx).supabase,
+      (context as Ctx).userId,
+      (context as Ctx).claims,
+    );
+    requirePermission(actor, "integration.manage", "Only administrators can view alert delivery");
+    const organizationId = requireOrganization(actor);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("alert_deliveries")
+      .select("id, department_name, chat_id, identity, status_code, ok, detail, created_at")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    return (data ?? []) as Array<{
+      id: string;
+      department_name: string | null;
+      chat_id: string | null;
+      identity: string | null;
+      status_code: number | null;
+      ok: boolean;
+      detail: string | null;
+      created_at: string;
+    }>;
   });

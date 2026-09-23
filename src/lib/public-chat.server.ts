@@ -1271,6 +1271,44 @@ export async function conversationForSession(ctx: SessionContext, conversationId
   return data;
 }
 
+/**
+ * Same as `conversationForSession`, but a stale id never blocks the visitor.
+ *
+ * Returning visitors keep a conversation id in browser storage. When that row
+ * has since been deleted, purged, or belonged to a different session, the
+ * visitor could not send a message or ask for a person at all. We start a fresh
+ * conversation instead and hand its id back so the widget re-syncs.
+ */
+export async function conversationForSessionOrNew(
+  ctx: SessionContext,
+  website: Record<string, any>,
+  conversationId: string | null | undefined,
+  subject?: string,
+  deps: {
+    lookup?: (ctx: SessionContext, id: string) => Promise<any>;
+    create?: (website: any, visitor: any, subject?: string) => Promise<any>;
+  } = {},
+) {
+  const lookup = deps.lookup ?? conversationForSession;
+  const create =
+    deps.create ?? ((site: any, visitor: any, s?: string) => ensureConversation(site, visitor, null, s));
+  if (conversationId) {
+    try {
+      return await lookup(ctx, conversationId);
+    } catch (error) {
+      if (!(error instanceof PublicChatError) || error.status >= 500) throw error;
+      console.warn(
+        "[public-chat] stale conversation id from widget, starting a new one",
+        conversationId,
+        error.status,
+      );
+    }
+  }
+  return create(website, ctx.visitor, subject);
+}
+
+
+
 /* ------------------------------ usage limits ------------------------------ */
 
 export type OrgLimits = {

@@ -27,6 +27,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import {
+  alertDeliveriesFn,
   ringCentralChatsFn,
   sendRingCentralTestFn,
   setDepartmentChatFn,
@@ -197,6 +198,13 @@ function DepartmentsTab() {
   });
 
   const canManageIntegrations = Boolean(session.data?.permissions.has("integration.manage"));
+  const loadDeliveries = useServerFn(alertDeliveriesFn);
+  const deliveries = useQuery({
+    queryKey: ["alert-deliveries"],
+    enabled: canManageIntegrations,
+    staleTime: 30_000,
+    queryFn: async () => await loadDeliveries(),
+  });
   const [testResult, setTestResult] = useState<{
     id: string;
     ok: boolean;
@@ -381,8 +389,32 @@ function DepartmentsTab() {
             </>
           )}
 
+          {canManageIntegrations ? (
+            <div className="mt-3 border-t border-border pt-3">
+              <p className="text-xs font-medium">Recent alert deliveries</p>
+              {(deliveries.data ?? []).length === 0 ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  No alert attempts recorded yet.
+                </p>
+              ) : (
+                <ul className="mt-1 space-y-1">
+                  {(deliveries.data ?? []).map((row) => (
+                    <li key={row.id} className="text-xs text-muted-foreground">
+                      <span className={row.ok ? "text-foreground" : "text-destructive"}>
+                        {row.ok ? "Delivered" : "Failed"}
+                      </span>{" "}
+                      · {new Date(row.created_at).toLocaleString()} ·{" "}
+                      {row.department_name ?? "Unknown team"} · channel {row.chat_id ?? "—"} · as{" "}
+                      {row.identity ?? "—"} · HTTP {row.status_code ?? "—"}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
         </div>
       </div>
+
 
       <ul className="divide-y divide-border rounded-xl border border-border">
         {(list.data ?? []).map((d) => {

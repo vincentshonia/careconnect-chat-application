@@ -14,6 +14,7 @@ import {
 import { resolveWidgetTabs, tabIconPath } from "@/lib/widget-tabs";
 import {
   isConversationEnded,
+  isStoredThreadFresh,
   nextPollDelay,
   POLL_MIN_MS,
   safeStorage,
@@ -412,7 +413,15 @@ function WidgetPage() {
       live?: boolean;
       agentName?: string | null;
       agentAvatar?: string | null;
+      updatedAt?: number;
     }>(threadKey);
+    // A conversation remembered from more than a week ago is almost certainly
+    // gone server-side; forget it rather than sending a dead id.
+    if (saved && !isStoredThreadFresh(saved.updatedAt)) {
+      safeStorage.remove(threadKey);
+      setRestored(true);
+      return;
+    }
     if (saved?.conversationId && Array.isArray(saved.messages)) {
       setConversationId(saved.conversationId);
       setMessages(saved.messages);
@@ -428,6 +437,7 @@ function WidgetPage() {
     }
     setRestored(true);
   }, [websiteId, threadKey]);
+
 
   useEffect(() => {
     if (!restored) return;
@@ -547,21 +557,40 @@ function WidgetPage() {
     [storageKey, websiteId, hostOrigin, originProof, page, params],
   );
 
-  /** POST to a public chat endpoint, transparently re-minting an expired session. */
+  /**
+   * POST to a public chat endpoint, transparently re-minting an expired session
+   * and recovering from a conversation id that no longer exists (a chat from an
+   * earlier visit that has since been removed). The visitor never sees either.
+   */
   const chatPost = useCallback(
     async (path: string, body: Record<string, unknown>) => {
-      const send = async (token: string) =>
+      const send = async (token: string, payload: Record<string, unknown>) =>
         fetch(path, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...body, session: token, host: hostOrigin }),
+          body: JSON.stringify({ ...payload, session: token, host: hostOrigin }),
         });
-      let res = await send(await ensureSession());
-      if (res.status === 401) res = await send(await ensureSession(true));
+      let res = await send(await ensureSession(), body);
+      if (res.status === 401) res = await send(await ensureSession(true), body);
+      if (res.status === 404 && body["conversationId"]) {
+        let stale = false;
+        try {
+          const peek = (await res.clone().json()) as { error?: string };
+          stale = /conversation not found/i.test(peek.error ?? "");
+        } catch {
+          stale = true;
+        }
+        if (stale) {
+          safeStorage.remove(threadKey);
+          setConversationId(null);
+          res = await send(await ensureSession(), { ...body, conversationId: null });
+        }
+      }
       return res;
     },
-    [ensureSession, hostOrigin],
+    [ensureSession, hostOrigin, threadKey],
   );
+
 
   /* ---------------------------- load config ---------------------------- */
   useEffect(() => {

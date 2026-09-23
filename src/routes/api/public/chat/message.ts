@@ -40,14 +40,12 @@ export const Route = createFileRoute("/api/public/chat/message")({
           }
 
           const website = ctx.website;
-          const conversation = input.conversationId
-            ? await mod.conversationForSession(ctx, input.conversationId)
-            : await mod.ensureConversation(
-                website,
-                ctx.visitor,
-                null,
-                input.menuOption ? `${input.menuOption} enquiry` : undefined,
-              );
+          const conversation = await mod.conversationForSessionOrNew(
+            ctx,
+            website,
+            input.conversationId ?? null,
+            input.menuOption ? `${input.menuOption} enquiry` : undefined,
+          );
 
           const visitorMessage = await mod.insertMessage(
             conversation,
