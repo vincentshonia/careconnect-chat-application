@@ -392,11 +392,7 @@ function PersonalSettingsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Maximum simultaneous chats</Label>
-              <Input
-                value={String(profile.data?.max_concurrent_chats ?? "")}
-                disabled
-                readOnly
-              />
+              <Input value={String(profile.data?.max_concurrent_chats ?? "")} disabled readOnly />
               <p className="text-xs text-muted-foreground">Set by an administrator.</p>
             </div>
           </div>
@@ -404,7 +400,6 @@ function PersonalSettingsPage() {
             {save.isPending ? "Saving…" : "Save availability"}
           </Button>
         </section>
-
 
         {/* Appearance */}
         <section className="space-y-3 rounded-xl border border-border bg-card p-4">

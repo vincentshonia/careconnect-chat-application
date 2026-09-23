@@ -125,7 +125,10 @@ describe("bot token refresh", () => {
   });
 
   it("returns null when RingCentral rejects the refresh", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 400 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("nope", { status: 400 })),
+    );
     const s = store(row({ token_expires_at: new Date(Date.now() - HOUR).toISOString() }));
     expect(await resolveBotToken(s.impl)).toBeNull();
     expect(s.saved).toHaveLength(0);
@@ -176,14 +179,20 @@ describe("dashboard bot token (env)", () => {
 
   it("falls back to the default name when the lookup fails", async () => {
     process.env["RINGCENTRAL_BOT_TOKEN"] = "dashboard-token";
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 401 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("nope", { status: 401 })),
+    );
     const mod = await freshModule();
     expect((await mod.getBotToken())?.name).toBe("PHG Alert Bot");
   });
 
   it("ignores an empty env token so the DB path still applies", async () => {
     process.env["RINGCENTRAL_BOT_TOKEN"] = "   ";
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 401 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("nope", { status: 401 })),
+    );
     const mod = await freshModule();
     expect(await mod.getBotToken()).toBeNull();
   });

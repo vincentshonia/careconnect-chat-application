@@ -368,8 +368,6 @@ export async function isOrganizationOpen(website: Record<string, any>): Promise<
   return isOpenNow((hours ?? []) as any, (holidays ?? []) as any, org?.timezone);
 }
 
-
-
 export const DEFAULT_MENU = [
   { key: "services", label: "Services", icon: "heart" },
   { key: "faq", label: "Frequently Asked Questions", icon: "help" },
@@ -688,7 +686,6 @@ export async function insertMessage(
           : {}),
       });
     }
-
   }
   return data;
 }
@@ -1291,7 +1288,8 @@ export async function conversationForSessionOrNew(
 ) {
   const lookup = deps.lookup ?? conversationForSession;
   const create =
-    deps.create ?? ((site: any, visitor: any, s?: string) => ensureConversation(site, visitor, null, s));
+    deps.create ??
+    ((site: any, visitor: any, s?: string) => ensureConversation(site, visitor, null, s));
   if (conversationId) {
     try {
       return await lookup(ctx, conversationId);
@@ -1306,8 +1304,6 @@ export async function conversationForSessionOrNew(
   }
   return create(website, ctx.visitor, subject);
 }
-
-
 
 /* ------------------------------ usage limits ------------------------------ */
 

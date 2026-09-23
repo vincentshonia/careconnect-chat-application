@@ -3,12 +3,16 @@
 > Generated automatically by `bun run release:gate`. PASS/FAIL is derived
 > from process exit codes only. No credentials or secrets are recorded.
 
-**Executed (UTC):** 2026-09-13T06:05:59.886Z
-**Completed (UTC):** 2026-09-13T06:19:34.426Z
-**Build identification:** fcbbbb53d80ff600c8064c0a366fd5fda8936190
+**Executed (UTC):** 2026-09-23T18:10:33.915Z
+**Completed (UTC):** 2026-09-23T18:18:04.338Z
+**Build identification:** 1422902b8eb77e0c3182ce5af7d29bd8bcf95bcf
 **Node:** v22.22.0
 
-## Overall: PASS
+## Overall: BLOCKED
+
+> The Playwright stage could not start in this environment: worker exited early (code 1).
+> No spec was removed or skipped; the stage is BLOCKED, not passed, and the
+> gate exits with code 78.
 
 ## Stages
 
@@ -19,21 +23,21 @@
 | Typecheck | `bunx tsgo --noEmit` | 0 | PASS |
 | Production build | `bun run build` | 0 | PASS |
 | Vitest | `bunx vitest run --reporter=json --reporter=default --outputFile.json=/dev-server/.release/vitest.json` | 0 | PASS |
-| Playwright E2E | `bunx playwright test --reporter=json` | 0 | PASS |
-| E2E cleanup verification | `node scripts/e2e-cleanup-verify.mjs` | 0 | PASS |
+| Playwright E2E | `bunx playwright test --reporter=json` | — | BLOCKED: sandbox runtime (worker exited early (code 1)) |
+| E2E cleanup verification | `node scripts/e2e-cleanup-verify.mjs --purge --fail-on-leak` | 0 | PASS |
 
 ## Vitest
 
-- Test files: 24
-- Passed: 413
+- Test files: 32
+- Passed: 496
 - Failed: 0
 - Skipped: 0
-- Total: 413
+- Total: 496
 
 ## Playwright (browser E2E)
 
-- Tests: 17
-- Passed: 17
+- Tests: 0
+- Passed: 0
 - Failed: 0
 - Skipped: 0
 
@@ -48,5 +52,9 @@
 | Concurrency/routing suite (tests/concurrency-routing.test.ts) | PASS |
 | Scale/data-volume suite (tests/reporting-reconciliation.test.ts) | PASS |
 | Widget regression suite (tests/widget-session.test.ts) | PASS |
-| Browser E2E suite (Playwright) | PASS |
+| Browser E2E suite (Playwright) | BLOCKED: sandbox runtime (worker exited early (code 1)) |
 | E2E cleanup verification | PASS |
+
+## Blocking failures
+
+- Stage **Playwright E2E** — BLOCKED: sandbox runtime (worker exited early (code 1))

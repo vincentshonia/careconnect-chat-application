@@ -438,7 +438,6 @@ function WidgetPage() {
     setRestored(true);
   }, [websiteId, threadKey]);
 
-
   useEffect(() => {
     if (!restored) return;
     if (!conversationId || ended) return;
@@ -591,7 +590,6 @@ function WidgetPage() {
     [ensureSession, hostOrigin, threadKey],
   );
 
-
   /* ---------------------------- load config ---------------------------- */
   useEffect(() => {
     if (!websiteId) {
@@ -708,7 +706,6 @@ function WidgetPage() {
       window.removeEventListener("resize", schedule);
     };
   }, [open, view, config, messages, error, ended]);
-
 
   // On phones the on-screen keyboard shrinks the visual viewport. The panel is
   // sized in dvh so the header and tabs stay put; we only need to bring the
@@ -1021,9 +1018,7 @@ function WidgetPage() {
   return (
     <div
       className={`flex w-full flex-col overflow-hidden bg-card shadow-float ring-1 ring-black/5 ${
-        hugContent
-          ? "absolute bottom-0 left-0 right-0 h-auto max-h-dvh"
-          : "h-dvh max-h-dvh"
+        hugContent ? "absolute bottom-0 left-0 right-0 h-auto max-h-dvh" : "h-dvh max-h-dvh"
       }`}
       style={{ borderRadius: radius, fontFamily: config.website.fontFamily }}
     >
@@ -1128,386 +1123,430 @@ function WidgetPage() {
         className={`min-h-0 flex-1 overflow-y-auto overscroll-contain bg-background ${view === "menu" ? "" : "px-4 py-4"}`}
       >
         <div ref={contentRef}>
-        {view === "menu" && (
-          <HomeView
-            config={config}
-            brand={brand}
-            visitorName={visitorName}
-            topics={homeTopics}
-            onClose={closeWidget}
-            onStartChat={() => {
-              // The home call to action asks for a person, not the assistant.
-              setFormKind("live_agent");
-              setServiceInterest("");
-              setView("form");
-            }}
-            onOpenHelp={() => setView("faq")}
-            onTopic={(topic) => {
-              if (topic.kind === "faq") {
-                setFaqQuery(topic.label);
-                setView("faq");
-              } else {
-                openService(topic.id.replace(/^svc-/, ""));
-              }
-            }}
-          />
-        )}
-
-        {view === "services" && (
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold text-foreground">Our services</h2>
-            {config.services.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => openService(s.id)}
-                className="w-full rounded-xl border border-border bg-card p-3 text-left transition hover:border-foreground/20 hover:bg-muted/40"
-              >
-                <p className="text-sm font-semibold text-card-foreground">{s.name}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{s.short_description}</p>
-                <span
-                  className="mt-2 inline-block text-[11px] font-semibold"
-                  style={{ color: brand }}
-                >
-                  View details →
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {view === "service" && activeService && (
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={() => setView("services")}
-              className="text-[11px] font-semibold text-muted-foreground hover:text-foreground"
-            >
-              ← All services
-            </button>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <h2 className="text-sm font-semibold text-card-foreground">{activeService.name}</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {activeService.short_description}
-              </p>
-              {activeService.eligibility_overview && (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">Eligibility: </span>
-                  {activeService.eligibility_overview}
-                </p>
-              )}
-              {activeService.counties?.length > 0 && (
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  <span className="font-medium text-foreground">Counties: </span>
-                  {activeService.counties.join(", ")}
-                </p>
-              )}
-              {activeService.health_plans?.length > 0 && (
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  <span className="font-medium text-foreground">Health plans: </span>
-                  {activeService.health_plans.join(", ")}
-                </p>
-              )}
-              {activeService.learn_more_url && (
-                <a
-                  href={activeService.learn_more_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-block text-[11px] font-semibold underline"
-                  style={{ color: brand }}
-                >
-                  Learn more
-                </a>
-              )}
-              <div className="mt-4 flex flex-col gap-2">
-                <button
-                  type="button"
-                  className="rounded-lg px-3 py-2 text-xs font-semibold text-white"
-                  style={{ background: brand }}
-                  onClick={() => void sendQuestion(`Tell me more about ${activeService.name}`)}
-                >
-                  Ask a question about this
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground"
-                  onClick={() => {
-                    setServiceInterest(activeService.name);
-                    setFormKind("enrollment");
-                    setView("form");
-                  }}
-                >
-                  Request assistance
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground"
-                  onClick={() => {
-                    setServiceInterest(activeService.name);
-                    setFormKind("live_agent");
-                    setView("form");
-                  }}
-                >
-                  Talk to a representative
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {view === "faq" &&
-          (() => {
-            const q = faqQuery.trim();
-            const matches = config.faqs.filter(
-              (f) =>
-                !q ||
-                f.question.toLowerCase().includes(q.toLowerCase()) ||
-                f.answer.toLowerCase().includes(q.toLowerCase()),
-            );
-            const askAssistant = () => {
-              if (!q) return;
-              setFaqQuery("");
-              void sendQuestion(q);
-            };
-            return (
-              <div className="space-y-3">
-                <input
-                  value={faqQuery}
-                  onChange={(e) => setFaqQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      askAssistant();
-                    }
-                  }}
-                  placeholder="Search questions"
-                  aria-label="Search frequently asked questions"
-                  className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm"
-                />
-                {q && !matches.length ? (
-                  <p className="text-xs text-muted-foreground">No matching questions</p>
-                ) : null}
-                {matches.map((f) => (
-                  <details
-                    key={f.id}
-                    open={q.toLowerCase() === f.question.trim().toLowerCase()}
-                    className="rounded-xl border border-border bg-card p-3"
-                  >
-                    <summary className="cursor-pointer text-sm font-medium text-card-foreground">
-                      {f.question}
-                    </summary>
-                    <p className="mt-2 text-xs text-muted-foreground">{f.answer}</p>
-                    <span className="mt-2 block text-[10px] uppercase tracking-wide text-muted-foreground">
-                      {f.category}
-                    </span>
-                  </details>
-                ))}
-                {q ? (
-                  <button
-                    type="button"
-                    onClick={askAssistant}
-                    className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 text-left transition hover:bg-muted"
-                  >
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium text-card-foreground">
-                        Can't find it? Ask the assistant:
-                      </span>
-                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                        “{q}”
-                      </span>
-                    </span>
-                    <span aria-hidden="true" className="shrink-0 text-lg" style={{ color: brand }}>
-                      →
-                    </span>
-                  </button>
-                ) : null}
-              </div>
-            );
-          })()}
-
-        {view === "requests" && (
-          <div className="space-y-3">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">How can we help?</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Choose a request and a representative will follow up.
-              </p>
-            </div>
-            {[
-              {
-                key: "live_agent",
-                title: "Speak with a representative",
-                Icon: Headset,
-                sub: config.agentsAvailable
-                  ? "Someone is available now"
-                  : "We will reply as soon as we are back",
-              },
-              {
-                key: "referral",
-                title: "Submit a referral",
-                Icon: UserPlus,
-                sub: "Refer a patient or member",
-              },
-              {
-                key: "enrollment",
-                title: "Enrollment assistance",
-                Icon: ClipboardCheck,
-                sub: "Get help choosing or joining a plan",
-              },
-              {
-                key: "message",
-                title: "Leave a message",
-                Icon: MessageSquare,
-                sub: "We will get back to you",
-              },
-            ].map((option) => (
-              <button
-                key={option.key}
-                onClick={() => {
-                  setFormKind(
-                    option.key === "live_agent" && !config.agentsAvailable
-                      ? "message"
-                      : (option.key as typeof formKind),
-                  );
-                  setServiceInterest("");
-                  setView("form");
-                }}
-                className="flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-panel"
-              >
-                <span
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
-                  style={{ background: `color-mix(in oklab, ${brand} 10%, transparent)` }}
-                  aria-hidden="true"
-                >
-                  <option.Icon size={18} style={{ color: brand }} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-card-foreground">
-                    {option.title}
-                  </span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
-                    {option.sub}
-                  </span>
-                </span>
-              </button>
-            ))}
-            <button
-              onClick={() => setView("contact")}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-2.5 text-xs font-semibold text-foreground"
-            >
-              <Phone size={15} style={{ color: brand }} aria-hidden="true" />
-              View contact details
-            </button>
-          </div>
-        )}
-
-        {view === "contact" && (
-          <div className="space-y-3 text-sm">
-            <ContactCard config={config} brand={brand} />
-            <button
-              className="w-full rounded-lg px-3 py-2 text-sm font-semibold text-white"
-              style={{ background: brand }}
-              onClick={() => {
+          {view === "menu" && (
+            <HomeView
+              config={config}
+              brand={brand}
+              visitorName={visitorName}
+              topics={homeTopics}
+              onClose={closeWidget}
+              onStartChat={() => {
+                // The home call to action asks for a person, not the assistant.
                 setFormKind("live_agent");
                 setServiceInterest("");
                 setView("form");
               }}
-            >
-              Speak to a live agent
-            </button>
-          </div>
-        )}
+              onOpenHelp={() => setView("faq")}
+              onTopic={(topic) => {
+                if (topic.kind === "faq") {
+                  setFaqQuery(topic.label);
+                  setView("faq");
+                } else {
+                  openService(topic.id.replace(/^svc-/, ""));
+                }
+              }}
+            />
+          )}
 
-        {view === "form" && (
-          <IntakeForm
-            key={`${formKind}-${serviceInterest}`}
-            kind={formKind}
-            initialServiceInterest={serviceInterest}
-            config={config}
-            brand={brand}
-            onCancel={() => setView("menu")}
-            onSubmit={async (payload) => {
-              const res = await chatPost("/api/public/chat/escalate", {
-                conversationId,
-                kind: formKind,
-                after_hours: !config.businessOpen,
-                ...payload,
-              });
-              const data = await res.json();
-              if (!res.ok) throw new Error(data.error ?? "Submission failed");
-              setConversationId(data.conversationId);
-              // Remember who this visitor is so a return visit greets them by
-              // name (the greeting already reads this key).
-              const givenName = String(payload["fullName"] ?? "").trim();
-              if (givenName) {
-                safeStorage.set(`${storageKey}-name`, givenName);
-                setVisitorName(givenName.split(" ")[0] ?? null);
-              }
+          {view === "services" && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-foreground">Our services</h2>
+              {config.services.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => openService(s.id)}
+                  className="w-full rounded-xl border border-border bg-card p-3 text-left transition hover:border-foreground/20 hover:bg-muted/40"
+                >
+                  <p className="text-sm font-semibold text-card-foreground">{s.name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{s.short_description}</p>
+                  <span
+                    className="mt-2 inline-block text-[11px] font-semibold"
+                    style={{ color: brand }}
+                  >
+                    View details →
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
 
-              // Only a live-agent request means someone is waiting for a
-              // person; the other forms just need a confirmation in the chat.
-              if (formKind !== "live_agent") {
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    id: uid(),
-                    role: "bot",
-                    text: "Thank you — we have received your details and a representative will follow up.",
-                  },
-                ]);
-                setView("chat");
-                return;
-              }
-
-              setLiveStatus(
-                data.assignedAgent
-                  ? `${data.assignedAgent} has been assigned and will join shortly`
-                  : data.agentsAvailable
-                    ? "Looking for an available representative"
-                    : "No representative is currently available — your message has been saved.",
-              );
-              setView("waiting");
-            }}
-          />
-        )}
-
-        {view === "waiting" && (
-          <div className="space-y-3">
-            {ended ? (
-              <EndedNotice brand={brand} onRestart={startNewChat} />
-            ) : (
-              <div className="rounded-xl border border-border bg-card p-4 text-center">
-                <p className="text-sm font-semibold text-card-foreground">
-                  {liveStatus ?? "Connecting you"}
+          {view === "service" && activeService && (
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => setView("services")}
+                className="text-[11px] font-semibold text-muted-foreground hover:text-foreground"
+              >
+                ← All services
+              </button>
+              <div className="rounded-xl border border-border bg-card p-4">
+                <h2 className="text-sm font-semibold text-card-foreground">{activeService.name}</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {activeService.short_description}
                 </p>
-                {agentName && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    You are chatting with {agentName}.
+                {activeService.eligibility_overview && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">Eligibility: </span>
+                    {activeService.eligibility_overview}
                   </p>
                 )}
-                {!agentName && config.businessOpen && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    You can keep typing below — a representative will see everything you send.
+                {activeService.counties?.length > 0 && (
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    <span className="font-medium text-foreground">Counties: </span>
+                    {activeService.counties.join(", ")}
                   </p>
                 )}
-                {!agentName && !config.businessOpen && (
-                  <>
-                    <p className="mt-1 text-xs text-muted-foreground">{afterHoursNotice(config)}</p>
+                {activeService.health_plans?.length > 0 && (
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    <span className="font-medium text-foreground">Health plans: </span>
+                    {activeService.health_plans.join(", ")}
+                  </p>
+                )}
+                {activeService.learn_more_url && (
+                  <a
+                    href={activeService.learn_more_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-block text-[11px] font-semibold underline"
+                    style={{ color: brand }}
+                  >
+                    Learn more
+                  </a>
+                )}
+                <div className="mt-4 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    className="rounded-lg px-3 py-2 text-xs font-semibold text-white"
+                    style={{ background: brand }}
+                    onClick={() => void sendQuestion(`Tell me more about ${activeService.name}`)}
+                  >
+                    Ask a question about this
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground"
+                    onClick={() => {
+                      setServiceInterest(activeService.name);
+                      setFormKind("enrollment");
+                      setView("form");
+                    }}
+                  >
+                    Request assistance
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground"
+                    onClick={() => {
+                      setServiceInterest(activeService.name);
+                      setFormKind("live_agent");
+                      setView("form");
+                    }}
+                  >
+                    Talk to a representative
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {view === "faq" &&
+            (() => {
+              const q = faqQuery.trim();
+              const matches = config.faqs.filter(
+                (f) =>
+                  !q ||
+                  f.question.toLowerCase().includes(q.toLowerCase()) ||
+                  f.answer.toLowerCase().includes(q.toLowerCase()),
+              );
+              const askAssistant = () => {
+                if (!q) return;
+                setFaqQuery("");
+                void sendQuestion(q);
+              };
+              return (
+                <div className="space-y-3">
+                  <input
+                    value={faqQuery}
+                    onChange={(e) => setFaqQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        askAssistant();
+                      }
+                    }}
+                    placeholder="Search questions"
+                    aria-label="Search frequently asked questions"
+                    className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm"
+                  />
+                  {q && !matches.length ? (
+                    <p className="text-xs text-muted-foreground">No matching questions</p>
+                  ) : null}
+                  {matches.map((f) => (
+                    <details
+                      key={f.id}
+                      open={q.toLowerCase() === f.question.trim().toLowerCase()}
+                      className="rounded-xl border border-border bg-card p-3"
+                    >
+                      <summary className="cursor-pointer text-sm font-medium text-card-foreground">
+                        {f.question}
+                      </summary>
+                      <p className="mt-2 text-xs text-muted-foreground">{f.answer}</p>
+                      <span className="mt-2 block text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {f.category}
+                      </span>
+                    </details>
+                  ))}
+                  {q ? (
                     <button
                       type="button"
-                      onClick={() => setView("chat")}
-                      className="mt-3 rounded-lg px-3 py-2 text-xs font-semibold text-white"
-                      style={{ background: brand }}
+                      onClick={askAssistant}
+                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 text-left transition hover:bg-muted"
                     >
-                      Continue with the assistant
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-card-foreground">
+                          Can't find it? Ask the assistant:
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                          “{q}”
+                        </span>
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="shrink-0 text-lg"
+                        style={{ color: brand }}
+                      >
+                        →
+                      </span>
                     </button>
-                  </>
-                )}
+                  ) : null}
+                </div>
+              );
+            })()}
+
+          {view === "requests" && (
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">How can we help?</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Choose a request and a representative will follow up.
+                </p>
               </div>
-            )}
-            {messages
-              .filter((m) => m.role !== "system")
-              .map((m) => (
+              {[
+                {
+                  key: "live_agent",
+                  title: "Speak with a representative",
+                  Icon: Headset,
+                  sub: config.agentsAvailable
+                    ? "Someone is available now"
+                    : "We will reply as soon as we are back",
+                },
+                {
+                  key: "referral",
+                  title: "Submit a referral",
+                  Icon: UserPlus,
+                  sub: "Refer a patient or member",
+                },
+                {
+                  key: "enrollment",
+                  title: "Enrollment assistance",
+                  Icon: ClipboardCheck,
+                  sub: "Get help choosing or joining a plan",
+                },
+                {
+                  key: "message",
+                  title: "Leave a message",
+                  Icon: MessageSquare,
+                  sub: "We will get back to you",
+                },
+              ].map((option) => (
+                <button
+                  key={option.key}
+                  onClick={() => {
+                    setFormKind(
+                      option.key === "live_agent" && !config.agentsAvailable
+                        ? "message"
+                        : (option.key as typeof formKind),
+                    );
+                    setServiceInterest("");
+                    setView("form");
+                  }}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-panel"
+                >
+                  <span
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
+                    style={{ background: `color-mix(in oklab, ${brand} 10%, transparent)` }}
+                    aria-hidden="true"
+                  >
+                    <option.Icon size={18} style={{ color: brand }} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-card-foreground">
+                      {option.title}
+                    </span>
+                    <span className="block truncate text-[11px] text-muted-foreground">
+                      {option.sub}
+                    </span>
+                  </span>
+                </button>
+              ))}
+              <button
+                onClick={() => setView("contact")}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border px-4 py-2.5 text-xs font-semibold text-foreground"
+              >
+                <Phone size={15} style={{ color: brand }} aria-hidden="true" />
+                View contact details
+              </button>
+            </div>
+          )}
+
+          {view === "contact" && (
+            <div className="space-y-3 text-sm">
+              <ContactCard config={config} brand={brand} />
+              <button
+                className="w-full rounded-lg px-3 py-2 text-sm font-semibold text-white"
+                style={{ background: brand }}
+                onClick={() => {
+                  setFormKind("live_agent");
+                  setServiceInterest("");
+                  setView("form");
+                }}
+              >
+                Speak to a live agent
+              </button>
+            </div>
+          )}
+
+          {view === "form" && (
+            <IntakeForm
+              key={`${formKind}-${serviceInterest}`}
+              kind={formKind}
+              initialServiceInterest={serviceInterest}
+              config={config}
+              brand={brand}
+              onCancel={() => setView("menu")}
+              onSubmit={async (payload) => {
+                const res = await chatPost("/api/public/chat/escalate", {
+                  conversationId,
+                  kind: formKind,
+                  after_hours: !config.businessOpen,
+                  ...payload,
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error ?? "Submission failed");
+                setConversationId(data.conversationId);
+                // Remember who this visitor is so a return visit greets them by
+                // name (the greeting already reads this key).
+                const givenName = String(payload["fullName"] ?? "").trim();
+                if (givenName) {
+                  safeStorage.set(`${storageKey}-name`, givenName);
+                  setVisitorName(givenName.split(" ")[0] ?? null);
+                }
+
+                // Only a live-agent request means someone is waiting for a
+                // person; the other forms just need a confirmation in the chat.
+                if (formKind !== "live_agent") {
+                  setMessages((prev) => [
+                    ...prev,
+                    {
+                      id: uid(),
+                      role: "bot",
+                      text: "Thank you — we have received your details and a representative will follow up.",
+                    },
+                  ]);
+                  setView("chat");
+                  return;
+                }
+
+                setLiveStatus(
+                  data.assignedAgent
+                    ? `${data.assignedAgent} has been assigned and will join shortly`
+                    : data.agentsAvailable
+                      ? "Looking for an available representative"
+                      : "No representative is currently available — your message has been saved.",
+                );
+                setView("waiting");
+              }}
+            />
+          )}
+
+          {view === "waiting" && (
+            <div className="space-y-3">
+              {ended ? (
+                <EndedNotice brand={brand} onRestart={startNewChat} />
+              ) : (
+                <div className="rounded-xl border border-border bg-card p-4 text-center">
+                  <p className="text-sm font-semibold text-card-foreground">
+                    {liveStatus ?? "Connecting you"}
+                  </p>
+                  {agentName && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      You are chatting with {agentName}.
+                    </p>
+                  )}
+                  {!agentName && config.businessOpen && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      You can keep typing below — a representative will see everything you send.
+                    </p>
+                  )}
+                  {!agentName && !config.businessOpen && (
+                    <>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {afterHoursNotice(config)}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setView("chat")}
+                        className="mt-3 rounded-lg px-3 py-2 text-xs font-semibold text-white"
+                        style={{ background: brand }}
+                      >
+                        Continue with the assistant
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+              {messages
+                .filter((m) => m.role !== "system")
+                .map((m) => (
+                  <MessageBubble
+                    key={m.id}
+                    bubble={m}
+                    brand={brand}
+                    agentName={agentName}
+                    agentAvatar={agentAvatar}
+                    onRate={rateAnswer}
+                    onAction={() => {}}
+                  />
+                ))}
+              {/* Only ask for a rating once a person replied or the chat ended. */}
+              {shouldShowRating({
+                conversationId,
+                status: convStatus,
+                agentReplied,
+                dismissed: ratingDismissed,
+                sending,
+              }) && (
+                <SatisfactionPrompt
+                  conversationId={conversationId!}
+                  brand={brand}
+                  chatPost={chatPost}
+                  onDismiss={dismissRating}
+                />
+              )}
+            </div>
+          )}
+
+          {view === "chat" && (
+            <div className="space-y-3">
+              {!config.businessOpen && config.website.offlineMessage && (
+                // The assistant still answers when the office is closed; this
+                // only sets expectations about reaching a person.
+                <p className="rounded-xl border border-border bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
+                  {config.website.offlineMessage}
+                </p>
+              )}
+              {messages.map((m) => (
                 <MessageBubble
                   key={m.id}
                   bubble={m}
@@ -1515,82 +1554,44 @@ function WidgetPage() {
                   agentName={agentName}
                   agentAvatar={agentAvatar}
                   onRate={rateAnswer}
-                  onAction={() => {}}
+                  onAction={(action) => {
+                    if (action === "connect") {
+                      setFormKind(config.agentsAvailable ? "live_agent" : "message");
+                      setServiceInterest("");
+                      setView("form");
+                    }
+                    if (action === "message") {
+                      setFormKind("message");
+                      setServiceInterest("");
+                      setView("form");
+                    }
+                  }}
                 />
               ))}
-            {/* Only ask for a rating once a person replied or the chat ended. */}
-            {shouldShowRating({
-              conversationId,
-              status: convStatus,
-              agentReplied,
-              dismissed: ratingDismissed,
-              sending,
-            }) && (
-              <SatisfactionPrompt
-                conversationId={conversationId!}
-                brand={brand}
-                chatPost={chatPost}
-                onDismiss={dismissRating}
-              />
-            )}
-          </div>
-        )}
-
-        {view === "chat" && (
-          <div className="space-y-3">
-            {!config.businessOpen && config.website.offlineMessage && (
-              // The assistant still answers when the office is closed; this
-              // only sets expectations about reaching a person.
-              <p className="rounded-xl border border-border bg-muted p-3 text-[11px] leading-relaxed text-muted-foreground">
-                {config.website.offlineMessage}
-              </p>
-            )}
-            {messages.map((m) => (
-              <MessageBubble
-                key={m.id}
-                bubble={m}
-                brand={brand}
-                agentName={agentName}
-                agentAvatar={agentAvatar}
-                onRate={rateAnswer}
-                onAction={(action) => {
-                  if (action === "connect") {
-                    setFormKind(config.agentsAvailable ? "live_agent" : "message");
-                    setServiceInterest("");
-                    setView("form");
-                  }
-                  if (action === "message") {
-                    setFormKind("message");
-                    setServiceInterest("");
-                    setView("form");
-                  }
-                }}
-              />
-            ))}
-            {sending && (
-              <div className="flex w-fit items-center gap-1.5 rounded-2xl bg-muted px-3 py-2.5">
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.2s]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.1s]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70" />
-              </div>
-            )}
-            {ended && <EndedNotice brand={brand} onRestart={startNewChat} />}
-            {shouldShowRating({
-              conversationId,
-              status: convStatus,
-              agentReplied,
-              dismissed: ratingDismissed,
-              sending,
-            }) && (
-              <SatisfactionPrompt
-                conversationId={conversationId!}
-                brand={brand}
-                chatPost={chatPost}
-                onDismiss={dismissRating}
-              />
-            )}
-          </div>
-        )}
+              {sending && (
+                <div className="flex w-fit items-center gap-1.5 rounded-2xl bg-muted px-3 py-2.5">
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.2s]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.1s]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70" />
+                </div>
+              )}
+              {ended && <EndedNotice brand={brand} onRestart={startNewChat} />}
+              {shouldShowRating({
+                conversationId,
+                status: convStatus,
+                agentReplied,
+                dismissed: ratingDismissed,
+                sending,
+              }) && (
+                <SatisfactionPrompt
+                  conversationId={conversationId!}
+                  brand={brand}
+                  chatPost={chatPost}
+                  onDismiss={dismissRating}
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -2107,9 +2108,7 @@ function MessageBubble({
         }
       >
         <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase text-muted-foreground">
-          {!isAgent && (
-            <span className="rounded bg-background/70 px-1 tracking-wide">AI</span>
-          )}
+          {!isAgent && <span className="rounded bg-background/70 px-1 tracking-wide">AI</span>}
           <span>{who}</span>
         </p>
         <p className="whitespace-pre-wrap text-sm text-foreground">{bubble.text}</p>

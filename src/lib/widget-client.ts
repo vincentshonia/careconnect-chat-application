@@ -66,7 +66,6 @@ export function isStoredThreadFresh(
 
 /* ------------------------------- storage ------------------------------- */
 
-
 /**
  * localStorage that cannot throw. Safari with storage blocked (Lockdown mode,
  * "Prevent cross-site tracking" inside an iframe, private browsing quota)

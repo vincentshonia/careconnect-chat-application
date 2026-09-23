@@ -156,7 +156,6 @@ function NotificationsPage() {
             </p>
           ) : null}
         </section>
-
       </div>
     </AdminShell>
   );

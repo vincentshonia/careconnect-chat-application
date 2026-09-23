@@ -155,7 +155,8 @@ const StaffChatAlertEmail = ({
 export const template: TemplateEntry = {
   component: StaffChatAlertEmail,
   displayName: "Staff alert — a visitor is waiting",
-  subject: (data) => `A visitor is waiting${data?.departmentName ? ` — ${data.departmentName}` : ""}`,
+  subject: (data) =>
+    `A visitor is waiting${data?.departmentName ? ` — ${data.departmentName}` : ""}`,
   previewData: {
     departmentName: "Member Engagement",
     reason: "New chat waiting for a human",

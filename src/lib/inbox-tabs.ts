@@ -13,14 +13,7 @@ import { CLOSED_STATUSES, QUEUE_STATUSES } from "@/lib/conversation-status";
 
 export type InboxTab = "waiting" | "mine" | "department" | "active" | "closed" | "all";
 
-export const INBOX_TABS: InboxTab[] = [
-  "waiting",
-  "mine",
-  "department",
-  "active",
-  "closed",
-  "all",
-];
+export const INBOX_TABS: InboxTab[] = ["waiting", "mine", "department", "active", "closed", "all"];
 
 export type InboxCounts = Record<InboxTab, number>;
 

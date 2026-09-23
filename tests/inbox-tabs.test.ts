@@ -29,7 +29,6 @@ describe("inbox landing tab", () => {
     ).toBe("active");
   });
 
-
   it("recognises only real tab names", () => {
     expect(isInboxTab("waiting")).toBe(true);
     expect(isInboxTab("nonsense")).toBe(false);
@@ -62,9 +61,9 @@ describe("tab containing a conversation opened by link", () => {
   });
 
   it("anything else falls back to All when the viewer may see everything", () => {
-    expect(
-      tabForConversation({ status: "new", assigned_to: null, department_id: null }, ctx),
-    ).toBe("all");
+    expect(tabForConversation({ status: "new", assigned_to: null, department_id: null }, ctx)).toBe(
+      "all",
+    );
   });
 
   it("uses the viewer's department when they cannot see everything", () => {

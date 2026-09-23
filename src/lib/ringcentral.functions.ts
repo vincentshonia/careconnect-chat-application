@@ -31,9 +31,8 @@ export const ringCentralChatsFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { organizationId } = await authorize(context as Ctx);
-    const { isRingCentralConfigured, listChats, botStatus, fetchChat } = await import(
-      "@/lib/ringcentral.server"
-    );
+    const { isRingCentralConfigured, listChats, botStatus, fetchChat } =
+      await import("@/lib/ringcentral.server");
     const bot = await botStatus();
     const configured = isRingCentralConfigured() || bot.connected;
     if (!configured) {
@@ -66,7 +65,6 @@ export const ringCentralChatsFn = createServerFn({ method: "GET" })
 
     return { connected: true as const, chats, unlisted, bot };
   });
-
 
 const mapInput = z.object({
   departmentId: z.string().uuid(),

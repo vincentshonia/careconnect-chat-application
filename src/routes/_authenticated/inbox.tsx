@@ -118,7 +118,6 @@ type Conversation = {
 const CONVERSATION_COLUMNS =
   "id, reference, subject, status, priority, assigned_to, department_id, escalation_requested, last_message_at, requested_agent_at, organization_id, website_id, visitor_type, contact_id, unread_agent_count, first_human_requested_at, first_agent_response_at, resolved_at, resolved_by, closed_at, closed_by";
 
-
 type Tab = InboxTab;
 
 const STATUS_LABEL: Record<string, string> = {
@@ -307,10 +306,7 @@ function InboxPage() {
     refetchInterval: 60_000,
     placeholderData: (prev) => prev,
     queryFn: async () => {
-      let q = supabase
-        .from("conversations")
-        .select(CONVERSATION_COLUMNS, { count: "exact" });
-
+      let q = supabase.from("conversations").select(CONVERSATION_COLUMNS, { count: "exact" });
 
       switch (tab) {
         case "waiting":
@@ -487,7 +483,6 @@ function InboxPage() {
       setActiveId(conversations[0].id);
     }
   }, [conversations, activeId]);
-
 
   // Changing queue or filters always restarts at the first page.
   useEffect(() => {
@@ -860,12 +855,9 @@ function InboxPage() {
     return (staffQuery.data ?? []).find((s) => s.id === id)?.full_name ?? null;
   };
 
-
-
   return (
     <AdminShell
       fill
-
       title="Inbox"
       description="Website chat conversations, AI answers, and live agent replies."
       actions={
@@ -925,8 +917,6 @@ function InboxPage() {
     >
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
         <aside className="flex min-h-0 flex-col overflow-y-auto rounded-xl border border-border lg:w-[320px] lg:shrink-0">
-
-
           {conversationsQuery.error ? (
             <QueryError
               className="m-3"
@@ -945,12 +935,7 @@ function InboxPage() {
               {emptyShortcuts.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {emptyShortcuts.map((t) => (
-                    <Button
-                      key={t.key}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setTab(t.key)}
-                    >
+                    <Button key={t.key} variant="outline" size="sm" onClick={() => setTab(t.key)}>
                       {t.label} ({counts?.[t.key] ?? 0})
                     </Button>
                   ))}
@@ -989,7 +974,6 @@ function InboxPage() {
                       departmentName={departmentName(c.department_id)}
                       finishedByName={finishedByName(c)}
                     />
-
                   </button>
                 </li>
               ))}
@@ -1158,7 +1142,6 @@ function InboxPage() {
                 ))}
                 <div ref={bottomRef} />
               </div>
-
 
               {canReply ? (
                 <form
@@ -1738,4 +1721,3 @@ function IntakeRequestBubble({
     </div>
   );
 }
-

@@ -86,8 +86,7 @@ export function VisitorDetailsPanel({
           metadata: (conversation.metadata ?? null) as Record<string, unknown> | null,
         } satisfies VisitorDetailsConversation,
         contact: ((contactRes as { data: unknown }).data ?? null) as VisitorDetailsContact | null,
-        departmentName:
-          (departmentRes as { data: { name?: string } | null }).data?.name ?? null,
+        departmentName: (departmentRes as { data: { name?: string } | null }).data?.name ?? null,
         pageUrl: visitor?.["current_page"] ?? visitor?.["landing_page"] ?? null,
         firstSeenAt: visitor?.["created_at"] ?? null,
         messageCount: (countRes as { count?: number | null }).count ?? null,

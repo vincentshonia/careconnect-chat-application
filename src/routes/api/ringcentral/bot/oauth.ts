@@ -14,7 +14,10 @@ function page(title: string, detail: string, status: number) {
     `<!doctype html><meta charset="utf-8"><title>${title}</title>` +
       `<body style="font-family:system-ui;margin:3rem;max-width:32rem">` +
       `<h1 style="font-size:1.25rem">${title}</h1><p>${detail}</p></body>`,
-    { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } },
+    {
+      status,
+      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
+    },
   );
 }
 
@@ -35,7 +38,11 @@ function validationResponse(request: Request): Response | null {
 }
 
 const livePage = () =>
-  page("PHG Alert Bot callback is live", "This endpoint is ready to complete the bot install.", 200);
+  page(
+    "PHG Alert Bot callback is live",
+    "This endpoint is ready to complete the bot install.",
+    200,
+  );
 
 export const Route = createFileRoute("/api/ringcentral/bot/oauth")({
   server: {
@@ -61,7 +68,6 @@ export const Route = createFileRoute("/api/ringcentral/bot/oauth")({
         }
         // Bare validation ping — must be 200 or RingCentral refuses the install.
         if (!code) return livePage();
-
 
         const rc = await import("@/lib/ringcentral.server");
         const creds = rc.botCredentials();
