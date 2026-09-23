@@ -116,7 +116,6 @@ export function AdminShell({
   fill?: boolean;
   children: ReactNode;
 }) {
-
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
@@ -242,8 +241,7 @@ export function AdminShell({
                       }`}
                       activeOptions={{ includeSearch: false }}
                       activeProps={{
-                        className:
-                          "sidebar-active font-semibold shadow-glow hover:text-white",
+                        className: "sidebar-active font-semibold shadow-glow hover:text-white",
                       }}
                     >
                       <item.icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
@@ -371,14 +369,11 @@ export function AdminShell({
 
         <main
           className={`min-w-0 flex-1 px-5 py-6 sm:px-8 print:h-auto print:overflow-visible print:px-0 print:py-0 ${
-            fill
-              ? "flex min-h-0 flex-col overflow-hidden"
-              : "min-h-0 overflow-y-auto"
+            fill ? "flex min-h-0 flex-col overflow-hidden" : "min-h-0 overflow-y-auto"
           }`}
         >
           {children}
         </main>
-
       </div>
     </div>
   );

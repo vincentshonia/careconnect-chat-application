@@ -24,7 +24,6 @@ type NotifyInput = {
   userIds?: string[];
   /** Best-known visitor name, used in the RingCentral alert only. */
   visitorName?: string | null;
-
 };
 
 const PREF_COLUMN: Record<NotifyInput["type"], string> = {
@@ -146,7 +145,6 @@ async function fanOutExternal(input: NotifyInput) {
             departmentName,
           },
         );
-
       }
     }
   } catch (error) {
@@ -210,4 +208,3 @@ async function emailAlert(args: {
     console.warn("[notifications] email fan-out failed", error);
   }
 }
-

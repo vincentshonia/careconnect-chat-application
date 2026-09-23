@@ -93,11 +93,35 @@ export async function signIn(
   page: Page,
   credentials: { email: string; password: string },
 ): Promise<void> {
-  await page.goto("/auth", { waitUntil: "domcontentloaded" });
-  await page.locator("#email").fill(credentials.email);
-  await page.locator("#password").fill(credentials.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await submitSignInForm(page, credentials);
   await page.waitForURL(/\/inbox/, { timeout: 60_000 });
+}
+
+/**
+ * Loads /auth and submits the sign-in form, retrying while the page is still
+ * server-rendered: before React hydrates, the submit button performs a native
+ * GET submit that reloads /auth and discards the typed credentials.
+ */
+export async function submitSignInForm(
+  page: Page,
+  credentials: { email: string; password: string },
+): Promise<void> {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    await page.goto("/auth", { waitUntil: "load" });
+    await page.waitForTimeout(1500);
+    await page.locator("#email").fill(credentials.email);
+    await page.locator("#password").fill(credentials.password);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    // Either we navigate away, or the native submit bounced us back to /auth.
+    try {
+      await page.waitForURL(/\/inbox/, { timeout: 10_000 });
+      return;
+    } catch {
+      /* retry */
+    }
+    if (!/\/auth/.test(page.url())) return;
+  }
+  throw new Error("sign-in never completed");
 }
 
 /** Opens a specific conversation in the inbox by its reference. */

@@ -280,7 +280,10 @@ export async function purgeSyntheticUsers(
 export async function purgeOrphanSyntheticOrganizations(db: AnyClient): Promise<number> {
   const ids: string[] = [];
   for (const prefix of SYNTHETIC_PREFIXES) {
-    const { data, error } = await db.from("organizations").select("id, name").like("name", `${prefix}%`);
+    const { data, error } = await db
+      .from("organizations")
+      .select("id, name")
+      .like("name", `${prefix}%`);
     if (error) throw new Error(`orphan org sweep failed: ${error.message}`);
     for (const org of (data ?? []) as { id: string; name: string }[]) {
       if (org.name?.startsWith(prefix)) ids.push(org.id);

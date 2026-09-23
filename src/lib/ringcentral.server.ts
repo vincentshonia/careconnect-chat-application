@@ -151,9 +151,9 @@ export type ListChatsDeps = {
  * The bot identity comes first because `postToChat()` posts as the bot; the JWT
  * staff user is merged in only as the fallback identity that same function uses.
  */
-export async function listChats(deps: ListChatsDeps = defaultListDeps()): Promise<
-  RingCentralChat[]
-> {
+export async function listChats(
+  deps: ListChatsDeps = defaultListDeps(),
+): Promise<RingCentralChat[]> {
   try {
     const lists: RingCentralChat[][] = [];
     let bot: BotToken | null = null;
@@ -200,7 +200,11 @@ export async function fetchChat(
       });
       if (res.ok) {
         const json = (await res.json()) as { id?: string; name?: string; type?: string };
-        return { id: chatId, name: json.name?.trim() || `Channel ${chatId}`, type: json.type ?? null };
+        return {
+          id: chatId,
+          name: json.name?.trim() || `Channel ${chatId}`,
+          type: json.type ?? null,
+        };
       }
     }
     const res = await call(path);
@@ -212,7 +216,6 @@ export async function fetchChat(
     return null;
   }
 }
-
 
 /* ------------------------------------------------------------------ *
  * Bot identity
@@ -392,7 +395,9 @@ function envBotToken(): string | null {
 }
 
 /** Best-effort display name and extension for the dashboard bot token. Never throws. */
-async function fetchBotIdentity(token: string): Promise<{ name: string; extensionId: string | null }> {
+async function fetchBotIdentity(
+  token: string,
+): Promise<{ name: string; extensionId: string | null }> {
   const base = serverUrl();
   const fallback = { name: "PHG Alert Bot", extensionId: null };
   if (!base) return fallback;
@@ -421,7 +426,12 @@ export async function getBotToken(): Promise<BotToken | null> {
   const direct = envBotToken();
   if (direct) {
     const identity = await fetchBotIdentity(direct);
-    botCache = { token: direct, name: identity.name, extensionId: identity.extensionId, at: Date.now() };
+    botCache = {
+      token: direct,
+      name: identity.name,
+      extensionId: identity.extensionId,
+      at: Date.now(),
+    };
     return { token: direct, name: identity.name };
   }
 
@@ -443,7 +453,8 @@ export type BotStatus = {
 export async function botStatus(): Promise<BotStatus> {
   try {
     const token = await getBotToken();
-    if (!token) return { connected: false, name: null, extensionId: null, source: null, lastPostAt: null };
+    if (!token)
+      return { connected: false, name: null, extensionId: null, source: null, lastPostAt: null };
     const source = envBotToken() ? ("dashboard" as const) : ("oauth" as const);
     let extensionId = botCache?.extensionId ?? null;
     let lastPostAt: string | null = null;
@@ -468,7 +479,9 @@ export async function botStatus(): Promise<BotStatus> {
 /** Remember the last successful bot post, for the admin screen. Best-effort. */
 async function recordPost(): Promise<void> {
   try {
-    await supabaseBotStore().save({ last_post_at: new Date().toISOString() } as Partial<BotAuthRow>);
+    await supabaseBotStore().save({
+      last_post_at: new Date().toISOString(),
+    } as Partial<BotAuthRow>);
   } catch {
     /* never block alerting */
   }
@@ -487,7 +500,13 @@ export type AlertTarget = {
  */
 async function logDelivery(
   target: AlertTarget | undefined,
-  row: { chatId: string; identity: string; statusCode: number | null; ok: boolean; detail?: string },
+  row: {
+    chatId: string;
+    identity: string;
+    statusCode: number | null;
+    ok: boolean;
+    detail?: string;
+  },
 ) {
   if (!target?.organizationId) return;
   try {
@@ -601,4 +620,3 @@ export async function postToChat(
     return false;
   }
 }
-

@@ -216,7 +216,6 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
             });
           }
 
-
           const typeMap: Record<string, string> = {
             referral: "referral",
             enrollment: "enrollment",
@@ -321,7 +320,6 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
               recordId: conversation.id,
               visitorName: input.fullName,
             });
-
           }
 
           const { count } = await db

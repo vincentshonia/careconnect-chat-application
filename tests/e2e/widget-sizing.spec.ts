@@ -44,8 +44,7 @@ test("the embedded panel is content-sized on Home and full height in Chat", asyn
     timeout: 30_000,
   });
 
-  const heightOf = async () =>
-    (await frame.boundingBox({ timeout: 10_000 }))?.height ?? Number.NaN;
+  const heightOf = async () => (await frame.boundingBox({ timeout: 10_000 }))?.height ?? Number.NaN;
 
   await expect
     .poll(heightOf, { timeout: 20_000, message: "Home must be content-sized" })

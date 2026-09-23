@@ -58,7 +58,6 @@ describe("outgoing message shapes", () => {
     expect(text).toContain("Visitor: a website visitor");
   });
 
-
   it("dedupes an email per conversation, person and type", () => {
     const key = emailIdempotencyKey("conv-1", "user-1", "escalation");
     expect(key).toBe(emailIdempotencyKey("conv-1", "user-1", "escalation"));

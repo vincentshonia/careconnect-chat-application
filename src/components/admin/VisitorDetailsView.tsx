@@ -144,14 +144,10 @@ export function VisitorDetailsView({
             />
             <Field
               term="Messages"
-              value={
-                typeof data.messageCount === "number" ? String(data.messageCount) : null
-              }
+              value={typeof data.messageCount === "number" ? String(data.messageCount) : null}
             />
           </dl>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Visitor did not request an agent.
-          </p>
+          <p className="mt-3 text-xs text-muted-foreground">Visitor did not request an agent.</p>
         </div>
       </div>
     );

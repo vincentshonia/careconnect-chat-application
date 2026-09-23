@@ -200,7 +200,6 @@ export async function handoffToHumans(input: {
       recordId: input.conversationId,
       visitorName: input.visitorLabel ?? null,
     });
-
   }
 
   if (assigned) {

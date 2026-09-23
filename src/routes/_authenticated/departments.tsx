@@ -62,7 +62,9 @@ function ChannelCombobox({
             className="w-56 justify-between font-normal"
           >
             <span className="truncate">
-              {current?.name ?? orphan?.name ?? (value ? "Unknown channel" : "No RingCentral channel")}
+              {current?.name ??
+                orphan?.name ??
+                (value ? "Unknown channel" : "No RingCentral channel")}
             </span>
           </Button>
         </PopoverTrigger>
@@ -106,7 +108,6 @@ function ChannelCombobox({
     </div>
   );
 }
-
 
 export const Route = createFileRoute("/_authenticated/departments")({
   // Moved into the Admin hub. The old address still works so existing links,
@@ -415,7 +416,6 @@ function DepartmentsTab() {
         </div>
       </div>
 
-
       <ul className="divide-y divide-border rounded-xl border border-border">
         {(list.data ?? []).map((d) => {
           const count = (members.data ?? []).filter((m) => m.department_id === d.id).length;
@@ -460,9 +460,7 @@ function DepartmentsTab() {
                   {testResult?.id === d.id ? (
                     <span
                       className={
-                        testResult.ok
-                          ? "text-xs text-muted-foreground"
-                          : "text-xs text-destructive"
+                        testResult.ok ? "text-xs text-muted-foreground" : "text-xs text-destructive"
                       }
                     >
                       {testResult.message}
@@ -717,7 +715,6 @@ function HolidaysTab() {
           Add closure
         </Button>
       </form>
-
 
       <ul className="divide-y divide-border rounded-xl border border-border">
         {(list.data ?? []).map((h) => (

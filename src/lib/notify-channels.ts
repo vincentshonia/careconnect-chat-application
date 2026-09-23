@@ -49,7 +49,6 @@ export function ringCentralText(input: {
   return `🔔 New live-support request${where}\nVisitor: ${who}\n${input.title}\nOpen: ${input.link}`;
 }
 
-
 /** Stable key so a retried fan-out never emails the same person twice. */
 export function emailIdempotencyKey(
   conversationId: string | null | undefined,

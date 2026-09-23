@@ -6,7 +6,7 @@ import {
   fixtureReader,
   type E2ETenant,
 } from "./fixtures/e2e-fixtures";
-import { resolveOpenConversation } from "./helpers/flows";
+import { resolveOpenConversation, submitSignInForm } from "./helpers/flows";
 
 /**
  * Segment 2 — the CareConnect golden path.
@@ -132,10 +132,7 @@ test("visitor → AI chat → human hand-off → agent claim, reply and resoluti
    * ---------------------------------------------------------------- */
   const agentContext = await browser.newContext();
   const agent = await agentContext.newPage();
-  await agent.goto("/auth", { waitUntil: "domcontentloaded" });
-  await agent.locator("#email").fill(tenant.agent.email);
-  await agent.locator("#password").fill(tenant.agent.password);
-  await agent.getByRole("button", { name: "Sign in" }).click();
+  await submitSignInForm(agent, tenant.agent);
   await agent.waitForURL(/\/inbox/, { timeout: 60_000 });
 
   /* ---------------------------------------------------------------- *
