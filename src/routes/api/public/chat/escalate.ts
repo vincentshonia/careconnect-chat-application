@@ -49,9 +49,13 @@ export const Route = createFileRoute("/api/public/chat/escalate")({
           const website = ctx.website;
           // The browser's flag is only a hint; the organization's own clock decides.
           const afterHours = !(await mod.isOrganizationOpen(website));
-          const conversation = input.conversationId
-            ? await mod.conversationForSession(ctx, input.conversationId)
-            : await mod.ensureConversation(website, ctx.visitor, null);
+          // A stale id from an earlier visit must never block the request:
+          // fall back to a fresh conversation and return its id.
+          const conversation = await mod.conversationForSessionOrNew(
+            ctx,
+            website,
+            input.conversationId ?? null,
+          );
           const db = mod.admin();
 
           // De-duplicate contacts within the organization using two separate

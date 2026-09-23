@@ -103,6 +103,63 @@ export type Database = {
           },
         ]
       }
+      alert_deliveries: {
+        Row: {
+          channel: string
+          chat_id: string | null
+          created_at: string
+          department_id: string | null
+          department_name: string | null
+          detail: string | null
+          id: string
+          identity: string | null
+          ok: boolean
+          organization_id: string
+          status_code: number | null
+        }
+        Insert: {
+          channel?: string
+          chat_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          department_name?: string | null
+          detail?: string | null
+          id?: string
+          identity?: string | null
+          ok?: boolean
+          organization_id: string
+          status_code?: number | null
+        }
+        Update: {
+          channel?: string
+          chat_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          department_name?: string | null
+          detail?: string | null
+          id?: string
+          identity?: string | null
+          ok?: boolean
+          organization_id?: string
+          status_code?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_deliveries_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alert_deliveries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string

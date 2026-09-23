@@ -474,6 +474,39 @@ async function recordPost(): Promise<void> {
   }
 }
 
+/** Where an alert was headed — used only for the delivery log. */
+export type AlertTarget = {
+  organizationId?: string | null;
+  departmentId?: string | null;
+  departmentName?: string | null;
+};
+
+/**
+ * Record one delivery attempt so admins can confirm alerts are firing without
+ * asking an engineer. Never throws and never blocks the alert itself.
+ */
+async function logDelivery(
+  target: AlertTarget | undefined,
+  row: { chatId: string; identity: string; statusCode: number | null; ok: boolean; detail?: string },
+) {
+  if (!target?.organizationId) return;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("alert_deliveries").insert({
+      organization_id: target.organizationId,
+      department_id: target.departmentId ?? null,
+      department_name: target.departmentName ?? null,
+      channel: "ringcentral",
+      chat_id: row.chatId,
+      identity: row.identity,
+      status_code: row.statusCode,
+      ok: row.ok,
+      detail: row.detail ?? null,
+    });
+  } catch {
+    /* logging must never break alerting */
+  }
+}
 
 /**
  * Post a plain-text message into a channel. Never throws.
@@ -481,7 +514,11 @@ async function recordPost(): Promise<void> {
  * Posts as the CareConnect Alerts bot when it is installed, and falls back to
  * the JWT user otherwise so alerts keep flowing before the bot goes live.
  */
-export async function postToChat(chatId: string, text: string): Promise<boolean> {
+export async function postToChat(
+  chatId: string,
+  text: string,
+  target?: AlertTarget,
+): Promise<boolean> {
   const path = `/restapi/v1.0/glip/chats/${encodeURIComponent(chatId)}/posts`;
   const init: RequestInit = { method: "POST", body: JSON.stringify({ text }) };
   try {
@@ -511,10 +548,24 @@ export async function postToChat(chatId: string, text: string): Promise<boolean>
         }
         if (botRes?.ok) {
           void recordPost();
+          void logDelivery(target, {
+            chatId,
+            identity: "bot",
+            statusCode: botRes.status,
+            ok: true,
+          });
           return true;
         }
         if (botRes) {
-          console.warn("[ringcentral] bot post failed", botRes.status, await botRes.text());
+          const detail = await botRes.text();
+          console.warn("[ringcentral] bot post failed", botRes.status, detail);
+          void logDelivery(target, {
+            chatId,
+            identity: "bot",
+            statusCode: botRes.status,
+            ok: false,
+            detail: detail.slice(0, 500),
+          });
         }
       } catch (error) {
         console.warn("[ringcentral] bot post threw", error);
@@ -525,12 +576,29 @@ export async function postToChat(chatId: string, text: string): Promise<boolean>
     const jwtRes = await call(path, init);
     console.info("[ringcentral] post attempt", "jwt", jwtRes?.status ?? "unavailable");
     if (!jwtRes?.ok) {
-      if (jwtRes) console.warn("[ringcentral] jwt post failed", jwtRes.status, await jwtRes.text());
+      const detail = jwtRes ? await jwtRes.text() : "unavailable";
+      if (jwtRes) console.warn("[ringcentral] jwt post failed", jwtRes.status, detail);
+      void logDelivery(target, {
+        chatId,
+        identity: "jwt",
+        statusCode: jwtRes?.status ?? null,
+        ok: false,
+        detail: detail.slice(0, 500),
+      });
       return false;
     }
+    void logDelivery(target, { chatId, identity: "jwt", statusCode: jwtRes.status, ok: true });
     return true;
   } catch (error) {
     console.warn("[ringcentral] post threw", error);
+    void logDelivery(target, {
+      chatId,
+      identity: "unknown",
+      statusCode: null,
+      ok: false,
+      detail: String(error).slice(0, 500),
+    });
     return false;
   }
 }
+
